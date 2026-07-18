@@ -51,7 +51,7 @@
   --magenta: #e87ba4;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; }
+html, body { height: 100%; overflow: hidden; }
 body {
   background: var(--page);
   color: var(--ink);
@@ -60,9 +60,9 @@ body {
   line-height: 1.45;
   overscroll-behavior-y: none;
 }
-.app { max-width: 520px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+.app { max-width: 520px; margin: 0 auto; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
 header.topbar {
-  position: sticky; top: 0; z-index: 20;
+  flex: 0 0 auto; z-index: 20;
   background: color-mix(in srgb, var(--page) 88%, transparent);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   padding: calc(env(safe-area-inset-top) + 14px) 20px 10px;
@@ -71,7 +71,7 @@ header.topbar {
 }
 .topbar h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
 .topbar .date { font-size: 13px; color: var(--muted); font-weight: 500; }
-main { flex: 1; padding: 16px 16px calc(env(safe-area-inset-bottom) + 92px); }
+main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 16px 28px; }
 .view { display: none; animation: fade .18s ease; }
 .view.active { display: block; }
 @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
@@ -258,11 +258,9 @@ main { flex: 1; padding: 16px 16px calc(env(safe-area-inset-bottom) + 92px); }
 
 /* ---- tab bar ---- */
 nav.tabbar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+  flex: 0 0 auto; z-index: 30;
   display: flex; justify-content: space-around;
-  max-width: 520px; margin: 0 auto;
-  background: color-mix(in srgb, var(--page) 86%, transparent);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  background: var(--page);
   border-top: 1px solid var(--hairline);
   padding: 8px 6px calc(env(safe-area-inset-bottom) + 8px);
 }
@@ -277,7 +275,7 @@ nav.tabbar {
 /* ---- misc ---- */
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: calc(env(safe-area-inset-bottom) + 100px);
+  bottom: calc(env(safe-area-inset-bottom) + 96px);
   background: var(--surface-2); color: var(--ink); font-size: 14px; font-weight: 600;
   border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px;
   z-index: 90; opacity: 0; pointer-events: none; transition: opacity .2s;
@@ -376,7 +374,7 @@ nav.tabbar {
         <button class="btn danger" id="wipeBtn">Erase all data</button>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v2.1</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v2.2</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
