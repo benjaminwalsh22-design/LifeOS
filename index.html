@@ -375,6 +375,11 @@ nav.tabbar {
         <div class="notice">Everything lives on this device. Export occasionally to keep a backup — it includes journal photos.</div>
         <button class="btn danger" id="wipeBtn">Erase all data</button>
       </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v2.1</b></div>
+        <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
+        <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
+      </div>
     </section>
   </main>
 
@@ -1042,6 +1047,14 @@ function savePlaceName(key){
   save(); closeSheet(); renderPlaces();
 }
 
+
+async function checkUpdate(){
+  toast('Checking…');
+  try {
+    await fetch(location.href.split('#')[0], { cache: 'reload' });
+    location.reload();
+  } catch(e){ toast('Could not reach the server — try again on Wi-Fi'); }
+}
 // ---------- wiring ----------
 $('todayAddEvent').addEventListener('click', () => { selDate = today(); editEvent(''); });
 $('schedAddEvent').addEventListener('click', () => editEvent(''));
