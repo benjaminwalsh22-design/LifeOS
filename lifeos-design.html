@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>LifeOS — Design Prototype</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FAF8F4">
+<style>
+/* ============================================================
+   LifeOS design language
+   paper & stone surfaces · charcoal ink · deep blue / sage / amber
+   editorial serif titles · quiet sans body · hairlines · calm motion
+   ============================================================ */
+:root{
+  --paper:   #FAF8F4;   /* warm off-white page */
+  --card:    #FFFFFF;
+  --stone:   #F1EEE7;   /* soft stone fill */
+  --stone-2: #EAE6DD;
+  --ink:     #23211C;   /* charcoal */
+  --ink-2:   #5E5A50;   /* secondary */
+  --mut:     #8F8A7D;   /* muted slate-warm */
+  --faint:   #B4AFA2;
+  --line:    #E8E4DA;   /* thin separators */
+  --blue:    #33527B;   /* deep blue accent */
+  --blue-ink:#2A4364;
+  --sage:    #6E7F63;   /* soft sage */
+  --sage-bg: #EEF0E9;
+  --amber:   #A9762B;   /* warm amber */
+  --amber-bg:#F5EEDF;
+  --blue-bg: #EBEFF4;
+  --shadow: 0 1px 2px rgba(35,33,28,.04), 0 10px 30px rgba(35,33,28,.06);
+  --shadow-soft: 0 1px 2px rgba(35,33,28,.03), 0 4px 14px rgba(35,33,28,.04);
+  --serif: "New York", ui-serif, Georgia, "Times New Roman", serif;
+  --sans: -apple-system, system-ui, "SF Pro Text", "Segoe UI", sans-serif;
+  --r: 16px;
+  --ease: cubic-bezier(.32,.72,.28,1);
+}
+*{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html,body{ height:100%; }
+body{
+  background:#EFECE5;
+  font-family:var(--sans);
+  color:var(--ink);
+  font-size:15.5px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+/* phone shell — full-bleed on mobile, framed on larger screens */
+.phone{
+  position:relative;
+  max-width:430px; margin:0 auto; min-height:100dvh;
+  background:var(--paper);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+@media (min-width:560px){
+  body{ padding:36px 0; }
+  .phone{
+    min-height:0; height:880px; border-radius:48px;
+    box-shadow:0 2px 4px rgba(35,33,28,.08), 0 40px 90px rgba(35,33,28,.18);
+    outline:10px solid #22201c;
+  }
+}
+/* status bar */
+.statusbar{
+  flex:0 0 auto; display:flex; justify-content:space-between; align-items:center;
+  padding:14px 26px 4px; font-size:14px; font-weight:600; letter-spacing:.01em;
+  color:var(--ink); background:var(--paper); z-index:40;
+}
+.statusbar svg{ height:12px; display:block; }
+/* scroll region */
+.stage{ flex:1; position:relative; overflow:hidden; }
+.screen{
+  position:absolute; inset:0; overflow-y:auto; overflow-x:hidden;
+  padding:6px 20px 120px;
+  opacity:0; pointer-events:none; transform:translateY(6px);
+  transition:opacity .28s var(--ease), transform .28s var(--ease);
+  scrollbar-width:none;
+}
+.screen::-webkit-scrollbar{ display:none; }
+.screen.on{ opacity:1; pointer-events:auto; transform:none; }
+/* pushed detail screens */
+.screen.push{ background:var(--paper); z-index:30; transform:translateX(26px); }
+.screen.push.on{ transform:none; }
+
+/* ---------- typography ---------- */
+.overline{
+  font-size:12.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--mut);
+}
+h1.editorial{
+  font-family:var(--serif); font-weight:600; letter-spacing:-.01em;
+  font-size:34px; line-height:1.15; margin:2px 0 0;
+}
+.pagehead{ padding:18px 2px 6px; }
+.pagehead .sub{ color:var(--ink-2); font-size:15px; margin-top:6px; }
+.sectionlabel{
+  font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--mut); margin:26px 2px 10px; display:flex; justify-content:space-between; align-items:baseline;
+}
+.sectionlabel .quiet-link{ font-size:13px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--blue); cursor:pointer; }
+
+/* ---------- cards ---------- */
+.card{
+  background:var(--card); border-radius:var(--r);
+  box-shadow:var(--shadow-soft); border:1px solid rgba(35,33,28,.04);
+  padding:18px;
+}
+.card + .card{ margin-top:10px; }
+.brief{
+  font-family:var(--serif); font-size:17.5px; line-height:1.62; color:var(--ink);
+  padding:20px;
+}
+.brief .lede{ display:block; }
+.brief-tag{ display:flex; align-items:center; gap:7px; margin-bottom:10px; }
+.brief-tag .spark{ width:14px; height:14px; color:var(--amber); }
+.brief-tag span{ font-family:var(--sans); font-size:12.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--mut); }
+
+/* ---------- header meta row (weather / energy) ---------- */
+.meta-row{ display:flex; gap:8px; margin-top:14px; }
+.meta-chip{
+  display:flex; align-items:center; gap:8px;
+  background:var(--card); border:1px solid rgba(35,33,28,.05); box-shadow:var(--shadow-soft);
+  border-radius:999px; padding:8px 14px 8px 10px; font-size:13.5px; color:var(--ink-2); font-weight:500; white-space:nowrap;
+}
+.meta-chip svg{ width:17px; height:17px; color:var(--amber); }
+.meta-chip b{ color:var(--ink); font-weight:600; }
+.meta-chip .ring{
+  width:20px; height:20px; border-radius:50%;
+  background:conic-gradient(var(--sage) 0 82%, var(--stone-2) 82% 100%);
+  display:flex; align-items:center; justify-content:center;
+}
+.meta-chip .ring i{ width:12px; height:12px; border-radius:50%; background:var(--card); }
+
+/* ---------- priorities ---------- */
+.prio{ display:flex; align-items:center; gap:14px; padding:15px 16px; cursor:pointer; }
+.prio + .prio{ border-top:1px solid var(--line); }
+.prio .tick{
+  flex:0 0 26px; width:26px; height:26px; border-radius:50%;
+  border:1.5px solid var(--faint); transition:all .25s var(--ease);
+  display:flex; align-items:center; justify-content:center; color:transparent;
+}
+.prio.done .tick{ background:var(--sage); border-color:var(--sage); color:#fff; }
+.prio .p-title{ font-weight:590; font-size:15.5px; letter-spacing:-.005em; transition:color .25s; }
+.prio .p-why{ font-size:13px; color:var(--mut); margin-top:1px; }
+.prio.done .p-title{ color:var(--faint); text-decoration:line-through; text-decoration-thickness:1px; }
+.prio.done .p-why{ color:var(--faint); }
+.prio .p-glyph{ margin-left:auto; color:var(--faint); flex:0 0 auto; }
+.prio .p-glyph svg{ width:16px; height:16px; }
+.card.stack{ padding:2px 2px; }
+
+/* ---------- timeline ---------- */
+.timeline{ position:relative; padding:6px 0 4px 2px; }
+.tl-item{ position:relative; display:flex; gap:16px; padding:11px 0; }
+.tl-item .t{
+  flex:0 0 52px; text-align:right; font-size:13px; font-weight:600; color:var(--mut);
+  font-variant-numeric:tabular-nums; padding-top:2px; letter-spacing:-.01em;
+}
+.tl-item .rail{ flex:0 0 10px; position:relative; }
+.tl-item .rail::before{
+  content:""; position:absolute; left:4.5px; top:-13px; bottom:-13px; width:1px; background:var(--line);
+}
+.tl-item:first-child .rail::before{ top:8px; }
+.tl-item:last-child .rail::before{ bottom:auto; height:20px; }
+.tl-item .dot{
+  position:absolute; top:7px; left:1px; width:8px; height:8px; border-radius:50%;
+  background:var(--paper); border:1.5px solid var(--faint);
+}
+.tl-item.now .dot{ background:var(--blue); border-color:var(--blue); }
+.tl-item.past .dot{ background:var(--stone-2); border-color:var(--stone-2); }
+.tl-item .tl-body{ flex:1; min-width:0; padding-bottom:2px; }
+.tl-item .tl-title{ font-size:15px; font-weight:590; letter-spacing:-.005em; }
+.tl-item.past .tl-title{ color:var(--mut); font-weight:500; }
+.tl-item .tl-sub{ font-size:13px; color:var(--mut); margin-top:1px; }
+.tl-item .tl-note{
+  display:inline-flex; align-items:center; gap:6px; margin-top:7px;
+  font-size:12.5px; color:var(--blue-ink); background:var(--blue-bg);
+  padding:4px 10px; border-radius:8px; font-weight:500;
+}
+.tl-item .tl-note.sage{ color:#4C5B44; background:var(--sage-bg); }
+.tl-item .tl-note.amber{ color:#7A5620; background:var(--amber-bg); }
+.tl-item .tl-note svg{ width:12px; height:12px; }
+
+/* ---------- insight lines (AI voice) ---------- */
+.insight{
+  display:flex; gap:11px; padding:13px 2px; align-items:flex-start;
+}
+.insight + .insight{ border-top:1px solid var(--line); }
+.insight .i-dot{ flex:0 0 auto; width:6px; height:6px; border-radius:50%; margin-top:8px; background:var(--sage); }
+.insight.watch .i-dot{ background:var(--amber); }
+.insight.info .i-dot{ background:var(--blue); }
+.insight p{ font-size:14.5px; color:var(--ink); line-height:1.5; }
+.insight p .why{ display:block; font-size:13px; color:var(--mut); margin-top:2px; }
+
+/* ---------- life areas ---------- */
+.areas{ display:flex; flex-direction:column; }
+.area{
+  display:flex; align-items:center; gap:14px; padding:14px 16px; cursor:pointer;
+  transition:background .2s;
+}
+.area + .area{ border-top:1px solid var(--line); }
+.area:active{ background:var(--stone); }
+.a-icon{
+  flex:0 0 38px; width:38px; height:38px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--stone); color:var(--ink-2);
+}
+.a-icon svg{ width:19px; height:19px; }
+.a-icon.blue{ background:var(--blue-bg); color:var(--blue); }
+.a-icon.sage{ background:var(--sage-bg); color:var(--sage); }
+.a-icon.amber{ background:var(--amber-bg); color:var(--amber); }
+.area .a-body{ flex:1; min-width:0; }
+.area .a-name{ font-size:15.5px; font-weight:590; letter-spacing:-.005em; }
+.area .a-sum{ font-size:13px; color:var(--mut); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.area .chev{ color:var(--faint); flex:0 0 auto; }
+.chev svg{ width:15px; height:15px; }
+
+/* ---------- missions ---------- */
+.mission{ padding:17px 18px; cursor:pointer; }
+.mission .m-top{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.mission .m-name{ font-family:var(--serif); font-size:18.5px; font-weight:600; letter-spacing:-.005em; }
+.mission .m-mom{ font-size:12.5px; font-weight:600; }
+.m-mom.up{ color:var(--sage); }
+.m-mom.steady{ color:var(--mut); }
+.m-mom.low{ color:var(--amber); }
+.mission .m-prog{ font-size:13.5px; color:var(--ink-2); margin-top:5px; }
+.mission .m-bar{ height:3px; border-radius:2px; background:var(--stone-2); margin-top:12px; overflow:hidden; }
+.mission .m-bar i{ display:block; height:100%; border-radius:2px; background:var(--blue); }
+.mission .m-next{ display:flex; gap:9px; margin-top:12px; align-items:flex-start; }
+.mission .m-next svg{ width:14px; height:14px; color:var(--amber); flex:0 0 auto; margin-top:2.5px; }
+.mission .m-next p{ font-size:13.5px; color:var(--ink-2); line-height:1.45; }
+.mission .m-next p b{ color:var(--ink); font-weight:590; }
+
+/* ---------- push screen header ---------- */
+.pushhead{
+  display:flex; align-items:center; gap:6px; padding:14px 0 2px; position:sticky; top:0;
+  background:linear-gradient(var(--paper) 78%, transparent); z-index:5;
+}
+.backbtn{
+  display:flex; align-items:center; gap:3px; border:none; background:none; cursor:pointer;
+  color:var(--blue); font-size:15.5px; font-family:var(--sans); padding:6px 8px 6px 0; font-weight:500;
+}
+.backbtn svg{ width:18px; height:18px; }
+
+/* ---------- finance ---------- */
+.big-figure{ padding:20px 18px 18px; }
+.big-figure .bf-label{ font-size:13px; color:var(--mut); font-weight:600; letter-spacing:.05em; text-transform:uppercase; }
+.big-figure .bf-num{ font-family:var(--serif); font-size:40px; font-weight:600; letter-spacing:-.015em; margin-top:6px; line-height:1.05; }
+.big-figure .bf-delta{ font-size:13.5px; margin-top:6px; color:var(--sage); font-weight:550; }
+.big-figure .bf-delta.warn{ color:var(--amber); }
+.split{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+.split .card{ margin:0; }
+.mini-fig .bf-label{ font-size:12px; }
+.mini-fig .bf-num{ font-size:24px; margin-top:3px; font-family:var(--serif); font-weight:600; letter-spacing:-.01em; }
+.mini-fig .bf-sub{ font-size:12.5px; color:var(--mut); margin-top:2px; }
+.budget-row{ padding:13px 2px; }
+.budget-row + .budget-row{ border-top:1px solid var(--line); }
+.budget-row .b-top{ display:flex; justify-content:space-between; font-size:14.5px; }
+.budget-row .b-top b{ font-weight:590; }
+.budget-row .b-top span{ color:var(--mut); font-variant-numeric:tabular-nums; }
+.budget-row .b-bar{ height:3px; background:var(--stone-2); border-radius:2px; margin-top:9px; overflow:hidden; }
+.budget-row .b-bar i{ display:block; height:100%; border-radius:2px; background:var(--blue); }
+.budget-row.watch .b-bar i{ background:var(--amber); }
+.bill{ display:flex; align-items:center; gap:13px; padding:12px 2px; }
+.bill + .bill{ border-top:1px solid var(--line); }
+.bill .b-when{ flex:0 0 46px; text-align:center; background:var(--stone); border-radius:10px; padding:5px 0; }
+.bill .b-when b{ display:block; font-size:15px; font-weight:650; letter-spacing:-.01em; }
+.bill .b-when span{ font-size:10.5px; color:var(--mut); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+.bill .b-name{ font-size:14.5px; font-weight:560; }
+.bill .b-sub{ font-size:12.5px; color:var(--mut); }
+.bill .b-amt{ margin-left:auto; font-size:14.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+
+/* ---------- people ---------- */
+.people{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.person{
+  background:var(--card); border-radius:var(--r); border:1px solid rgba(35,33,28,.04);
+  box-shadow:var(--shadow-soft); padding:16px 15px 14px; cursor:pointer;
+}
+.pavatar{
+  width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-size:19px; font-weight:600; color:#fff; letter-spacing:.01em;
+}
+.person .p-name{ font-size:15.5px; font-weight:600; margin-top:11px; letter-spacing:-.005em; }
+.person .p-rel{ font-size:12.5px; color:var(--mut); margin-top:1px; }
+.person .p-flag{
+  display:inline-flex; align-items:center; gap:5px; margin-top:10px; white-space:nowrap;
+  font-size:12px; font-weight:550; padding:4px 9px; border-radius:8px;
+  background:var(--stone); color:var(--ink-2);
+}
+.person .p-flag.warm{ background:var(--amber-bg); color:#7A5620; }
+.person .p-flag.cool{ background:var(--blue-bg); color:var(--blue-ink); }
+.person .p-flag.ok{ background:var(--sage-bg); color:#4C5B44; }
+.person .p-flag svg{ width:11px; height:11px; }
+/* person detail */
+.pd-hero{ text-align:center; padding:16px 0 6px; }
+.pd-hero .pavatar{ width:74px; height:74px; font-size:30px; margin:0 auto; }
+.pd-hero h2{ font-family:var(--serif); font-size:26px; font-weight:600; margin-top:12px; letter-spacing:-.01em;}
+.pd-hero .pd-sub{ color:var(--mut); font-size:14px; margin-top:3px; }
+.kv{ display:flex; justify-content:space-between; gap:14px; padding:12px 2px; font-size:14.5px; }
+.kv + .kv{ border-top:1px solid var(--line); }
+.kv .k{ color:var(--mut); flex:0 0 auto; }
+.kv .v{ text-align:right; font-weight:540; color:var(--ink); }
+.actions-row{ display:flex; gap:8px; margin-top:14px; }
+.act{
+  flex:1; text-align:center; padding:11px 6px; border-radius:12px; cursor:pointer;
+  background:var(--stone); color:var(--ink); font-size:13.5px; font-weight:590; border:none; font-family:var(--sans);
+}
+.act.primary{ background:var(--ink); color:var(--paper); }
+
+/* ---------- journal ---------- */
+.j-compose{ padding:20px 18px 16px; }
+.j-compose .prompt{ font-family:var(--serif); font-size:19px; line-height:1.45; letter-spacing:-.005em; }
+.j-compose .j-modes{ display:flex; gap:8px; margin-top:16px; }
+.jmode{
+  display:flex; align-items:center; gap:7px; border:none; cursor:pointer; font-family:var(--sans);
+  background:var(--stone); border-radius:999px; padding:9px 15px; font-size:13.5px; font-weight:580; color:var(--ink);
+}
+.jmode.primary{ background:var(--ink); color:var(--paper); }
+.jmode svg{ width:15px; height:15px; }
+.jentry{ padding:16px 18px; cursor:pointer; }
+.jentry .je-head{ display:flex; align-items:baseline; gap:8px; }
+.jentry .je-day{ font-size:14.5px; font-weight:650; letter-spacing:-.005em; }
+.jentry .je-meta{ font-size:12.5px; color:var(--mut); margin-left:auto; display:flex; align-items:center; gap:5px; }
+.jentry .je-meta svg{ width:12px; height:12px; }
+.jentry .je-mood{ font-size:12.5px; color:var(--mut); }
+.jentry p.je-text{
+  font-family:var(--serif); font-size:15.5px; line-height:1.6; color:var(--ink-2); margin-top:8px;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+}
+.je-photo{
+  margin-top:12px; height:120px; border-radius:12px; overflow:hidden; position:relative;
+}
+.je-photo .ph{ width:100%; height:100%; }
+.searchbar{
+  display:flex; align-items:center; gap:10px;
+  background:var(--card); border:1px solid rgba(35,33,28,.05); box-shadow:var(--shadow-soft);
+  border-radius:14px; padding:13px 15px; color:var(--mut); font-size:14.5px; margin-top:14px;
+}
+.searchbar svg{ width:16px; height:16px; flex:0 0 auto; }
+.weekly{ background:var(--stone); border:none; box-shadow:none; }
+.weekly .brief-tag .spark{ color:var(--sage); }
+.weekly p{ font-family:var(--serif); font-size:16px; line-height:1.6; color:var(--ink); }
+
+/* ---------- inbox ---------- */
+.inb{ display:flex; gap:13px; padding:15px 16px; align-items:flex-start; }
+.inb + .inb{ border-top:1px solid var(--line); }
+.inb .a-icon{ flex:0 0 36px; width:36px; height:36px; }
+.inb .in-title{ font-size:15px; font-weight:590; letter-spacing:-.005em; }
+.inb .in-sub{ font-size:13px; color:var(--mut); margin-top:1px; line-height:1.45; }
+.inb .in-ai{ font-size:13px; color:var(--blue-ink); margin-top:7px; background:var(--blue-bg); display:inline-block; padding:4px 10px; border-radius:8px; font-weight:500; }
+.inb .in-acts{ display:flex; gap:14px; margin-top:9px; }
+.inb .in-acts button{
+  border:none; background:none; cursor:pointer; font-family:var(--sans);
+  font-size:13px; font-weight:600; color:var(--blue); padding:0;
+}
+.inb .in-acts button.quiet{ color:var(--mut); font-weight:500; }
+.handled{
+  text-align:center; padding:18px 8px 6px; color:var(--mut); font-size:13px; line-height:1.6;
+}
+
+/* ---------- assistant ---------- */
+.asst-card{ padding:16px 18px; }
+.asst-card .a-kind{ display:flex; align-items:center; gap:7px; margin-bottom:8px; }
+.asst-card .a-kind i{ width:6px; height:6px; border-radius:50%; background:var(--blue); }
+.asst-card.notice .a-kind i{ background:var(--amber); }
+.asst-card.warm .a-kind i{ background:var(--sage); }
+.asst-card .a-kind span{ font-size:12px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--mut); }
+.asst-card p{ font-family:var(--serif); font-size:16.5px; line-height:1.55; }
+.asst-card .a-act{ margin-top:12px; display:inline-flex; }
+.chip-act{
+  border:1px solid var(--line); background:var(--paper); border-radius:999px;
+  font-size:13px; font-weight:580; color:var(--ink); padding:7px 14px; cursor:pointer; font-family:var(--sans);
+}
+.ask{
+  position:absolute; left:16px; right:16px; bottom:calc(env(safe-area-inset-bottom) + 88px);
+  display:flex; align-items:center; gap:10px; z-index:25;
+  background:var(--card); border:1px solid rgba(35,33,28,.07);
+  box-shadow:var(--shadow); border-radius:999px; padding:13px 18px; color:var(--mut); font-size:15px;
+}
+.ask svg{ width:17px; height:17px; color:var(--mut); }
+.ask span{ flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ask .mic{ color:var(--ink-2); }
+
+/* ---------- tab bar ---------- */
+.tabbar{
+  position:absolute; left:0; right:0; bottom:0; z-index:35;
+  display:flex; padding:10px 8px calc(env(safe-area-inset-bottom) + 14px);
+  background:color-mix(in srgb, var(--paper) 84%, transparent);
+  -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
+  border-top:1px solid var(--line);
+}
+.tabbar button{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+  background:none; border:none; cursor:pointer; color:var(--faint); font-family:var(--sans);
+  transition:color .2s;
+}
+.tabbar button svg{ width:23px; height:23px; }
+.tabbar button span{ font-size:10px; font-weight:600; letter-spacing:.01em; }
+.tabbar button.on{ color:var(--ink); }
+.tabbar button .badge{
+  position:absolute; margin-left:22px; margin-top:-2px;
+  min-width:15px; height:15px; border-radius:8px; background:var(--amber);
+  color:#fff; font-size:9.5px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 4px;
+}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar">
+    <span>9:41</span>
+    <svg viewBox="0 0 54 12" fill="currentColor"><rect x="0" y="4" width="3" height="8" rx="1"/><rect x="5" y="2.5" width="3" height="9.5" rx="1"/><rect x="10" y="1" width="3" height="11" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/><path d="M28.7 3.4a7.5 7.5 0 0 1 9.6 0l-1.3 1.5a5.5 5.5 0 0 0-7 0l-1.3-1.5Zm2.2 2.6a4 4 0 0 1 5.2 0l-1.3 1.6a2 2 0 0 0-2.6 0l-1.3-1.6Zm2.6 3.1 1.2 1.5-1.2.9-1.2-.9 1.2-1.5Z"/><rect x="43" y="1.5" width="9.5" height="9" rx="2.5" fill="none" stroke="currentColor"/><rect x="44.5" y="3" width="5.5" height="6" rx="1.2"/><rect x="53.2" y="4.5" width="1.3" height="3" rx="0.6"/></svg>
+  </div>
+  <div class="stage" id="stage"></div>
+  <nav class="tabbar" id="tabbar"></nav>
+</div>
+<script>
+/* ============ icon set (1.5px strokes, quiet) ============ */
+const I = (d, extra='') => `<svg fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" ${extra}>${d}</svg>`;
+const ic = {
+  sun:      I('<circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7"/>'),
+  leaf:     I('<path d="M4.5 19.5C4.5 11 9.5 5 20 4.5c.5 10.5-5.5 15.5-14 15Z"/><path d="M4.5 19.5C8 14 12 10.5 16.5 8"/>'),
+  book:     I('<path d="M5 4.8A1.8 1.8 0 0 1 6.8 3h10.4A1.8 1.8 0 0 1 19 4.8v14.4a1.8 1.8 0 0 1-1.8 1.8H6.8A1.8 1.8 0 0 1 5 19.2V4.8Z"/><path d="M9 7.5h6M9 11h6"/>'),
+  tray:     I('<path d="M3.5 13.5 6 5.8A1.5 1.5 0 0 1 7.4 4.8h9.2a1.5 1.5 0 0 1 1.4 1l2.5 7.7v4a1.7 1.7 0 0 1-1.7 1.7H5.2a1.7 1.7 0 0 1-1.7-1.7v-4Z"/><path d="M3.7 13.5h4.6l1.2 2.2h5l1.2-2.2h4.6"/>'),
+  spark:    I('<path d="M12 3.5c.7 4.6 3.9 7.8 8.5 8.5-4.6.7-7.8 3.9-8.5 8.5-.7-4.6-3.9-7.8-8.5-8.5 4.6-.7 7.8-3.9 8.5-8.5Z"/>'),
+  heart:    I('<path d="M12 20s-7.5-4.6-9-9.6C2 7 4 4.5 7 4.5c2 0 3.7 1.2 5 3 1.3-1.8 3-3 5-3 3 0 5 2.5 4 5.9-1.5 5-9 9.6-9 9.6Z"/>'),
+  people:   I('<circle cx="9" cy="8.5" r="3.1"/><path d="M3.6 19.4c.6-3.1 2.7-4.9 5.4-4.9s4.8 1.8 5.4 4.9M15.7 6.1a2.9 2.9 0 1 1-1 5.6M16.7 14.6c2.1.4 3.5 2 3.9 4.8"/>'),
+  case:     I('<rect x="3.5" y="7" width="17" height="13" rx="2"/><path d="M9 7V5.4A1.4 1.4 0 0 1 10.4 4h3.2A1.4 1.4 0 0 1 15 5.4V7M3.5 12h17"/>'),
+  coins:    I('<circle cx="12" cy="12" r="8.5"/><path d="M14.8 9.2a3.3 3.3 0 0 0-2.8-1.3c-1.7 0-3 .9-3 2.1s1.3 1.8 3 2.1 3 .9 3 2.1-1.3 2.1-3 2.1a3.3 3.3 0 0 1-2.8-1.3M12 6.2v1.7M12 16.3V18"/>'),
+  grad:     I('<path d="m12 4 9.5 4.5L12 13 2.5 8.5 12 4Z"/><path d="M6 10.5V15c0 1.5 2.7 3 6 3s6-1.5 6-3v-4.5M21.5 8.5V13"/>'),
+  dumbbell: I('<path d="M7.2 8v8M16.8 8v8M4 9.5v5M20 9.5v5M7.2 12h9.6"/>'),
+  house:    I('<path d="m4 10.5 8-6.5 8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19v-8.5Z"/><path d="M9.5 20.5V14h5v6.5"/>'),
+  plane:    I('<path d="M10.5 13.5 3.8 11a.8.8 0 0 1 0-1.5L19.4 4a.8.8 0 0 1 1 1L15 20.2a.8.8 0 0 1-1.5 0l-2.5-6.7Z"/><path d="m10.5 13.5 4-4"/>'),
+  bookOpen: I('<path d="M12 6.5C10.5 5 8.4 4.2 5.5 4.2c-.9 0-1.7.1-2.5.3v13.9a10 10 0 0 1 2.5-.3c2.9 0 5 .8 6.5 2.3 1.5-1.5 3.6-2.3 6.5-2.3.9 0 1.7.1 2.5.3V4.5a10 10 0 0 0-2.5-.3c-2.9 0-5 .8-6.5 2.3v14"/>'),
+  doc:      I('<path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h6L18 7.5v12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19.5v-15Z"/><path d="M13 3.3V8h4.7M9.5 12.5h5M9.5 16h5"/>'),
+  phone:    I('<path d="M7 3.5h3l1.5 4.5-2 1.5a12 12 0 0 0 5 5l1.5-2 4.5 1.5v3a2 2 0 0 1-2 2C11 19.5 4.5 13 4.5 5.5a2 2 0 0 1 2-2Z" transform="translate(0.5 0)"/>'),
+  cart:     I('<circle cx="9.5" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/><path d="M3.5 4.5h2.2l2.1 10.4a1.5 1.5 0 0 0 1.5 1.2h7.6a1.5 1.5 0 0 0 1.5-1.2l1.4-7H6.4"/>'),
+  pill:     I('<rect x="3.5" y="9" width="17" height="8" rx="4" transform="rotate(-40 12 13)"/><path d="m8.6 8.2 5.6 6.7"/>'),
+  gift:     I('<rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M4 13h16M12 9v11M12 9C10 9 7.6 8.3 7.6 6.3A1.9 1.9 0 0 1 9.5 4.4C11.4 4.4 12 7 12 9Zm0 0c2 0 4.4-.7 4.4-2.7a1.9 1.9 0 0 0-1.9-1.9C12.6 4.4 12 7 12 9Z"/>'),
+  cake:     I('<path d="M5 12.5h14a1.5 1.5 0 0 1 1.5 1.5v6h-17v-6A1.5 1.5 0 0 1 5 12.5ZM3.5 17c1.4 0 1.4 1.2 2.8 1.2S7.7 17 9.2 17s1.4 1.2 2.8 1.2 1.4-1.2 2.8-1.2 1.4 1.2 2.9 1.2 1.4-1.2 2.8-1.2"/><path d="M8 12.5V10M12 12.5V10M16 12.5V10M8 7.2c0-.9.7-1.4.7-2.2M12 7.2c0-.9.7-1.4.7-2.2M16 7.2c0-.9.7-1.4.7-2.2"/>'),
+  search:   I('<circle cx="11" cy="11" r="6.5"/><path d="m19.5 19.5-3.9-3.9"/>'),
+  mic:      I('<rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/>'),
+  camera:   I('<path d="M6.8 7h-1A2.8 2.8 0 0 0 3 9.8v7.4A2.8 2.8 0 0 0 5.8 20h12.4a2.8 2.8 0 0 0 2.8-2.8V9.8A2.8 2.8 0 0 0 18.2 7h-1l-1.2-2.1A1.8 1.8 0 0 0 14.4 4H9.6a1.8 1.8 0 0 0-1.6.9L6.8 7Z"/><circle cx="12" cy="13" r="3.2"/>'),
+  pen:      I('<path d="m14.5 5 4.5 4.5L8.5 20H4v-4.5L14.5 5ZM12.8 6.7l4.5 4.5"/>'),
+  chevR:    I('<path d="m9 5.5 6.5 6.5L9 18.5"/>'),
+  chevL:    I('<path d="M15 5.5 8.5 12 15 18.5"/>'),
+  check:    I('<path d="m5 13 4.5 4.5L19 7" stroke-width="2"/>'),
+  clock:    I('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+  car:      I('<path d="M5 12 6.6 7.3A2 2 0 0 1 8.5 6h7a2 2 0 0 1 1.9 1.3L19 12M5 12h14a1.5 1.5 0 0 1 1.5 1.5V17h-2M5 12a1.5 1.5 0 0 0-1.5 1.5V17h2M7.5 17h9"/><circle cx="7.5" cy="17" r="1.6"/><circle cx="16.5" cy="17" r="1.6"/>'),
+  moon:     I('<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>'),
+  bolt:     I('<path d="M13 3 5 13.5h5L11 21l8-10.5h-5L13 3Z"/>'),
+};
+
+/* ============ screen templates ============ */
+const S = {};
+
+/* ---------------- TODAY ---------------- */
+S.today = `
+  <div class="pagehead">
+    <div class="overline">Saturday, July 18</div>
+    <h1 class="editorial">Good morning, Ben.</h1>
+    <div class="meta-row">
+      <div class="meta-chip">${ic.sun}<span><b>72°</b> · Clear</span></div>
+      <div class="meta-chip"><span class="ring"><i></i></span><span>Energy <b>82</b> · Rested</span></div>
+    </div>
+  </div>
+
+  <div class="sectionlabel">Today’s brief</div>
+  <div class="card brief">
+    <div class="brief-tag"><span class="spark">${ic.spark}</span><span>Written for you</span></div>
+    <span class="lede">You slept 7h 42m — enough for real focus this morning. Your calendar stays quiet until lunch with Sarah, which makes the next two hours the right window to finish the Hartley proposal you’ve been circling. Two birthdays land this week, and dining is at 72% of budget with two weeks left — worth a glance, not a worry.</span>
+  </div>
+
+  <div class="sectionlabel">Priorities <span style="letter-spacing:0;text-transform:none;font-weight:500">5 today — that’s all</span></div>
+  <div class="card stack" id="prios">
+    ${[
+      ['Draft the Hartley proposal','Best window is now — calendar’s clear until 11:30'],
+      ['Call Mom','Saturdays after 2 usually reach her'],
+      ['Upper-body workout','Recovery is up — you’re cleared for a hard one'],
+      ['Pick up prescription','CVS on Lincoln closes at 6'],
+      ['Ten minutes with the dining budget','72% used at mid-month'],
+    ].map((p,i)=>`
+      <div class="prio" data-i="${i}">
+        <span class="tick">${ic.check}</span>
+        <span><span class="p-title">${p[0]}</span><span class="p-why" style="display:block">${p[1]}</span></span>
+      </div>`).join('')}
+  </div>
+
+  <div class="sectionlabel">Your day, in order</div>
+  <div class="card" style="padding:8px 16px 10px">
+    <div class="timeline">
+      <div class="tl-item past">
+        <div class="t">7:30</div><div class="rail"><span class="dot"></span></div>
+        <div class="tl-body"><div class="tl-title">Morning walk</div><div class="tl-sub">2.1 mi with Cooper — done</div></div>
+      </div>
+      <div class="tl-item now">
+        <div class="t">9:00</div><div class="rail"><span class="dot"></span></div>
+        <div class="tl-body"><div class="tl-title">Focus — Hartley proposal</div><div class="tl-sub">Protected time · phone on Do Not Disturb</div>
+        <span class="tl-note">${ic.spark} You write best before noon — this block is why</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="t">12:30</div><div class="rail"><span class="dot"></span></div>
+        <div class="tl-body"><div class="tl-title">Lunch with Sarah</div><div class="tl-sub">Gjusta, Venice</div>
+        <span class="tl-note amber">${ic.car} Leave by 12:05 — 22 min with traffic</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="t">3:00</div><div class="rail"><span class="dot"></span></div>
+        <div class="tl-body"><div class="tl-title">Pick up prescription</div><div class="tl-sub">CVS, Lincoln Blvd · closes 6:00</div></div>
+      </div>
+      <div class="tl-item">
+        <div class="t">4:30</div><div class="rail"><span class="dot"></span></div>
+        <div class="tl-body"><div class="tl-title">Upper-body workout</div><div class="tl-sub">45 min · garage gym</div>
+        <span class="tl-note sage">${ic.bolt} Recovery 82% — go heavy today</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="t">7:00</div><div class="rail"><span class="dot"></span></div>
+        <div class="tl-body"><div class="tl-title">Dinner at home</div><div class="tl-sub">The salmon in the fridge is best by tomorrow</div></div>
+      </div>
+      <div class="tl-item">
+        <div class="t">9:45</div><div class="rail"><span class="dot"></span></div>
+        <div class="tl-body"><div class="tl-title">Wind down</div>
+        <span class="tl-note">${ic.moon} Up past midnight twice this week — tonight’s a good reset</span></div>
+      </div>
+    </div>
+  </div>
+`;
+
+/* ---------------- LIFE ---------------- */
+const area = (icon, cls, name, sum, target='') =>
+  `<div class="area" ${target?`data-push="${target}"`:''}>
+     <span class="a-icon ${cls}">${icon}</span>
+     <span class="a-body"><span class="a-name">${name}</span><span class="a-sum" style="display:block">${sum}</span></span>
+     <span class="chev">${ic.chevR}</span></div>`;
+
+S.life = `
+  <div class="pagehead">
+    <div class="overline">Life</div>
+    <h1 class="editorial">Everything, quietly watched.</h1>
+    <div class="sub">Eleven areas. Summaries, not statistics.</div>
+  </div>
+
+  <div class="sectionlabel">Areas</div>
+  <div class="card stack areas">
+    ${area(ic.heart,'sage','Health','Recovery up · sleep improving','health')}
+    ${area(ic.people,'blue','Family & Friends','Mom’s birthday in 12 days','people')}
+    ${area(ic.case,'','Career','Proposal 70% · due Tuesday')}
+    ${area(ic.coins,'amber','Finances','On plan · dining running warm','finance')}
+    ${area(ic.dumbbell,'','Fitness','3 of 4 workouts · deload Monday')}
+    ${area(ic.grad,'','Learning','Italian streak: 9 days')}
+    ${area(ic.house,'','Home','Insurance renews in 9 days')}
+    ${area(ic.plane,'blue','Travel','Japan 64% · fares dip in Oct')}
+    ${area(ic.bookOpen,'','Reading','14 of 25 · ahead of pace')}
+    ${area(ic.leaf,'sage','Faith','Four quiet mornings this week')}
+  </div>
+
+  <div class="sectionlabel">Life missions</div>
+  <div class="card mission">
+    <div class="m-top"><span class="m-name">Visit Japan</span><span class="m-mom up">Rising</span></div>
+    <div class="m-prog">$8,960 of $14,000 saved · spring trip</div>
+    <div class="m-bar"><i style="width:64%"></i></div>
+    <div class="m-next">${ic.spark}<p><b>Next:</b> fares to Tokyo dip in October — set the alert now and this books itself.</p></div>
+  </div>
+  <div class="card mission">
+    <div class="m-top"><span class="m-name">Read 25 books</span><span class="m-mom steady">Steady</span></div>
+    <div class="m-prog">14 finished · three ahead of pace</div>
+    <div class="m-bar"><i style="width:56%;background:var(--sage)"></i></div>
+    <div class="m-next">${ic.spark}<p><b>Next:</b> twenty pages tonight keeps the evening-reading streak at twelve days.</p></div>
+  </div>
+  <div class="card mission">
+    <div class="m-top"><span class="m-name">Lose 20 pounds</span><span class="m-mom low">Needs attention</span></div>
+    <div class="m-prog">11 down · flat for two weeks</div>
+    <div class="m-bar"><i style="width:55%;background:var(--amber)"></i></div>
+    <div class="m-next">${ic.spark}<p>Plateaus in your history break with sleep, not harder workouts. Protect the 9:45 wind-down this week and re-weigh Friday.</p></div>
+  </div>
+  <div class="card mission" style="margin-bottom:8px">
+    <div class="m-top"><span class="m-name">Conversational Italian</span><span class="m-mom up">Rising</span></div>
+    <div class="m-prog">9-day streak · 41 hours total</div>
+    <div class="m-bar"><i style="width:38%"></i></div>
+    <div class="m-next">${ic.spark}<p><b>Next:</b> you’re past the flashcard stage — try one episode of <i>Un Giorno in Italia</i> this weekend.</p></div>
+  </div>
+`;
+
+/* ---------------- HEALTH (push) ---------------- */
+S.health = `
+  <div class="pushhead"><button class="backbtn" data-back>${ic.chevL} Life</button></div>
+  <div class="pagehead" style="padding-top:4px">
+    <h1 class="editorial">Health</h1>
+    <div class="sub">This week, read for you.</div>
+  </div>
+  <div class="card" style="padding:6px 16px">
+    <div class="insight"><span class="i-dot"></span><p>Recovery is up 14% this week.<span class="why">Three nights over 7½ hours did it.</span></p></div>
+    <div class="insight info"><span class="i-dot"></span><p>Resting heart rate keeps trending down — 54 this morning.</p></div>
+    <div class="insight watch"><span class="i-dot"></span><p>Screen time after 10 PM is creeping up.<span class="why">It cost you about 40 minutes of sleep on Tuesday.</span></p></div>
+    <div class="insight"><span class="i-dot"></span><p>You’re likely ready for a hard workout tomorrow.</p></div>
+    <div class="insight info"><span class="i-dot"></span><p>You consistently sleep better on lifting days.<span class="why">True for 11 of the last 13.</span></p></div>
+  </div>
+  <div class="split">
+    <div class="card mini-fig big-figure"><div class="bf-label">Sleep, avg</div><div class="bf-num">7h 22m</div><div class="bf-sub">up 31 min vs last week</div></div>
+    <div class="card mini-fig big-figure"><div class="bf-label">Resting HR</div><div class="bf-num">54</div><div class="bf-sub">two-month low</div></div>
+  </div>
+  <div class="sectionlabel">The week in one paragraph</div>
+  <div class="card weekly brief" style="padding:18px">
+    <p>The pattern is simple and it’s working: lift, sleep, repeat. Your body is responding to the earlier nights faster than it did in the spring. If you protect the wind-down through the weekend, next week starts from a higher floor than any week this month.</p>
+  </div>
+`;
+
+/* ---------------- FINANCE (push) ---------------- */
+S.finance = `
+  <div class="pushhead"><button class="backbtn" data-back>${ic.chevL} Life</button></div>
+  <div class="pagehead" style="padding-top:4px">
+    <h1 class="editorial">Finances</h1>
+    <div class="sub">On plan. One thing running warm.</div>
+  </div>
+  <div class="card big-figure">
+    <div class="bf-label">Net worth</div>
+    <div class="bf-num">$412,800</div>
+    <div class="bf-delta">▲ $6,140 this month · investments up 4.2% this quarter</div>
+  </div>
+  <div class="split">
+    <div class="card mini-fig big-figure"><div class="bf-label">Spent in July</div><div class="bf-num">$3,180</div><div class="bf-sub">of $5,400 planned</div></div>
+    <div class="card mini-fig big-figure"><div class="bf-label">Safe to spend</div><div class="bf-num">$92<span style="font-size:15px;color:var(--mut)">/day</span></div><div class="bf-sub">through July 31</div></div>
+  </div>
+  <div class="sectionlabel">Budgets that matter right now</div>
+  <div class="card" style="padding:6px 16px">
+    <div class="budget-row watch">
+      <div class="b-top"><b>Dining out</b><span>$432 of $600</span></div>
+      <div class="b-bar"><i style="width:72%"></i></div>
+      <p style="font-size:13px;color:var(--ink-2);margin-top:8px">72% used at mid-month. One home-cooked weekend puts this back on plan.</p>
+    </div>
+    <div class="budget-row"><div class="b-top"><b>Groceries</b><span>$264 of $550</span></div><div class="b-bar"><i style="width:48%"></i></div></div>
+    <div class="budget-row"><div class="b-top"><b>Everything else</b><span>on pace</span></div><div class="b-bar"><i style="width:41%;background:var(--sage)"></i></div></div>
+  </div>
+  <div class="sectionlabel">Coming up</div>
+  <div class="card" style="padding:6px 16px">
+    <div class="bill"><span class="b-when"><b>21</b><span>Jul</span></span><span><span class="b-name" style="display:block">Mortgage</span><span class="b-sub">autopay on</span></span><span class="b-amt">$2,850</span></div>
+    <div class="bill"><span class="b-when"><b>24</b><span>Jul</span></span><span><span class="b-name" style="display:block">Car insurance renews</span><span class="b-sub">a comparable quote is $19/mo lower</span></span><span class="b-amt">$164</span></div>
+    <div class="bill"><span class="b-when"><b>1</b><span>Aug</span></span><span><span class="b-name" style="display:block">Subscriptions</span><span class="b-sub">3 renew · unchanged for 6 months</span></span><span class="b-amt">$41</span></div>
+  </div>
+  <div class="sectionlabel">Worth knowing</div>
+  <div class="card weekly brief" style="padding:18px">
+    <p>At your current savings rate you’ll reach the Japan goal three months early. If you’d rather keep the date, you could ease monthly savings by $180 — or keep the pace and fly business on points.</p>
+  </div>
+`;
+
+/* ---------------- PEOPLE (push) ---------------- */
+const person = (init, color, name, rel, flagCls, flagIcon, flag, push='') => `
+  <div class="person" ${push?`data-push="${push}"`:''}>
+    <span class="pavatar" style="background:${color}">${init}</span>
+    <div class="p-name">${name}</div><div class="p-rel">${rel}</div>
+    <span class="p-flag ${flagCls}">${flagIcon} ${flag}</span>
+  </div>`;
+S.people = `
+  <div class="pushhead"><button class="backbtn" data-back>${ic.chevL} Life</button></div>
+  <div class="pagehead" style="padding-top:4px">
+    <h1 class="editorial">Your people</h1>
+    <div class="sub">Eight who matter most. Two could use you this week.</div>
+  </div>
+  <div class="people" style="margin-top:6px">
+    ${person('M','#8A7355','Mom','Family','warm',ic.phone,'Call Sunday?')}
+    ${person('A','#5B6E86','Alex Meyer','Close friend','warm',ic.clock,'37 days quiet','alex')}
+    ${person('S','#77836B','Sarah Kim','Friend','cool',ic.cake,'Birthday Thu')}
+    ${person('D','#8A7355','Dad','Family','ok',ic.check,'Talked Sunday')}
+    ${person('M','#5B6E86','Marcus Hill','Friend','ok',ic.check,'Saw last week')}
+    ${person('J','#77836B','Jess + Theo','Alex’s family','',ic.gift,'Theo turns 6')}
+  </div>
+  <div class="sectionlabel">Noticed</div>
+  <div class="card" style="padding:6px 16px">
+    <div class="insight"><span class="i-dot"></span><p>Your parents usually appreciate a Sunday afternoon call — you’ve reached them 6 of the last 7.</p></div>
+    <div class="insight watch"><span class="i-dot"></span><p>You and Alex haven’t talked since his promotion news. He’ll want to tell you how it’s going.</p></div>
+  </div>
+`;
+
+/* ---------------- PERSON: ALEX (push) ---------------- */
+S.alex = `
+  <div class="pushhead"><button class="backbtn" data-back>${ic.chevL} People</button></div>
+  <div class="pd-hero">
+    <span class="pavatar" style="background:#5B6E86">A</span>
+    <h2>Alex Meyer</h2>
+    <div class="pd-sub">Close friend · 37 days since you last talked</div>
+    <div class="actions-row" style="max-width:320px;margin:16px auto 0">
+      <button class="act primary">Text Alex</button><button class="act">Call</button><button class="act">Log a chat</button>
+    </div>
+  </div>
+  <div class="sectionlabel">Between you</div>
+  <div class="card" style="padding:6px 16px">
+    <div class="kv"><span class="k">Last conversation</span><span class="v">Jun 11 — his promotion news</span></div>
+    <div class="kv"><span class="k">Birthday</span><span class="v">Nov 3 · turns 39</span></div>
+    <div class="kv"><span class="k">Family</span><span class="v">Jess · Theo (5) &amp; June (2)</span></div>
+    <div class="kv"><span class="k">Gift ideas</span><span class="v">Pour-over kit · Dodgers tickets</span></div>
+    <div class="kv"><span class="k">His spot</span><span class="v">Bavel — brings it up constantly</span></div>
+    <div class="kv"><span class="k">Your rhythm</span><span class="v">Aim: monthly</span></div>
+  </div>
+  <div class="sectionlabel">A good opener</div>
+  <div class="card weekly brief" style="padding:18px">
+    <p>He mentioned training for a half marathon in your last call. Ask how the running is going — you two do your best catching up on long walks anyway.</p>
+  </div>
+`;
+
+/* ---------------- JOURNAL ---------------- */
+S.journal = `
+  <div class="pagehead">
+    <div class="overline">Saturday, July 18</div>
+    <h1 class="editorial">Journal</h1>
+  </div>
+  <div class="card j-compose">
+    <div class="brief-tag"><span class="spark">${ic.spark}</span><span>Tonight’s prompt</span></div>
+    <div class="prompt">The proposal has been sitting heavy all week. What would make today feel finished?</div>
+    <div class="j-modes">
+      <button class="jmode primary">${ic.pen} Write</button>
+      <button class="jmode">${ic.mic} Speak</button>
+      <button class="jmode">${ic.camera} Photo</button>
+    </div>
+  </div>
+  <div class="searchbar">${ic.search}<span>Ask your journal — “when did I last mention burnout?”</span></div>
+
+  <div class="sectionlabel">This week, summarized</div>
+  <div class="card weekly brief" style="padding:18px">
+    <div class="brief-tag"><span class="spark">${ic.spark}</span><span>Weekly reflection</span></div>
+    <p>A steadier week than it felt. You wrote three times, all at night, and work sat heavy in the early entries — then lifted after Wednesday’s walk with Marcus. Sleep shows up in everything: your two best days followed your two best nights.</p>
+  </div>
+
+  <div class="sectionlabel">Entries</div>
+  <div class="card jentry">
+    <div class="je-head"><span class="je-day">Friday</span><span class="je-mood">Tired, but lighter</span><span class="je-meta">${ic.moon} 68° · home</span></div>
+    <p class="je-text">Long week. Shipped the deck, said no to the Thursday thing and didn’t regret it. I keep re-learning that the anxious version of me on Monday is a bad forecaster…</p>
+  </div>
+  <div class="card jentry">
+    <div class="je-head"><span class="je-day">Wednesday</span><span class="je-mood">Content</span><span class="je-meta">${ic.sun} Point Dume</span></div>
+    <p class="je-text">Walked the bluff with Marcus after work. Talked about his dad, the diagnosis, how he’s carrying it. Grateful in the specific way, not the vague way.</p>
+    <div class="je-photo"><svg class="ph" viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice"><rect width="400" height="120" fill="#D8D3C4"/><rect y="70" width="400" height="50" fill="#A8A08B"/><path d="M0 74 L90 40 L170 74 Z" fill="#8F8873"/><path d="M120 74 L230 28 L340 74 Z" fill="#7C7663"/><circle cx="318" cy="30" r="13" fill="#EFEAD9"/><rect y="70" width="400" height="6" fill="#B9B19A"/></svg></div>
+  </div>
+  <div class="card jentry" style="margin-bottom:8px">
+    <div class="je-head"><span class="je-day">Sunday</span><span class="je-mood">Grateful</span><span class="je-meta">${ic.phone} 45 min</span></div>
+    <p class="je-text">Called Dad. He told the story about the ’88 Datsun again and I let him, because someday I’ll pay money to hear it one more time.</p>
+  </div>
+`;
+
+/* ---------------- INBOX ---------------- */
+S.inbox = `
+  <div class="pagehead">
+    <div class="overline">Inbox</div>
+    <h1 class="editorial">Five need you.</h1>
+    <div class="sub">The rest is handled quietly.</div>
+  </div>
+  <div class="sectionlabel">Today</div>
+  <div class="card stack">
+    <div class="inb"><span class="a-icon amber">${ic.doc}</span>
+      <div><div class="in-title">Electric bill — $184, due Monday</div><div class="in-sub">LADWP · arrived Thursday</div>
+      <div class="in-ai">Autopay is off for this one — want it on?</div>
+      <div class="in-acts"><button>Pay now</button><button>Turn on autopay</button><button class="quiet">Later</button></div></div></div>
+    <div class="inb"><span class="a-icon blue">${ic.people}</span>
+      <div><div class="in-title">RSVP — Dana’s dinner, next Saturday</div><div class="in-sub">Asked Tuesday · she’ll want a headcount soon</div>
+      <div class="in-ai">Your evening is free — the drive is 25 minutes</div>
+      <div class="in-acts"><button>Say yes</button><button class="quiet">Decline politely</button></div></div></div>
+  </div>
+  <div class="sectionlabel">This week</div>
+  <div class="card stack">
+    <div class="inb"><span class="a-icon sage">${ic.cake}</span>
+      <div><div class="in-title">Sarah’s birthday — Thursday</div><div class="in-sub">Turning 34</div>
+      <div class="in-ai">The ceramics class you saved in May fits her — $65, two seats left Saturday</div>
+      <div class="in-acts"><button>Book it</button><button class="quiet">Just send a note</button></div></div></div>
+    <div class="inb"><span class="a-icon">${ic.car}</span>
+      <div><div class="in-title">Car insurance renews July 24</div><div class="in-sub">$164/mo with Meridian</div>
+      <div class="in-ai">A comparable policy is running $19/mo lower — 10 minutes to check</div>
+      <div class="in-acts"><button>Review</button><button class="quiet">Keep as is</button></div></div></div>
+    <div class="inb"><span class="a-icon">${ic.pill}</span>
+      <div><div class="in-title">Prescription ready for pickup</div><div class="in-sub">CVS, Lincoln Blvd</div>
+      <div class="in-ai">Already on today’s plan — 3:00, after lunch</div></div></div>
+  </div>
+  <div class="handled">Also this week, without you: filed 2 documents, archived 14 promotions,<br>confirmed 3 subscriptions unchanged. Nothing needed your attention.</div>
+`;
+
+/* ---------------- ASSISTANT ---------------- */
+S.assistant = `
+  <div class="pagehead">
+    <div class="overline">Assistant</div>
+    <h1 class="editorial">Seen, not searched.</h1>
+    <div class="sub">It knows the whole picture. It speaks when useful.</div>
+  </div>
+  <div class="sectionlabel" style="margin-top:18px">This morning</div>
+  <div class="card asst-card notice">
+    <div class="a-kind"><i></i><span>Noticed</span></div>
+    <p>You haven’t checked in with Mike in six weeks — unusual for you two. Thursday evening is open for both of you.</p>
+    <div class="a-act"><button class="chip-act">Suggest Thursday to Mike</button></div>
+  </div>
+  <div class="card asst-card">
+    <div class="a-kind"><i></i><span>Pattern</span></div>
+    <p>You tend to spend more on days you sleep under six hours. Yesterday was one — worth a light hand with the card today.</p>
+  </div>
+  <div class="card asst-card">
+    <div class="a-kind"><i></i><span>Ahead of you</span></div>
+    <p>No workouts are planned before Friday. Tomorrow at 4 is open, and recovery says you’re ready.</p>
+    <div class="a-act"><button class="chip-act">Hold 4 PM tomorrow</button></div>
+  </div>
+  <div class="card asst-card notice">
+    <div class="a-kind"><i></i><span>Tonight</span></div>
+    <p>This would be a good evening for an early bedtime — nothing on the calendar, and the week ahead is heavier than this one.</p>
+    <div class="a-act"><button class="chip-act">Wind down at 9:30</button></div>
+  </div>
+  <div class="card asst-card warm" style="margin-bottom:76px">
+    <div class="a-kind"><i></i><span>For what it’s worth</span></div>
+    <p>You’ve accomplished more this week than you realize. The proposal is the last big rock — and you’ve already moved the others.</p>
+  </div>
+`;
+
+/* ============ router ============ */
+const TABS = [
+  ['today','Today',ic.sun],
+  ['life','Life',ic.leaf],
+  ['journal','Journal',ic.book],
+  ['inbox','Inbox',ic.tray,5],
+  ['assistant','Assistant',ic.spark],
+];
+const PUSH = { health:'life', finance:'life', people:'life', alex:'people' };
+const stage = document.getElementById('stage');
+const tabbar = document.getElementById('tabbar');
+
+Object.keys(S).forEach(k => {
+  const el = document.createElement('div');
+  el.className = 'screen' + (PUSH[k] ? ' push' : '');
+  el.id = 'sc-' + k;
+  el.innerHTML = S[k];
+  stage.appendChild(el);
+});
+/* assistant ask bar lives outside the scroll so it floats */
+const ask = document.createElement('div');
+ask.className = 'ask'; ask.id = 'askbar'; ask.style.display = 'none';
+ask.innerHTML = ic.search + '<span>Ask about anything in your life…</span><span class="mic">' + ic.mic + '</span>';
+stage.appendChild(ask);
+
+tabbar.innerHTML = TABS.map(([k,label,icon,badge]) =>
+  `<button data-tab="${k}">${badge?`<span class="badge">${badge}</span>`:''}${icon}<span>${label}</span></button>`).join('');
+
+let tab = 'today', pushed = [];
+function paint(){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  const top = pushed.length ? pushed[pushed.length-1] : tab;
+  document.getElementById('sc-'+top).classList.add('on');
+  if (pushed.length) document.getElementById('sc-'+tab).classList.add('on'); /* keep base under push */
+  document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.getElementById('askbar').style.display = (top === 'assistant') ? 'flex' : 'none';
+}
+tabbar.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (tab === b.dataset.tab && pushed.length){ pushed = []; }
+  tab = b.dataset.tab; pushed = []; paint();
+  document.getElementById('sc-'+tab).scrollTop = 0;
+});
+stage.addEventListener('click', e => {
+  const p = e.target.closest('[data-push]');
+  if (p){ pushed.push(p.dataset.push); paint();
+    document.getElementById('sc-'+p.dataset.push).scrollTop = 0; return; }
+  if (e.target.closest('[data-back]')){ pushed.pop(); paint(); return; }
+  const pr = e.target.closest('.prio');
+  if (pr) pr.classList.toggle('done');
+});
+paint();
+</script>
+</body>
+</html>

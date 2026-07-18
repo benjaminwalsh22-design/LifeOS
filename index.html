@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Life OS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Life OS">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%233987e5'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' font-family='system-ui' fill='white' font-weight='700'%3EL%3C/text%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #232322;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --hairline: #2c2c2a;
+  --border: rgba(255,255,255,0.10);
+  --accent: #3987e5;
+  --accent-soft: rgba(57,135,229,0.16);
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --gold: #c98500;
+  --violet: #9085e9;
+  --aqua: #199e70;
+  --magenta: #d55181;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --hairline: #e1e0d9;
+  --border: rgba(11,11,11,0.10);
+  --accent: #2a78d6;
+  --accent-soft: rgba(42,120,214,0.12);
+  --gold: #eda100;
+  --violet: #4a3aa7;
+  --aqua: #1baf7a;
+  --magenta: #e87ba4;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  overscroll-behavior-y: none;
+}
+.app { max-width: 520px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+header.topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--page) 88%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  padding: calc(env(safe-area-inset-top) + 14px) 20px 10px;
+  border-bottom: 1px solid var(--hairline);
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.topbar h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.topbar .date { font-size: 13px; color: var(--muted); font-weight: 500; }
+main { flex: 1; padding: 16px 16px calc(env(safe-area-inset-bottom) + 92px); }
+.view { display: none; animation: fade .18s ease; }
+.view.active { display: block; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ---- cards & sections ---- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.section-head { display: flex; align-items: center; justify-content: space-between; margin: 4px 2px 10px; }
+.section-head h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.section-head .action { font-size: 13px; font-weight: 600; color: var(--accent); background: none; border: none; cursor: pointer; padding: 4px 6px; }
+.empty { color: var(--muted); font-size: 14px; padding: 6px 2px; }
+
+/* ---- greeting ---- */
+.greeting { margin: 6px 2px 18px; }
+.greeting .hi { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.greeting .sub { font-size: 14px; color: var(--ink-2); margin-top: 2px; }
+
+/* ---- attention list ---- */
+.attn { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.attn-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px; padding: 12px 14px; font-size: 14px;
+}
+.attn-item.warn { border-left-color: var(--warning); }
+.attn-item.birthday { border-left-color: var(--magenta); }
+.attn-item .icon { flex: 0 0 auto; width: 20px; height: 20px; color: var(--ink-2); }
+.attn-item .txt b { font-weight: 650; }
+.attn-item .txt .sub { color: var(--muted); font-size: 12.5px; }
+.attn-item button.mini {
+  margin-left: auto; flex: 0 0 auto;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); border: none; border-radius: 8px;
+  padding: 6px 10px; cursor: pointer;
+}
+
+/* ---- stat tiles ---- */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.tile {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 13px 14px; cursor: pointer; position: relative;
+}
+.tile .label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; display:flex; align-items:center; gap:6px;}
+.tile .dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.tile .value { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; color: var(--ink); }
+.tile .value .unit { font-size: 13px; font-weight: 500; color: var(--ink-2); margin-left: 3px; }
+.tile .hint { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+/* ---- schedule ---- */
+.weekstrip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 14px; }
+.day-pill {
+  text-align: center; padding: 8px 0 9px; border-radius: 12px; cursor: pointer;
+  border: 1px solid transparent; color: var(--ink-2);
+}
+.day-pill .dow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.day-pill .num { font-size: 17px; font-weight: 700; margin-top: 1px; }
+.day-pill.today .num { color: var(--accent); }
+.day-pill.sel { background: var(--accent); color: #fff; }
+.day-pill.sel .num, .day-pill.sel .dow { color: #fff; }
+.day-pill .marker { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); margin: 3px auto 0; opacity: 0; }
+.day-pill.has .marker { opacity: 1; }
+.day-pill.sel .marker { background: #fff; }
+.event {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+}
+.event .time { flex: 0 0 62px; font-size: 13px; font-weight: 650; color: var(--accent); padding-top: 2px; font-variant-numeric: tabular-nums; }
+.event .body { flex: 1; min-width: 0; }
+.event .title { font-size: 15px; font-weight: 600; }
+.event .notes { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.event.done .title { text-decoration: line-through; color: var(--muted); }
+.event .check {
+  flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%;
+  border: 1.5px solid var(--muted); background: none; cursor: pointer; margin-top: 1px;
+  display: flex; align-items: center; justify-content: center; color: transparent;
+}
+.event.done .check { background: var(--good); border-color: var(--good); color: #fff; }
+
+/* ---- friends ---- */
+.friend {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
+}
+.avatar {
+  flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px; color: #fff;
+}
+.friend .info { flex: 1; min-width: 0; }
+.friend .name { font-weight: 650; font-size: 15px; }
+.friend .meta { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.friend .meta .due { color: var(--warning); font-weight: 600; }
+.friend .meta .bday { color: var(--magenta); font-weight: 600; }
+.friend button.mini {
+  flex: 0 0 auto; font-size: 12px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); border: none; border-radius: 8px; padding: 7px 10px; cursor: pointer;
+}
+
+/* ---- journal ---- */
+.jentry {
+  display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 12px; margin-bottom: 10px; cursor: pointer;
+}
+.jentry .thumb {
+  flex: 0 0 64px; width: 64px; height: 64px; border-radius: 10px;
+  object-fit: cover; background: var(--surface-2); display:flex; align-items:center; justify-content:center; color: var(--muted);
+}
+.jentry .body { flex: 1; min-width: 0; }
+.jentry .jdate { font-size: 12px; font-weight: 600; color: var(--accent); }
+.jentry .jsum { font-size: 13.5px; color: var(--ink-2); margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.jentry .jmood { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.capture-box {
+  border: 1.5px dashed var(--hairline); border-radius: 16px; padding: 26px 16px;
+  text-align: center; color: var(--muted); cursor: pointer; margin-bottom: 14px; background: var(--surface);
+}
+.capture-box .big { font-size: 15px; font-weight: 600; color: var(--ink-2); margin-top: 8px; }
+.capture-box svg { width: 28px; height: 28px; color: var(--accent); }
+
+/* ---- forms & modals ---- */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 50;
+  display: none; align-items: flex-end; justify-content: center;
+}
+.overlay.open { display: flex; }
+.sheet {
+  background: var(--page); width: 100%; max-width: 520px;
+  border-radius: 20px 20px 0 0; padding: 18px 20px calc(env(safe-area-inset-bottom) + 20px);
+  max-height: 88vh; overflow-y: auto; border-top: 1px solid var(--border);
+}
+.sheet h3 { font-size: 17px; font-weight: 700; margin-bottom: 14px; }
+.field { margin-bottom: 13px; }
+.field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+.field input, .field textarea, .field select {
+  width: 100%; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 11px 12px; font-size: 16px; font-family: inherit;
+}
+.field textarea { min-height: 74px; resize: vertical; }
+.field input:focus, .field textarea:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn {
+  display: block; width: 100%; text-align: center;
+  background: var(--accent); color: #fff; font-size: 16px; font-weight: 650;
+  border: none; border-radius: 12px; padding: 13px; cursor: pointer; margin-top: 6px;
+}
+.btn.secondary { background: var(--surface-2); color: var(--ink); }
+.btn.danger { background: none; color: var(--critical); font-size: 14px; padding: 10px; }
+.btn:disabled { opacity: 0.5; }
+.sheet .closer { float: right; background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; padding: 0 2px; margin-top: -4px;}
+
+/* ---- tab bar ---- */
+nav.tabbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+  display: flex; justify-content: space-around;
+  max-width: 520px; margin: 0 auto;
+  background: color-mix(in srgb, var(--page) 86%, transparent);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--hairline);
+  padding: 8px 6px calc(env(safe-area-inset-bottom) + 8px);
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: none; border: none; color: var(--muted); cursor: pointer; font-family: inherit;
+}
+.tab svg { width: 23px; height: 23px; }
+.tab span { font-size: 10.5px; font-weight: 600; }
+.tab.active { color: var(--accent); }
+
+/* ---- misc ---- */
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom) + 100px);
+  background: var(--surface-2); color: var(--ink); font-size: 14px; font-weight: 600;
+  border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px;
+  z-index: 90; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.toast.show { opacity: 1; }
+.spinner {
+  width: 18px; height: 18px; border: 2.5px solid var(--accent-soft);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin .7s linear infinite; display: inline-block; vertical-align: -4px; margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.pill { font-size: 11.5px; font-weight: 600; color: var(--ink-2); background: var(--surface-2); border-radius: 999px; padding: 3px 10px; }
+.detail-photo { width: 100%; border-radius: 14px; margin-bottom: 14px; }
+.detail-block { margin-bottom: 14px; }
+.detail-block h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 5px; }
+.detail-block p { font-size: 14.5px; color: var(--ink-2); white-space: pre-wrap; }
+.notice { font-size: 12.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+.notice a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <h1 id="topTitle">Today</h1>
+    <div class="date" id="topDate"></div>
+  </header>
+  <main>
+    <!-- ============ TODAY ============ -->
+    <section class="view active" id="view-today">
+      <div class="greeting">
+        <div class="hi" id="greetHi">Hello</div>
+        <div class="sub" id="greetSub"></div>
+      </div>
+      <div class="attn" id="attnList"></div>
+      <div class="section-head"><h2>Daily numbers</h2><span class="action" style="cursor:default">tap to log</span></div>
+      <div class="tiles" id="tiles"></div>
+      <div class="section-head"><h2>Today's schedule</h2><button class="action" id="todayAddEvent">+ Add</button></div>
+      <div id="todayEvents"></div>
+      <div class="section-head" style="margin-top:18px"><h2>Journal</h2></div>
+      <div id="todayJournal"></div>
+    </section>
+
+    <!-- ============ SCHEDULE ============ -->
+    <section class="view" id="view-schedule">
+      <div class="weekstrip" id="weekstrip"></div>
+      <div class="section-head"><h2 id="schedDayLabel">Events</h2><button class="action" id="schedAddEvent">+ Add</button></div>
+      <div id="schedEvents"></div>
+    </section>
+
+    <!-- ============ FRIENDS ============ -->
+    <section class="view" id="view-friends">
+      <div class="section-head"><h2>Keep in touch</h2><button class="action" id="friendAdd">+ Add friend</button></div>
+      <div id="friendList"></div>
+    </section>
+
+    <!-- ============ JOURNAL ============ -->
+    <section class="view" id="view-journal">
+      <div class="capture-box" id="captureBox">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.8 7h-1A2.8 2.8 0 0 0 3 9.8v7.4A2.8 2.8 0 0 0 5.8 20h12.4a2.8 2.8 0 0 0 2.8-2.8V9.8A2.8 2.8 0 0 0 18.2 7h-1l-1.2-2.1A1.8 1.8 0 0 0 14.4 4H9.6a1.8 1.8 0 0 0-1.6.9L6.8 7Z"/><circle cx="12" cy="13" r="3.4"/></svg>
+        <div class="big">Photograph today's journal page</div>
+        <div style="font-size:12.5px;margin-top:3px">It'll be stored, transcribed &amp; analyzed</div>
+      </div>
+      <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+      <div class="section-head"><h2>Entries</h2></div>
+      <div id="journalList"></div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="view" id="view-settings">
+      <div class="card">
+        <div class="field"><label>Your name</label><input id="setName" placeholder="Benjamin"></div>
+        <div class="field"><label>Theme</label>
+          <select id="setTheme"><option value="dark">Dark</option><option value="light">Light</option></select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="field"><label>Anthropic API key (for journal AI analysis)</label>
+          <input id="setApiKey" type="password" placeholder="sk-ant-...">
+        </div>
+        <div class="notice">With a key, journal photos are transcribed, summarized and analyzed by Claude, directly from your phone to the Anthropic API — no other server involved. Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Leave blank to just store photos.</div>
+      </div>
+      <div class="card">
+        <button class="btn secondary" id="exportBtn">Export data backup (JSON)</button>
+        <button class="btn secondary" id="importBtn" style="margin-top:10px">Import backup</button>
+        <input type="file" id="importInput" accept="application/json" hidden>
+        <div class="notice">Everything lives on this device. Export occasionally to keep a backup — it includes journal photos.</div>
+        <button class="btn danger" id="wipeBtn">Erase all data</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab active" data-view="today">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m3 10.5 9-7 9 7V20a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 20v-9.5Z"/></svg>
+      <span>Today</span></button>
+    <button class="tab" data-view="schedule">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path stroke-linecap="round" d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>
+      <span>Schedule</span></button>
+    <button class="tab" data-view="friends">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path stroke-linecap="round" d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M15.5 6a3 3 0 1 1-1 5.8M16.5 14.6c2.2.4 3.6 2 4 4.9"/></svg>
+      <span>Friends</span></button>
+    <button class="tab" data-view="journal">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4.5A1.5 1.5 0 0 1 6.5 3h11A1.5 1.5 0 0 1 19 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-15Z"/><path stroke-linecap="round" d="M9 7.5h6M9 11h6M9 14.5h3.5"/></svg>
+      <span>Journal</span></button>
+    <button class="tab" data-view="settings">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.35a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09c0 .68.4 1.3 1.03 1.56a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.02c.26.62.88 1.03 1.56 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03Z"/></svg>
+      <span>Settings</span></button>
+  </nav>
+
+  <!-- modals -->
+  <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+/* Life OS v1 — single-file PWA. All data stays on-device
+   (localStorage for structured data, IndexedDB for photos). */
+
+// ---------- utils ----------
+const $ = id => document.getElementById(id);
+const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+const pad = n => String(n).padStart(2,'0');
+const dstr = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today = () => dstr(new Date());
+const parseD = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtDate = s => { const d = parseD(s); return DOW[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate(); };
+const daysBetween = (a,b) => Math.round((parseD(b)-parseD(a))/86400000);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtTime = t => { if(!t) return ''; let [h,m] = t.split(':').map(Number);
+  const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h+':'+pad(m)+' '+ap; };
+
+// ---------- persistence ----------
+const KEY = 'lifeos_v1';
+const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
+  catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
+const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'dark'},
+  events:[], friends:[], stats:{}, journal:[] };
+let DB;
+try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
+catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
+const save = () => store.setItem(KEY, JSON.stringify(DB));
+
+// IndexedDB for photos
+let _idb = null;
+function idb(){ return _idb || (_idb = new Promise((res, rej) => {
+  const r = indexedDB.open('lifeos', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('photos');
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+})); }
+async function putPhoto(id, blob){ const db = await idb(); return new Promise((res, rej) => {
+  const t = db.transaction('photos','readwrite'); t.objectStore('photos').put(blob, id);
+  t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function getPhoto(id){ const db = await idb(); return new Promise((res, rej) => {
+  const q = db.transaction('photos').objectStore('photos').get(id);
+  q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error); }); }
+async function delPhoto(id){ const db = await idb(); return new Promise((res, rej) => {
+  const t = db.transaction('photos','readwrite'); t.objectStore('photos').delete(id);
+  t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+
+// ---------- toast & sheet ----------
+let toastTimer;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600); }
+function openSheet(html){ $('sheet').innerHTML =
+  '<button class="closer" onclick="closeSheet()">&times;</button>' + html;
+  $('overlay').classList.add('open'); }
+function closeSheet(){ $('overlay').classList.remove('open'); $('sheet').innerHTML = ''; }
+$('overlay').addEventListener('click', e => { if (e.target === $('overlay')) closeSheet(); });
+
+// ---------- navigation ----------
+const VIEWS = { today:'Today', schedule:'Schedule', friends:'Friends', journal:'Journal', settings:'Settings' };
+let currentView = 'today';
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+function showView(v){ currentView = v;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-'+v));
+  $('topTitle').textContent = VIEWS[v];
+  renderAll(); }
+
+// ---------- friends logic ----------
+const AV_COLORS = ['#3987e5','#199e70','#d55181','#c98500','#9085e9','#d95926','#e66767','#008300'];
+const avColor = name => AV_COLORS[[...name].reduce((a,c) => a + c.charCodeAt(0), 0) % AV_COLORS.length];
+function nextBirthday(bday){ // bday: YYYY-MM-DD; returns {days, dateStr} or null
+  if (!bday) return null;
+  const now = parseD(today());
+  const [ , m, d ] = bday.split('-').map(Number);
+  let next = new Date(now.getFullYear(), m-1, d);
+  if (next < now) next = new Date(now.getFullYear()+1, m-1, d);
+  return { days: Math.round((next - now)/86400000), label: MON[m-1]+' '+d };
+}
+function friendStatus(f){
+  const bd = nextBirthday(f.birthday);
+  const since = f.lastContact ? daysBetween(f.lastContact, today()) : null;
+  const overdue = f.cadence > 0 && (since === null || since >= f.cadence);
+  return { bd, since, overdue };
+}
+function markContacted(id){ const f = DB.friends.find(x => x.id === id);
+  if (f){ f.lastContact = today(); save(); renderAll(); toast('Nice — logged it'); } }
+
+// ---------- render: dashboard ----------
+const TILES = [
+  { key:'sleep',  label:'Sleep',  unit:'hrs',  dot:'var(--violet)', hint:'Fitbit — manual for now', ph:'e.g. 7.5' },
+  { key:'steps',  label:'Steps',  unit:'',     dot:'var(--aqua)',   hint:'Fitbit — manual for now', ph:'e.g. 8200' },
+  { key:'budget', label:'Budget', unit:'',     dot:'var(--good)',   hint:'YNAB left to spend',      ph:'e.g. $430 left' },
+  { key:'lakers', label:'Lakers', unit:'',     dot:'var(--gold)',   hint:'last game',               ph:'e.g. W 112–104' },
+];
+function renderToday(){
+  const t = today();
+  $('topDate').textContent = fmtDate(t);
+  const h = new Date().getHours();
+  const name = DB.profile.name || 'there';
+  $('greetHi').textContent = (h < 12 ? 'Good morning, ' : h < 18 ? 'Good afternoon, ' : 'Good evening, ') + name;
+  const evToday = DB.events.filter(e => e.date === t);
+  const nudges = DB.friends.filter(f => friendStatus(f).overdue);
+  const hasJournal = DB.journal.some(j => j.date === t);
+  const bits = [];
+  bits.push(evToday.length ? evToday.length + (evToday.length === 1 ? ' event' : ' events') : 'no events');
+  if (nudges.length) bits.push(nudges.length + (nudges.length === 1 ? ' follow-up' : ' follow-ups'));
+  bits.push(hasJournal ? 'journal logged' : 'journal not logged');
+  $('greetSub').textContent = bits.join(' · ');
+
+  // attention items
+  const items = [];
+  DB.friends.forEach(f => {
+    const { bd } = friendStatus(f);
+    if (bd && bd.days === 0) items.push({ cls:'birthday', html:
+      '<div class="txt"><b>It’s '+esc(f.name)+'’s birthday today!</b><div class="sub">Send some love</div></div>' +
+      '<button class="mini" onclick="markContacted(\''+f.id+'\')">Did it</button>',
+      icon:'M12 8v13M5 12h14M7.5 8c-1.4 0-2.5-1.1-2.5-2.5S6.1 3 7.5 3c2 0 4.5 2.5 4.5 5 0-2.5 2.5-5 4.5-5 1.4 0 2.5 1.1 2.5 2.5S17.9 8 16.5 8h-9ZM5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7' });
+    else if (bd && bd.days <= 14) items.push({ cls:'birthday', html:
+      '<div class="txt"><b>'+esc(f.name)+'’s birthday '+(bd.days === 1 ? 'tomorrow' : 'in '+bd.days+' days')+'</b><div class="sub">'+bd.label+'</div></div>',
+      icon:'M12 8v13M5 12h14M7.5 8c-1.4 0-2.5-1.1-2.5-2.5S6.1 3 7.5 3c2 0 4.5 2.5 4.5 5 0-2.5 2.5-5 4.5-5 1.4 0 2.5 1.1 2.5 2.5S17.9 8 16.5 8h-9ZM5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7' });
+  });
+  DB.friends.forEach(f => {
+    const { since, overdue } = friendStatus(f);
+    if (overdue) items.push({ cls:'warn', html:
+      '<div class="txt"><b>Reach out to '+esc(f.name)+'</b><div class="sub">'+(since === null ? 'no contact logged yet' : since+' days since last contact')+'</div></div>' +
+      '<button class="mini" onclick="markContacted(\''+f.id+'\')">Done</button>',
+      icon:'M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.9-.9L3 20l1-4.9a8.4 8.4 0 1 1 17-3.6Z' });
+  });
+  if (!hasJournal) items.push({ cls:'', html:
+    '<div class="txt"><b>No journal entry yet today</b><div class="sub">Snap a photo of your page</div></div>' +
+    '<button class="mini" onclick="showView(\'journal\')">Open</button>',
+    icon:'M5 4.5A1.5 1.5 0 0 1 6.5 3h11A1.5 1.5 0 0 1 19 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-15ZM9 7.5h6M9 11h6' });
+  $('attnList').innerHTML = items.length ? items.map(i =>
+    '<div class="attn-item '+i.cls+'"><svg class="icon" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="'+i.icon+'"/></svg>'+i.html+'</div>').join('')
+    : '<div class="attn-item" style="border-left-color:var(--good)"><div class="txt"><b>All caught up</b><div class="sub">Nothing needs your attention</div></div></div>';
+
+  // tiles
+  const st = DB.stats[t] || {};
+  $('tiles').innerHTML = TILES.map(tl => {
+    const v = st[tl.key];
+    return '<div class="tile" onclick="editTile(\''+tl.key+'\')">' +
+      '<div class="label"><span class="dot" style="background:'+tl.dot+'"></span>'+tl.label+'</div>' +
+      '<div class="value">'+(v ? esc(v)+(tl.unit ? '<span class="unit">'+tl.unit+'</span>' : '') : '<span style="color:var(--muted);font-size:18px">—</span>')+'</div>' +
+      '<div class="hint">'+tl.hint+'</div></div>';
+  }).join('');
+
+  // today's events + journal status
+  $('todayEvents').innerHTML = evToday.length ? evToday.slice().sort((a,b) => (a.time||'99').localeCompare(b.time||'99')).map(eventHTML).join('')
+    : '<div class="empty">Nothing scheduled. Enjoy the open day — or add something.</div>';
+  const jToday = DB.journal.filter(j => j.date === t);
+  $('todayJournal').innerHTML = jToday.length
+    ? jToday.map(j => '<div class="card" style="cursor:pointer" onclick="openEntry(\''+j.id+'\')"><div style="font-size:13px;font-weight:600;color:var(--good)">Logged today</div><div style="font-size:14px;color:var(--ink-2);margin-top:3px">'+esc(j.summary || j.note || 'Photo saved' + (j.status === 'analyzing' ? ' — analyzing…' : '')) +'</div></div>').join('')
+    : '<div class="empty">No entry yet.</div>';
+}
+function editTile(key){
+  const tl = TILES.find(x => x.key === key); const st = DB.stats[today()] || {};
+  openSheet('<h3>'+tl.label+'</h3>' +
+    '<div class="field"><label>'+tl.hint+'</label><input id="tileVal" placeholder="'+tl.ph+'" value="'+esc(st[key] || '')+'"></div>' +
+    '<button class="btn" onclick="saveTile(\''+key+'\')">Save</button>');
+  setTimeout(() => { const el = $('tileVal'); if (el) el.focus(); }, 60);
+}
+function saveTile(key){
+  const t = today(); DB.stats[t] = DB.stats[t] || {};
+  DB.stats[t][key] = $('tileVal').value.trim();
+  save(); closeSheet(); renderToday();
+}
+
+// ---------- render: schedule ----------
+let selDate = today();
+let weekOffset = 0;
+function weekDays(){
+  const base = parseD(today()); base.setDate(base.getDate() - base.getDay() + weekOffset*7);
+  return Array.from({length:7}, (_,i) => { const d = new Date(base); d.setDate(d.getDate()+i); return dstr(d); });
+}
+function renderSchedule(){
+  const days = weekDays();
+  if (!days.includes(selDate)) selDate = days[0];
+  const evDates = new Set(DB.events.map(e => e.date));
+  $('weekstrip').innerHTML = days.map(d => { const dt = parseD(d);
+    return '<div class="day-pill'+(d === selDate ? ' sel' : '')+(d === today() ? ' today' : '')+(evDates.has(d) ? ' has' : '')+'" onclick="selectDay(\''+d+'\')">' +
+      '<div class="dow">'+DOW[dt.getDay()]+'</div><div class="num">'+dt.getDate()+'</div><div class="marker"></div></div>';
+  }).join('');
+  $('schedDayLabel').innerHTML = '<span style="cursor:pointer" onclick="shiftWeek(-1)">‹&nbsp;</span> ' +
+    fmtDate(selDate) + ' <span style="cursor:pointer" onclick="shiftWeek(1)">&nbsp;›</span>';
+  const evs = DB.events.filter(e => e.date === selDate).sort((a,b) => (a.time||'99').localeCompare(b.time||'99'));
+  $('schedEvents').innerHTML = evs.length ? evs.map(eventHTML).join('') : '<div class="empty">Nothing on this day.</div>';
+}
+function shiftWeek(n){ weekOffset += n; const days = weekDays(); selDate = days.includes(today()) ? today() : days[0]; renderSchedule(); }
+function selectDay(d){ selDate = d; renderSchedule(); }
+function eventHTML(e){
+  return '<div class="event'+(e.done ? ' done' : '')+'">' +
+    '<button class="check" onclick="toggleEvent(\''+e.id+'\');event.stopPropagation()">' +
+    '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg></button>' +
+    '<div class="time">'+(e.time ? fmtTime(e.time) : 'all day')+'</div>' +
+    '<div class="body" style="cursor:pointer" onclick="editEvent(\''+e.id+'\')"><div class="title">'+esc(e.title)+'</div>' +
+    (e.notes ? '<div class="notes">'+esc(e.notes)+'</div>' : '') + '</div></div>';
+}
+function toggleEvent(id){ const e = DB.events.find(x => x.id === id); if (e){ e.done = !e.done; save(); renderAll(); } }
+function editEvent(id){
+  const e = id ? DB.events.find(x => x.id === id) : null;
+  openSheet('<h3>'+(e ? 'Edit event' : 'New event')+'</h3>' +
+    '<div class="field"><label>Title</label><input id="evTitle" placeholder="Gym, dinner with Mom…" value="'+esc(e ? e.title : '')+'"></div>' +
+    '<div class="row2"><div class="field"><label>Date</label><input id="evDate" type="date" value="'+(e ? e.date : selDate)+'"></div>' +
+    '<div class="field"><label>Time</label><input id="evTime" type="time" value="'+(e ? e.time||'' : '')+'"></div></div>' +
+    '<div class="field"><label>Notes (optional)</label><textarea id="evNotes">'+esc(e ? e.notes||'' : '')+'</textarea></div>' +
+    '<button class="btn" onclick="saveEvent(\''+(e ? e.id : '')+'\')">Save</button>' +
+    (e ? '<button class="btn danger" onclick="deleteEvent(\''+e.id+'\')">Delete event</button>' : ''));
+  if (!e) setTimeout(() => { const el = $('evTitle'); if (el) el.focus(); }, 60);
+}
+function saveEvent(id){
+  const title = $('evTitle').value.trim(); if (!title){ toast('Give it a title'); return; }
+  const data = { title, date: $('evDate').value || today(), time: $('evTime').value, notes: $('evNotes').value.trim() };
+  if (id){ Object.assign(DB.events.find(x => x.id === id), data); }
+  else DB.events.push(Object.assign({ id: uid(), done: false }, data));
+  save(); closeSheet(); renderAll();
+}
+function deleteEvent(id){ DB.events = DB.events.filter(x => x.id !== id); save(); closeSheet(); renderAll(); }
+
+// ---------- render: friends ----------
+function renderFriends(){
+  if (!DB.friends.length){
+    $('friendList').innerHTML = '<div class="card"><b>Nobody here yet.</b><div style="font-size:14px;color:var(--ink-2);margin-top:4px">Add the people you want to stay close to — set their birthday and how often you want to be in touch, and the app will nudge you on the Today screen.</div></div>';
+    return;
+  }
+  const scored = DB.friends.map(f => { const s = friendStatus(f);
+    let score = 500 + (s.since || 0) - (f.cadence || 999);
+    if (s.overdue) score += 1000;
+    if (s.bd && s.bd.days <= 14) score += 2000 - s.bd.days;
+    return { f, s, score };
+  }).sort((a,b) => b.score - a.score);
+  $('friendList').innerHTML = scored.map(({f, s}) => {
+    const meta = [];
+    if (s.bd && s.bd.days === 0) meta.push('<span class="bday">Birthday today!</span>');
+    else if (s.bd && s.bd.days <= 14) meta.push('<span class="bday">Birthday '+(s.bd.days === 1 ? 'tomorrow' : 'in '+s.bd.days+'d')+'</span>');
+    else if (s.bd) meta.push('birthday '+s.bd.label);
+    if (s.overdue) meta.push('<span class="due">'+(s.since === null ? 'never logged' : s.since+'d since contact')+'</span>');
+    else if (s.since !== null) meta.push('talked '+(s.since === 0 ? 'today' : s.since+'d ago'));
+    if (f.cadence > 0) meta.push('every '+f.cadence+'d');
+    return '<div class="friend" onclick="editFriend(\''+f.id+'\')">' +
+      '<div class="avatar" style="background:'+avColor(f.name)+'">'+esc(f.name[0].toUpperCase())+'</div>' +
+      '<div class="info"><div class="name">'+esc(f.name)+'</div><div class="meta">'+meta.join(' · ')+'</div></div>' +
+      '<button class="mini" onclick="markContacted(\''+f.id+'\');event.stopPropagation()">Contacted</button></div>';
+  }).join('');
+}
+function editFriend(id){
+  const f = id ? DB.friends.find(x => x.id === id) : null;
+  const cads = [[7,'Weekly'],[14,'Every 2 weeks'],[30,'Monthly'],[60,'Every 2 months'],[90,'Quarterly'],[180,'Twice a year'],[0,'No cadence — birthdays only']];
+  openSheet('<h3>'+(f ? esc(f.name) : 'New friend')+'</h3>' +
+    '<div class="field"><label>Name</label><input id="frName" value="'+esc(f ? f.name : '')+'"></div>' +
+    '<div class="row2"><div class="field"><label>Birthday</label><input id="frBday" type="date" value="'+(f ? f.birthday||'' : '')+'"></div>' +
+    '<div class="field"><label>Stay in touch</label><select id="frCad">' +
+      cads.map(c => '<option value="'+c[0]+'"'+(f && f.cadence === c[0] ? ' selected' : (!f && c[0] === 30 ? ' selected' : ''))+'>'+c[1]+'</option>').join('') +
+    '</select></div></div>' +
+    '<div class="field"><label>Last contact</label><input id="frLast" type="date" value="'+(f ? f.lastContact||'' : today())+'"></div>' +
+    '<div class="field"><label>Notes</label><textarea id="frNotes" placeholder="Kids’ names, what you talked about last…">'+esc(f ? f.notes||'' : '')+'</textarea></div>' +
+    '<button class="btn" onclick="saveFriend(\''+(f ? f.id : '')+'\')">Save</button>' +
+    (f ? '<button class="btn danger" onclick="deleteFriend(\''+f.id+'\')">Remove</button>' : ''));
+  if (!f) setTimeout(() => { const el = $('frName'); if (el) el.focus(); }, 60);
+}
+function saveFriend(id){
+  const name = $('frName').value.trim(); if (!name){ toast('Name needed'); return; }
+  const data = { name, birthday: $('frBday').value, cadence: Number($('frCad').value),
+    lastContact: $('frLast').value, notes: $('frNotes').value.trim() };
+  if (id) Object.assign(DB.friends.find(x => x.id === id), data);
+  else DB.friends.push(Object.assign({ id: uid() }, data));
+  save(); closeSheet(); renderAll();
+}
+function deleteFriend(id){ DB.friends = DB.friends.filter(x => x.id !== id); save(); closeSheet(); renderAll(); }
+
+// ---------- journal ----------
+const thumbURLs = {};
+async function thumbURL(id){
+  if (thumbURLs[id]) return thumbURLs[id];
+  const b = await getPhoto(id); if (!b) return null;
+  return (thumbURLs[id] = URL.createObjectURL(b));
+}
+async function renderJournal(){
+  const list = DB.journal.slice().sort((a,b) => b.ts - a.ts);
+  if (!list.length){ $('journalList').innerHTML = '<div class="empty">No entries yet. Your journal photos and their analyses will live here.</div>'; return; }
+  const rows = await Promise.all(list.map(async j => {
+    const u = await thumbURL(j.id);
+    const status = j.status === 'analyzing' ? '<span class="spinner"></span>Analyzing…'
+      : j.status === 'error' ? '<span style="color:var(--serious)">Analysis failed — tap to retry</span>'
+      : esc(j.summary || j.note || 'Photo saved');
+    const moodBits = [j.mood, ...(j.themes||[]).slice(0,3)].filter(Boolean);
+    return '<div class="jentry" onclick="openEntry(\''+j.id+'\')">' +
+      (u ? '<img class="thumb" src="'+u+'" alt="">' : '<div class="thumb">—</div>') +
+      '<div class="body"><div class="jdate">'+fmtDate(j.date)+'</div>' +
+      '<div class="jsum">'+status+'</div>' +
+      (moodBits.length ? '<div class="jmood">'+moodBits.map(esc).join(' · ')+'</div>' : '') +
+      '</div></div>';
+  }));
+  $('journalList').innerHTML = rows.join('');
+}
+$('captureBox').addEventListener('click', () => $('photoInput').click());
+$('photoInput').addEventListener('change', async e => {
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  window._pendingPhoto = file;
+  openSheet('<h3>New journal entry</h3>' +
+    '<img src="'+url+'" class="detail-photo" style="max-height:38vh;object-fit:contain;background:var(--surface)">' +
+    '<div class="field"><label>Note (optional)</label><textarea id="jNote" placeholder="Anything to add beyond the page…"></textarea></div>' +
+    '<button class="btn" onclick="saveJournalEntry()">'+(DB.settings.apiKey ? 'Save &amp; analyze' : 'Save')+'</button>' +
+    (DB.settings.apiKey ? '' : '<div class="notice">Add an Anthropic API key in Settings and entries get transcribed, summarized and analyzed automatically.</div>'));
+});
+async function saveJournalEntry(){
+  const file = window._pendingPhoto; if (!file) return;
+  const id = uid();
+  const entry = { id, ts: Date.now(), date: today(), note: $('jNote').value.trim(),
+    transcription:'', summary:'', mood:'', themes:[], insight:'', status: DB.settings.apiKey ? 'analyzing' : 'saved' };
+  const blob = await resizeToBlob(file, 1600, 0.85);
+  await putPhoto(id, blob);
+  DB.journal.push(entry); save(); closeSheet();
+  window._pendingPhoto = null;
+  renderAll(); toast('Entry saved');
+  if (DB.settings.apiKey) analyzeEntry(id);
+}
+async function resizeToBlob(file, maxDim, q){
+  const img = await new Promise((res, rej) => { const i = new Image();
+    i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(res, 'image/jpeg', q));
+}
+const AI_PROMPT = 'This is a photo of a handwritten personal journal page. 1) Transcribe the handwriting as faithfully as you can (use [illegible] where unreadable). 2) Summarize the entry in 1-2 sentences. 3) Identify the overall mood in 1-3 words. 4) List up to 4 recurring themes/topics as short tags. 5) Offer one brief, kind, useful insight or observation (1-2 sentences, no platitudes). Respond with ONLY a JSON object: {"transcription": "...", "summary": "...", "mood": "...", "themes": ["..."], "insight": "..."}';
+async function analyzeEntry(id){
+  const m = DB.journal.find(j => j.id === id); if (!m) return;
+  const key = DB.settings.apiKey; if (!key){ toast('Add an API key in Settings first'); return; }
+  m.status = 'analyzing'; save(); renderJournal(); renderToday();
+  try {
+    const blob = await getPhoto(id);
+    const b64 = await new Promise((res, rej) => { const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(blob); });
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type':'application/json', 'x-api-key': key,
+        'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 2000,
+        messages: [{ role:'user', content: [
+          { type:'image', source:{ type:'base64', media_type:'image/jpeg', data: b64 } },
+          { type:'text', text: AI_PROMPT } ] }] })
+    });
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
+    let txt = (data.content || []).map(c => c.text || '').join('');
+    const s = txt.indexOf('{'), e2 = txt.lastIndexOf('}');
+    const j = JSON.parse(txt.slice(s, e2 + 1));
+    Object.assign(m, { transcription: j.transcription || '', summary: j.summary || '',
+      mood: j.mood || '', themes: Array.isArray(j.themes) ? j.themes : [], insight: j.insight || '', status: 'done' });
+    toast('Entry analyzed');
+  } catch (err) {
+    m.status = 'error'; console.error(err);
+    toast('Analysis failed — open the entry to retry');
+  }
+  save(); renderJournal(); renderToday();
+}
+async function openEntry(id){
+  const j = DB.journal.find(x => x.id === id); if (!j) return;
+  const u = await thumbURL(id);
+  openSheet('<h3>'+fmtDate(j.date)+'</h3>' +
+    (u ? '<img src="'+u+'" class="detail-photo">' : '') +
+    (j.status === 'analyzing' ? '<div class="detail-block"><p><span class="spinner"></span>Analyzing…</p></div>' : '') +
+    (j.summary ? '<div class="detail-block"><h4>Summary</h4><p>'+esc(j.summary)+'</p></div>' : '') +
+    (j.mood || (j.themes||[]).length ? '<div class="detail-block"><h4>Mood &amp; themes</h4><div class="pill-row">' +
+      [j.mood, ...(j.themes||[])].filter(Boolean).map(x => '<span class="pill">'+esc(x)+'</span>').join('') + '</div></div>' : '') +
+    (j.insight ? '<div class="detail-block"><h4>Reflection</h4><p>'+esc(j.insight)+'</p></div>' : '') +
+    (j.transcription ? '<div class="detail-block"><h4>Transcription</h4><p>'+esc(j.transcription)+'</p></div>' : '') +
+    (j.note ? '<div class="detail-block"><h4>Your note</h4><p>'+esc(j.note)+'</p></div>' : '') +
+    (j.status !== 'done' && j.status !== 'analyzing' ? '<button class="btn" onclick="analyzeEntry(\''+id+'\');closeSheet()">'+(DB.settings.apiKey ? 'Analyze with Claude' : 'Analyze (needs API key in Settings)')+'</button>' : '') +
+    '<button class="btn danger" onclick="deleteEntry(\''+id+'\')">Delete entry</button>');
+}
+async function deleteEntry(id){
+  DB.journal = DB.journal.filter(x => x.id !== id);
+  if (thumbURLs[id]){ URL.revokeObjectURL(thumbURLs[id]); delete thumbURLs[id]; }
+  await delPhoto(id); save(); closeSheet(); renderAll();
+}
+
+// ---------- settings ----------
+function applyTheme(){ document.documentElement.setAttribute('data-theme', DB.settings.theme || 'dark'); }
+function initSettings(){
+  $('setName').value = DB.profile.name || '';
+  $('setTheme').value = DB.settings.theme || 'dark';
+  $('setApiKey').value = DB.settings.apiKey || '';
+  $('setName').addEventListener('change', e => { DB.profile.name = e.target.value.trim(); save(); renderToday(); });
+  $('setTheme').addEventListener('change', e => { DB.settings.theme = e.target.value; save(); applyTheme(); });
+  $('setApiKey').addEventListener('change', e => { DB.settings.apiKey = e.target.value.trim(); save(); toast(DB.settings.apiKey ? 'Key saved — journal AI is on' : 'Key removed'); });
+  $('exportBtn').addEventListener('click', exportData);
+  $('importBtn').addEventListener('click', () => $('importInput').click());
+  $('importInput').addEventListener('change', importData);
+  $('wipeBtn').addEventListener('click', async () => {
+    if (!confirm('Erase everything? This cannot be undone.')) return;
+    store.removeItem(KEY);
+    for (const j of DB.journal) await delPhoto(j.id);
+    location.reload();
+  });
+}
+async function exportData(){
+  const photos = {};
+  for (const j of DB.journal){
+    const b = await getPhoto(j.id);
+    if (b) photos[j.id] = await new Promise(res => { const r = new FileReader();
+      r.onload = () => res(r.result); r.readAsDataURL(b); });
+  }
+  const payload = JSON.stringify({ v: 1, db: DB, photos });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([payload], { type:'application/json' }));
+  a.download = 'lifeos-backup-' + today() + '.json';
+  a.click(); toast('Backup downloaded');
+}
+async function importData(e){
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  try {
+    const { db, photos } = JSON.parse(await file.text());
+    DB = Object.assign({}, DEFAULTS, db); save();
+    for (const [id, dataUrl] of Object.entries(photos || {})){
+      const blob = await (await fetch(dataUrl)).blob();
+      await putPhoto(id, blob);
+    }
+    applyTheme(); renderAll(); initSettingsValues(); toast('Backup restored');
+  } catch (err){ toast('Import failed — not a valid backup'); }
+}
+function initSettingsValues(){
+  $('setName').value = DB.profile.name || '';
+  $('setTheme').value = DB.settings.theme || 'dark';
+  $('setApiKey').value = DB.settings.apiKey || '';
+}
+
+// ---------- wiring ----------
+$('todayAddEvent').addEventListener('click', () => { selDate = today(); editEvent(''); });
+$('schedAddEvent').addEventListener('click', () => editEvent(''));
+$('friendAdd').addEventListener('click', () => editFriend(''));
+function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
+applyTheme(); initSettings(); renderAll();
+</script>
+</body>
+</html>
