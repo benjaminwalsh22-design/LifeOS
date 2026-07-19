@@ -285,6 +285,17 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .wk-title{ font-size:14px; font-weight:650; }
 .wk-sub{ font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.5; }
 
+/* ---- journal archive + tools ---- */
+.pbar { height: 6px; background: var(--surface-2); border-radius: 3px; margin-top: 12px; overflow: hidden; }
+.pbar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
+.jtools { display: flex; gap: 8px; margin: 4px 0 8px; }
+.jtools input { flex: 1; min-width: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 11px 14px; font-size: 15px; font-family: inherit; box-shadow: var(--shadow-soft); }
+.jtools select { flex: 0 0 auto; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 0 8px; font-size: 13px; font-family: inherit; box-shadow: var(--shadow-soft); }
+.jtools input:focus, .jtools select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.jbtns { display: flex; gap: 8px; margin-bottom: 8px; }
+.jbtns button { flex: 1; background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.jbtns button#jAsk { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+
 /* ---- tab bar ---- */
 nav.tabbar {
   flex: 0 0 auto; z-index: 30;
@@ -373,7 +384,18 @@ nav.tabbar {
         <div style="font-size:12.5px;margin-top:3px">It'll be stored, transcribed &amp; analyzed</div>
       </div>
       <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
-      <div class="section-head"><h2>Entries</h2></div>
+      <button class="btn secondary" id="archiveBtn" style="margin-top:0">Import old journals (bulk)</button>
+      <input type="file" id="archiveInput" accept="image/*" multiple hidden>
+      <div id="archiveProgress" style="margin-top:14px"></div>
+      <div class="jtools">
+        <input id="jSearch" placeholder="Search your journal…">
+        <select id="jYear"></select>
+      </div>
+      <div class="jbtns">
+        <button id="jAsk">Ask your journal</button>
+        <button id="jExport">Export</button>
+      </div>
+      <div class="section-head"><h2 id="journalCount">Entries</h2></div>
       <div id="journalList"></div>
     </section>
 
@@ -411,7 +433,7 @@ nav.tabbar {
         <div class="notice">Fills today’s numbers with example values so you can see it work. Ask Claude for the 2-minute Shortcut recipe.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.1</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.2</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -471,14 +493,16 @@ const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light'
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
-const save = () => store.setItem(KEY, JSON.stringify(DB));
+const save = () => { const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); };
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 
 // IndexedDB for photos
 let _idb = null;
 function idb(){ return _idb || (_idb = new Promise((res, rej) => {
-  const r = indexedDB.open('lifeos', 1);
-  r.onupgradeneeded = () => r.result.createObjectStore('photos');
+  const r = indexedDB.open('lifeos', 2);
+  r.onupgradeneeded = () => { const db = r.result;
+    if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos');
+    if (!db.objectStoreNames.contains('entries')) db.createObjectStore('entries'); };
   r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
 })); }
 async function putPhoto(id, blob){ const db = await idb(); return new Promise((res, rej) => {
@@ -489,6 +513,15 @@ async function getPhoto(id){ const db = await idb(); return new Promise((res, re
   q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error); }); }
 async function delPhoto(id){ const db = await idb(); return new Promise((res, rej) => {
   const t = db.transaction('photos','readwrite'); t.objectStore('photos').delete(id);
+  t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function putEntry(e){ const db = await idb(); return new Promise((res, rej) => {
+  const t = db.transaction('entries','readwrite'); t.objectStore('entries').put(e, e.id);
+  t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function getAllEntries(){ const db = await idb(); return new Promise((res, rej) => {
+  const q = db.transaction('entries').objectStore('entries').getAll();
+  q.onsuccess = () => res(q.result || []); q.onerror = () => rej(q.error); }); }
+async function delEntryDB(id){ const db = await idb(); return new Promise((res, rej) => {
+  const t = db.transaction('entries','readwrite'); t.objectStore('entries').delete(id);
   t.oncomplete = res; t.onerror = () => rej(t.error); }); }
 
 // ---------- toast & sheet ----------
@@ -848,14 +881,32 @@ async function thumbURL(id){
   const b = await getPhoto(id); if (!b) return null;
   return (thumbURLs[id] = URL.createObjectURL(b));
 }
-async function renderJournal(){
-  const list = DB.journal.slice().sort((a,b) => b.ts - a.ts);
-  if (!list.length){ $('journalList').innerHTML = '<div class="empty">No entries yet. Your journal photos and their analyses will live here.</div>'; return; }
-  const rows = await Promise.all(list.map(async j => {
+let jState = { q:'', year:'' };
+function entryText(j){ return ((j.date||'')+' '+(j.transcription||'')+' '+(j.summary||'')+' '+(j.note||'')+' '+(j.mood||'')+' '+((j.themes||[]).join(' '))).toLowerCase(); }
+function journalFiltered(){
+  let list = DB.journal.slice();
+  if (jState.year) list = list.filter(j => (j.date||'').slice(0,4) === jState.year);
+  if (jState.q){ const toks = jState.q.toLowerCase().split(/\s+/).filter(Boolean);
+    list = list.filter(j => { const t = entryText(j); return toks.every(k => t.includes(k)); }); }
+  return list.sort((a,b) => (b.ts||0) - (a.ts||0));
+}
+function fillYearFilter(){
+  const sel = $('jYear'); if (!sel) return;
+  const years = [...new Set(DB.journal.map(j => (j.date||'').slice(0,4)).filter(Boolean))].sort().reverse();
+  sel.innerHTML = '<option value="">All years</option>' + years.map(y => '<option value="'+y+'"'+(y===jState.year?' selected':'')+'>'+y+'</option>').join('');
+}
+function renderJournal(){ renderArchiveProgress(); fillYearFilter(); renderJournalList(); }
+async function renderJournalList(){
+  const list = journalFiltered(); const total = DB.journal.length;
+  if ($('journalCount')) $('journalCount').textContent = (jState.q||jState.year) ? (list.length+' of '+total) : (total+(total===1?' entry':' entries'));
+  if (!total){ $('journalList').innerHTML = '<div class="empty">No entries yet. Photograph today\u2019s page, or import your old journals in bulk.</div>'; return; }
+  if (!list.length){ $('journalList').innerHTML = '<div class="empty">No entries match that search.</div>'; return; }
+  const cap = list.slice(0, 150);
+  const rows = await Promise.all(cap.map(async j => {
     const u = await thumbURL(j.id);
     const status = j.status === 'analyzing' ? '<span class="spinner"></span>Analyzing…'
-      : j.status === 'error' ? '<span style="color:var(--serious)">Analysis failed — tap to retry</span>'
-      : esc(j.summary || j.note || 'Photo saved');
+      : j.status === 'error' ? '<span style="color:var(--serious)">Not transcribed — tap to retry</span>'
+      : esc(j.summary || j.transcription || j.note || 'Saved');
     const moodBits = [j.mood, ...(j.themes||[]).slice(0,3)].filter(Boolean);
     return '<div class="jentry" onclick="openEntry(\''+j.id+'\')">' +
       (u ? '<img class="thumb" src="'+u+'" alt="">' : '<div class="thumb">—</div>') +
@@ -864,7 +915,7 @@ async function renderJournal(){
       (moodBits.length ? '<div class="jmood">'+moodBits.map(esc).join(' · ')+'</div>' : '') +
       '</div></div>';
   }));
-  $('journalList').innerHTML = rows.join('');
+  $('journalList').innerHTML = rows.join('') + (list.length>150 ? '<div class="empty">Showing 150 of '+list.length+' — search to narrow.</div>' : '');
 }
 $('captureBox').addEventListener('click', () => $('photoInput').click());
 $('photoInput').addEventListener('change', async e => {
@@ -885,7 +936,7 @@ async function saveJournalEntry(){
     transcription:'', summary:'', mood:'', themes:[], insight:'', status: DB.settings.apiKey ? 'analyzing' : 'saved' };
   const blob = await resizeToBlob(file, 1600, 0.85);
   await putPhoto(id, blob);
-  DB.journal.push(entry); save(); closeSheet();
+  DB.journal.push(entry); await putEntry(entry); save(); closeSheet();
   window._pendingPhoto = null;
   renderAll(); toast('Entry saved');
   if (DB.settings.apiKey) analyzeEntry(id);
@@ -902,26 +953,11 @@ async function resizeToBlob(file, maxDim, q){
 const AI_PROMPT = 'This is a photo of a handwritten personal journal page. 1) Transcribe the handwriting as faithfully as you can (use [illegible] where unreadable). 2) Summarize the entry in 1-2 sentences. 3) Identify the overall mood in 1-3 words. 4) List up to 4 recurring themes/topics as short tags. 5) Offer one brief, kind, useful insight or observation (1-2 sentences, no platitudes). Respond with ONLY a JSON object: {"transcription": "...", "summary": "...", "mood": "...", "themes": ["..."], "insight": "..."}';
 async function analyzeEntry(id){
   const m = DB.journal.find(j => j.id === id); if (!m) return;
-  const key = DB.settings.apiKey; if (!key){ toast('Add an API key in Settings first'); return; }
-  m.status = 'analyzing'; save(); renderJournal(); renderToday();
+  if (!DB.settings.apiKey){ toast('Add an API key in Settings first'); return; }
+  m.status = 'analyzing'; await putEntry(m); renderJournal(); renderToday();
   try {
     const blob = await getPhoto(id);
-    const b64 = await new Promise((res, rej) => { const r = new FileReader();
-      r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(blob); });
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type':'application/json', 'x-api-key': key,
-        'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 2000,
-        messages: [{ role:'user', content: [
-          { type:'image', source:{ type:'base64', media_type:'image/jpeg', data: b64 } },
-          { type:'text', text: AI_PROMPT } ] }] })
-    });
-    if (!res.ok) throw new Error('API error ' + res.status);
-    const data = await res.json();
-    let txt = (data.content || []).map(c => c.text || '').join('');
-    const s = txt.indexOf('{'), e2 = txt.lastIndexOf('}');
-    const j = JSON.parse(txt.slice(s, e2 + 1));
+    const j = await callVision(blob, AI_PROMPT);
     Object.assign(m, { transcription: j.transcription || '', summary: j.summary || '',
       mood: j.mood || '', themes: Array.isArray(j.themes) ? j.themes : [], insight: j.insight || '', status: 'done' });
     toast('Entry analyzed');
@@ -929,7 +965,7 @@ async function analyzeEntry(id){
     m.status = 'error'; console.error(err);
     toast('Analysis failed — open the entry to retry');
   }
-  save(); renderJournal(); renderToday();
+  await putEntry(m); renderJournal(); renderToday();
 }
 async function openEntry(id){
   const j = DB.journal.find(x => x.id === id); if (!j) return;
@@ -949,7 +985,7 @@ async function openEntry(id){
 async function deleteEntry(id){
   DB.journal = DB.journal.filter(x => x.id !== id);
   if (thumbURLs[id]){ URL.revokeObjectURL(thumbURLs[id]); delete thumbURLs[id]; }
-  await delPhoto(id); save(); closeSheet(); renderAll();
+  await delPhoto(id); await delEntryDB(id); save(); closeSheet(); renderAll();
 }
 
 // ---------- settings ----------
@@ -967,22 +1003,22 @@ function initSettings(){
   $('wipeBtn').addEventListener('click', async () => {
     if (!confirm('Erase everything? This cannot be undone.')) return;
     store.removeItem(KEY);
-    for (const j of DB.journal) await delPhoto(j.id);
+    try { if (_idb){ (await idb()).close(); } indexedDB.deleteDatabase('lifeos'); } catch(e){}
     location.reload();
   });
 }
 async function exportData(){
+  const big = DB.journal.length > 250;
   const photos = {};
-  for (const j of DB.journal){
+  if (!big){ for (const j of DB.journal){
     const b = await getPhoto(j.id);
-    if (b) photos[j.id] = await new Promise(res => { const r = new FileReader();
-      r.onload = () => res(r.result); r.readAsDataURL(b); });
-  }
-  const payload = JSON.stringify({ v: 1, db: DB, photos });
+    if (b) photos[j.id] = await blobToDataURL(b);
+  } }
+  const payload = JSON.stringify({ v: 1, db: DB, photos, photosOmitted: big });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([payload], { type:'application/json' }));
   a.download = 'lifeos-backup-' + today() + '.json';
-  a.click(); toast('Backup downloaded');
+  a.click(); toast(big ? 'Backup saved (text only — too many photos to embed; use Journal → Export for the archive)' : 'Backup downloaded');
 }
 async function importData(e){
   const file = e.target.files[0]; e.target.value = '';
@@ -1002,6 +1038,7 @@ async function importData(e){
     merged.settings = Object.assign({}, db.settings || {}, merged.settings || {});
     if (db.places && !merged.places) merged.places = db.places;
     DB = merged; save();
+    for (const e of merged.journal || []){ try { await putEntry(e); } catch(_){} }
     for (const [id, dataUrl] of Object.entries(photos || {})){
       const blob = await (await fetch(dataUrl)).blob();
       await putPhoto(id, blob);
@@ -1219,10 +1256,150 @@ async function checkUpdate(){
     location.reload();
   } catch(e){ toast('Could not reach the server — try again on Wi-Fi'); }
 }
+// ---------- vision + archive + ask + export ----------
+function blobToB64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); }); }
+function blobToDataURL(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); }); }
+async function callVision(blob, prompt){
+  const key=DB.settings.apiKey; if(!key) throw new Error('no key');
+  const b64=await blobToB64(blob);
+  const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
+    headers:{ 'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+    body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2000, messages:[{ role:'user', content:[
+      { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } }, { type:'text', text:prompt } ] }] }) });
+  if(!res.ok) throw new Error('API '+res.status);
+  const data=await res.json(); const txt=(data.content||[]).map(c=>c.text||'').join('');
+  const a=txt.indexOf('{'), b=txt.lastIndexOf('}'); if(a<0) throw new Error('no json'); return JSON.parse(txt.slice(a,b+1));
+}
+const ARCHIVE_PROMPT='This is a photo of one handwritten personal journal page. Return ONLY a JSON object with these keys: {"date":"the date written on the page as YYYY-MM-DD, or empty string if none","transcription":"a faithful transcription of the handwriting, using [illegible] where unreadable","summary":"1-2 sentence summary","mood":"1-3 words","themes":["up to 4 short topic tags"],"insight":"one brief, kind, useful observation"}';
+
+let _wake=null;
+async function wakeOn(){ try{ if(navigator.wakeLock) _wake=await navigator.wakeLock.request('screen'); }catch(e){} }
+function wakeOff(){ try{ if(_wake){ _wake.release(); _wake=null; } }catch(e){} }
+
+let ARCHIVE=null;
+function openArchiveSheet(files){
+  if(!DB.settings.apiKey){ openSheet('<h3>API key needed</h3><div class="notice" style="margin-top:0">Bulk transcription uses Claude to read your handwriting. Add your Anthropic API key in Settings first, then import.</div><button class="btn" onclick="closeSheet();showView(\'settings\')">Open Settings</button>'); return; }
+  const arr=[...files].sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  window._arcFiles=arr; const est=(arr.length*0.02).toFixed(2);
+  openSheet('<h3>Import '+arr.length+' journal pages</h3>'+
+    '<div class="notice" style="margin-top:0">Each page is transcribed and analyzed by Claude, then saved on your phone. Keep the app open with the screen on while it runs — you can pause and resume anytime.</div>'+
+    '<div class="field"><label>Date of the first (oldest) page</label><input id="arcStart" type="date" value="'+today()+'"></div>'+
+    '<div class="notice" style="margin-top:0">Pages are ordered by filename. A date written on a page always wins; otherwise dates count forward one per day from here.</div>'+
+    '<div class="field" style="margin-top:10px"><label>Estimated cost</label><div style="font-size:15px;font-weight:650">~$'+est+' &middot; '+arr.length+' pages</div></div>'+
+    '<button class="btn" onclick="startArchive()">Start transcribing</button>');
+}
+function startArchive(){
+  const files=window._arcFiles||[]; if(!files.length) return;
+  ARCHIVE={ files, i:0, ok:0, fail:0, running:false, startDate:($('arcStart').value||today()) };
+  closeSheet(); showView('journal'); runArchive();
+}
+async function runArchive(){
+  if(!ARCHIVE) return; await wakeOn(); ARCHIVE.running=true; renderArchiveProgress();
+  while(ARCHIVE && ARCHIVE.running && ARCHIVE.i<ARCHIVE.files.length){
+    const idx=ARCHIVE.i, file=ARCHIVE.files[idx];
+    try{
+      const blob=await resizeToBlob(file,1000,0.72);
+      const id=uid(); let parsed=null;
+      try{ parsed=await callVision(blob, ARCHIVE_PROMPT); }catch(e){ parsed=null; }
+      let date;
+      if(parsed && parsed.date){ if(/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) date=parsed.date; else { const d=new Date(parsed.date); if(!isNaN(d)) date=dstr(d); } }
+      if(!date){ const d=parseD(ARCHIVE.startDate); d.setDate(d.getDate()+idx); date=dstr(d); }
+      await putPhoto(id, blob);
+      const entry={ id, ts:parseD(date).getTime(), date, note:'', archived:true,
+        transcription:parsed?(parsed.transcription||''):'', summary:parsed?(parsed.summary||''):'',
+        mood:parsed?(parsed.mood||''):'', themes:(parsed&&Array.isArray(parsed.themes))?parsed.themes:[],
+        insight:parsed?(parsed.insight||''):'', status:parsed?'done':'error' };
+      DB.journal.push(entry); await putEntry(entry);
+      parsed?ARCHIVE.ok++:ARCHIVE.fail++;
+    }catch(e){ ARCHIVE.fail++; }
+    ARCHIVE.i++; renderArchiveProgress();
+    await new Promise(r=>setTimeout(r,120));
+  }
+  if(ARCHIVE) ARCHIVE.running=false; wakeOff();
+  if(ARCHIVE && ARCHIVE.i>=ARCHIVE.files.length){ const ok=ARCHIVE.ok, fail=ARCHIVE.fail; ARCHIVE=null; toast('Batch done · '+ok+' transcribed'+(fail?' · '+fail+' need retry':'')); }
+  renderArchiveProgress(); renderJournal(); renderToday();
+}
+function pauseArchive(){ if(ARCHIVE){ ARCHIVE.running=false; wakeOff(); renderArchiveProgress(); toast('Paused'); } }
+function resumeArchive(){ if(ARCHIVE && !ARCHIVE.running) runArchive(); }
+function cancelArchive(){ ARCHIVE=null; wakeOff(); renderArchiveProgress(); renderJournal(); toast('Stopped'); }
+function renderArchiveProgress(){
+  const el=$('archiveProgress'); if(!el) return;
+  if(!ARCHIVE){ el.innerHTML=''; return; }
+  const n=ARCHIVE.files.length, i=ARCHIVE.i, pct=Math.round(i/n*100), spent=(i*0.02).toFixed(2);
+  el.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Transcribing archive</b><span style="font-size:13px;color:var(--muted)">'+i+' / '+n+'</span></div>'+
+    '<div class="pbar"><i style="width:'+pct+'%"></i></div>'+
+    '<div style="font-size:12.5px;color:var(--muted);margin-top:8px">'+ARCHIVE.ok+' transcribed'+(ARCHIVE.fail?' · '+ARCHIVE.fail+' failed':'')+' · ~$'+spent+' spent</div>'+
+    '<div style="display:flex;gap:8px;margin-top:12px">'+
+    (ARCHIVE.running?'<button class="btn secondary" style="margin:0" onclick="pauseArchive()">Pause</button>':'<button class="btn" style="margin:0" onclick="resumeArchive()">Resume</button>')+
+    '<button class="btn danger" style="margin:0;padding:13px" onclick="cancelArchive()">Stop</button></div></div>';
+}
+function openAsk(){
+  if(!DB.settings.apiKey){ toast('Add an API key in Settings to ask your journal'); return; }
+  if(!DB.journal.length){ toast('No entries yet to ask about'); return; }
+  openSheet('<h3>Ask your journal</h3>'+
+    '<div class="notice" style="margin-top:0">Ask in plain English — Claude reads your most relevant entries and answers, citing dates. Try &ldquo;When did I write about burnout?&rdquo;</div>'+
+    '<div class="field"><textarea id="askQ" placeholder="Ask anything about your journals…"></textarea></div>'+
+    '<button class="btn" onclick="askJournal()">Ask</button><div id="askOut"></div>');
+  setTimeout(()=>{ const el=$('askQ'); if(el) el.focus(); },60);
+}
+function scoreEntry(j, toks){ const t=entryText(j); let s=0; toks.forEach(k=>{ let idx=t.indexOf(k); while(idx>=0){ s++; idx=t.indexOf(k, idx+k.length); } }); return s; }
+async function askJournal(){
+  const q=($('askQ')?$('askQ').value:'').trim(); if(!q) return;
+  const toks=q.toLowerCase().split(/\s+/).filter(w=>w.length>2);
+  let scored=DB.journal.map(j=>({j,s:scoreEntry(j,toks)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+  if(!scored.length) scored=DB.journal.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,8).map(j=>({j,s:0}));
+  const top=scored.slice(0,12).map(x=>x.j);
+  $('askOut').innerHTML='<div class="detail-block" style="margin-top:14px"><p><span class="spinner"></span>Reading '+top.length+' entries…</p></div>';
+  const ctx=top.map(j=>'['+j.date+'] '+((j.transcription||j.summary||j.note||'').slice(0,1200))).join('\n\n');
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
+      headers:{ 'content-type':'application/json','x-api-key':DB.settings.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+      body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:1024,
+        system:'You help someone explore their personal journal. Answer using ONLY the provided dated entries, and cite the dates you draw from in parentheses. If the entries do not answer the question, say so plainly. Be warm and concise.',
+        messages:[{ role:'user', content:'Entries:\n\n'+ctx+'\n\nQuestion: '+q }] }) });
+    if(!res.ok) throw new Error('API '+res.status);
+    const data=await res.json(); const ans=(data.content||[]).map(c=>c.text||'').join('').trim();
+    $('askOut').innerHTML='<div class="detail-block" style="margin-top:14px"><h4>Answer</h4><p>'+esc(ans)+'</p></div>'+
+      '<div class="detail-block"><h4>Drawn from</h4><div class="pill-row">'+top.map(j=>'<span class="pill" style="cursor:pointer" onclick="closeSheet();openEntry(\''+j.id+'\')">'+fmtDate(j.date)+'</span>').join('')+'</div></div>';
+  }catch(e){ $('askOut').innerHTML='<div class="notice">Couldn’t reach Claude just now — try again.</div>'; }
+}
+function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function downloadFile(name,text,mime){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:mime})); a.download=name; a.click(); }
+function exportJournalMenu(){
+  if(!DB.journal.length){ toast('Nothing to export yet'); return; }
+  openSheet('<h3>Export journal</h3>'+
+    '<div class="notice" style="margin-top:0">Your transcriptions and analysis as a file you can open anywhere or query in a spreadsheet. Photos aren’t included — use Settings &rarr; backup for those.</div>'+
+    '<button class="btn" onclick="exportJournalCSV()">Export CSV</button>'+
+    '<button class="btn secondary" style="margin-top:10px" onclick="exportJournalJSON()">Export JSON</button>');
+}
+function exportJournalCSV(){
+  const rows=[['date','mood','themes','summary','transcription','insight','note']];
+  DB.journal.slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(j=>rows.push([j.date,j.mood||'',(j.themes||[]).join('; '),j.summary||'',j.transcription||'',j.insight||'',j.note||'']));
+  downloadFile('journal-'+today()+'.csv', rows.map(r=>r.map(csvCell).join(',')).join('\n'), 'text/csv'); closeSheet(); toast('CSV exported');
+}
+function exportJournalJSON(){
+  const out=DB.journal.slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).map(j=>({date:j.date,mood:j.mood,themes:j.themes,summary:j.summary,transcription:j.transcription,insight:j.insight,note:j.note}));
+  downloadFile('journal-'+today()+'.json', JSON.stringify(out,null,2), 'application/json'); closeSheet(); toast('JSON exported');
+}
+async function loadJournal(){
+  try{
+    await idb();
+    if(DB.journal && DB.journal.length && !DB._jmig){ for(const e of DB.journal){ try{ await putEntry(e); }catch(_){} } DB._jmig=true; save(); }
+    DB.journal = await getAllEntries();
+    renderJournal(); renderToday();
+  }catch(e){ console.error('journal load failed', e); }
+}
+
 // ---------- wiring ----------
 $('todayAddEvent').addEventListener('click', () => { selDate = today(); editEvent(''); });
 $('schedAddEvent').addEventListener('click', () => editEvent(''));
 $('friendAdd').addEventListener('click', () => editFriend(''));
+$('archiveBtn').addEventListener('click', () => $('archiveInput').click());
+$('archiveInput').addEventListener('change', e => { const files = [...e.target.files]; e.target.value=''; if (files.length) openArchiveSheet(files); });
+$('jSearch').addEventListener('input', e => { jState.q = e.target.value; renderJournalList(); });
+$('jYear').addEventListener('change', e => { jState.year = e.target.value; renderJournalList(); });
+$('jAsk').addEventListener('click', openAsk);
+$('jExport').addEventListener('click', exportJournalMenu);
 $('ckOpen').addEventListener('click', openCheckin);
 $('tlInput').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = '';
@@ -1237,7 +1414,7 @@ $('tlInput').addEventListener('change', async e => {
 });
 function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
-applyTheme(); initSettings(); ingestHealth(); renderAll();
+applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal();
 window.addEventListener('hashchange', () => { ingestHealth(); renderAll(); });
 </script>
 </body>
