@@ -6,49 +6,60 @@
 <title>Life OS</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Life OS">
-<meta name="theme-color" content="#0d0d0d">
+<meta name="theme-color" content="#F4F1EA">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%233987e5'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' font-family='system-ui' fill='white' font-weight='700'%3EL%3C/text%3E%3C/svg%3E">
 <style>
 :root {
-  color-scheme: dark;
-  --page: #0d0d0d;
-  --surface: #1a1a19;
-  --surface-2: #232322;
-  --ink: #ffffff;
-  --ink-2: #c3c2b7;
-  --muted: #898781;
-  --hairline: #2c2c2a;
-  --border: rgba(255,255,255,0.10);
-  --accent: #3987e5;
-  --accent-soft: rgba(57,135,229,0.16);
-  --good: #0ca30c;
-  --warning: #fab219;
-  --serious: #ec835a;
-  --critical: #d03b3b;
-  --gold: #c98500;
-  --violet: #9085e9;
-  --aqua: #199e70;
-  --magenta: #d55181;
-}
-:root[data-theme="light"] {
   color-scheme: light;
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --surface-2: #f0efec;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --hairline: #e1e0d9;
-  --border: rgba(11,11,11,0.10);
-  --accent: #2a78d6;
-  --accent-soft: rgba(42,120,214,0.12);
-  --gold: #eda100;
-  --violet: #4a3aa7;
-  --aqua: #1baf7a;
-  --magenta: #e87ba4;
+  --page: #F4F1EA;
+  --surface: #FFFFFF;
+  --surface-2: #F1EDE4;
+  --ink: #23211C;
+  --ink-2: #5E5A50;
+  --muted: #8F8A7D;
+  --hairline: #E7E2D8;
+  --border: rgba(35,33,28,0.07);
+  --accent: #33527B;
+  --accent-soft: rgba(51,82,123,0.10);
+  --fill: #33527B;
+  --fill-ink: #FFFFFF;
+  --good: #5E7353;
+  --warning: #A9762B;
+  --serious: #B4653A;
+  --critical: #A6443B;
+  --gold: #A9762B;
+  --violet: #6A5FA6;
+  --aqua: #3E7E68;
+  --magenta: #A85778;
+  --shadow-soft: 0 1px 2px rgba(35,33,28,.03), 0 4px 14px rgba(35,33,28,.05);
+  --serif: "New York", ui-serif, Georgia, "Times New Roman", serif;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #141311;
+  --surface: #1E1D19;
+  --surface-2: #272521;
+  --ink: #F4F1E9;
+  --ink-2: #C4BFB1;
+  --muted: #948E80;
+  --hairline: #302D28;
+  --border: rgba(244,241,233,0.09);
+  --accent: #7BA0D2;
+  --accent-soft: rgba(123,160,210,0.16);
+  --fill: #3F6096;
+  --fill-ink: #FFFFFF;
+  --good: #8CA07F;
+  --warning: #D2A24A;
+  --serious: #D98A5A;
+  --critical: #D96F5F;
+  --gold: #C9A24A;
+  --violet: #A79BE0;
+  --aqua: #5FA588;
+  --magenta: #D083A0;
+  --shadow-soft: 0 1px 2px rgba(0,0,0,.2), 0 4px 14px rgba(0,0,0,.28);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; overflow: hidden; }
@@ -81,6 +92,7 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
+  box-shadow: var(--shadow-soft);
   padding: 16px;
   margin-bottom: 14px;
 }
@@ -91,8 +103,25 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 
 /* ---- greeting ---- */
 .greeting { margin: 6px 2px 18px; }
-.greeting .hi { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.greeting .hi { font-family: var(--serif); font-size: 30px; font-weight: 600; letter-spacing: -0.01em; }
 .greeting .sub { font-size: 14px; color: var(--ink-2); margin-top: 2px; }
+
+/* ---- AI brief ---- */
+.brief { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 16px; padding: 18px 18px 20px; margin: 4px 0 16px; }
+.brief .tag { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+.brief .tag svg { width: 14px; height: 14px; color: var(--warning); }
+.brief .tag span { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.brief p { font-family: var(--serif); font-size: 17px; line-height: 1.6; color: var(--ink); }
+/* ---- insight cards (assistant) ---- */
+.insight-card { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 14px; padding: 14px 15px; margin-bottom: 9px; }
+.insight-card .idot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; margin-top: 8px; background: var(--good); }
+.insight-card.watch .idot { background: var(--warning); }
+.insight-card.info .idot { background: var(--accent); }
+.insight-card .ibody { flex: 1; min-width: 0; }
+.insight-card .itext { font-family: var(--serif); font-size: 15px; line-height: 1.5; color: var(--ink); }
+.insight-card .iwhy { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+.insight-card .iact { margin-top: 10px; }
+.insight-card .iact button { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--ink); padding: 6px 13px; cursor: pointer; font-family: inherit; }
 
 /* ---- attention list ---- */
 .attn { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
@@ -135,7 +164,7 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .day-pill .dow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 .day-pill .num { font-size: 17px; font-weight: 700; margin-top: 1px; }
 .day-pill.today .num { color: var(--accent); }
-.day-pill.sel { background: var(--accent); color: #fff; }
+.day-pill.sel { background: var(--fill); color: var(--fill-ink); }
 .day-pill.sel .num, .day-pill.sel .dow { color: #fff; }
 .day-pill .marker { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); margin: 3px auto 0; opacity: 0; }
 .day-pill.has .marker { opacity: 1; }
@@ -222,7 +251,7 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .btn {
   display: block; width: 100%; text-align: center;
-  background: var(--accent); color: #fff; font-size: 16px; font-weight: 650;
+  background: var(--fill); color: var(--fill-ink); font-size: 16px; font-weight: 650;
   border: none; border-radius: 12px; padding: 13px; cursor: pointer; margin-top: 6px;
 }
 .btn.secondary { background: var(--surface-2); color: var(--ink); }
@@ -242,7 +271,7 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .ck-num span{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
 .toggle-row{ display:flex; gap:8px; flex-wrap:wrap; }
 .tgl{ border:1px solid var(--border); background:var(--surface-2); color:var(--ink-2); border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit; }
-.tgl.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.tgl.on{ background:var(--fill); border-color:var(--fill); color:var(--fill-ink); }
 .ck-label{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:14px 0 8px; }
 /* ---- places ---- */
 .place{ display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; }
@@ -310,6 +339,8 @@ nav.tabbar {
         <div class="hi" id="greetHi">Hello</div>
         <div class="sub" id="greetSub"></div>
       </div>
+      <div id="briefCard"></div>
+      <div class="section-head"><h2>Noticed</h2></div>
       <div class="attn" id="attnList"></div>
       <div class="section-head"><h2>Daily check-in</h2><button class="action" id="ckOpen">Check in</button></div>
       <div id="ckCard"></div>
@@ -357,7 +388,7 @@ nav.tabbar {
       <div class="card">
         <div class="field"><label>Your name</label><input id="setName" placeholder="Benjamin"></div>
         <div class="field"><label>Theme</label>
-          <select id="setTheme"><option value="dark">Dark</option><option value="light">Light</option></select>
+          <select id="setTheme"><option value="light">Warm paper (light)</option><option value="dark">Dark</option></select>
         </div>
       </div>
       <div class="card">
@@ -374,7 +405,7 @@ nav.tabbar {
         <button class="btn danger" id="wipeBtn">Erase all data</button>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v2.2</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.0</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -429,12 +460,13 @@ const fmtTime = t => { if(!t) return ''; let [h,m] = t.split(':').map(Number);
 const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
-const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'dark'},
+const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light'},
   events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{} };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
 const save = () => store.setItem(KEY, JSON.stringify(DB));
+if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 
 // IndexedDB for photos
 let _idb = null;
@@ -493,6 +525,121 @@ function friendStatus(f){
 function markContacted(id){ const f = DB.friends.find(x => x.id === id);
   if (f){ f.lastContact = today(); save(); renderAll(); toast('Nice — logged it'); } }
 
+// ---------- intelligence: brief + insight engine ----------
+const SPARK = '<svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3.5c.7 4.6 3.9 7.8 8.5 8.5-4.6.7-7.8 3.9-8.5 8.5-.7-4.6-3.9-7.8-8.5-8.5 4.6-.7 7.8-3.9 8.5-8.5Z"/></svg>';
+const REL_LABEL = { annalise:'Annalise', kids:'the kids', family:'family', friends:'friends' };
+function allChk(){ return Object.entries(DB.checkins).map(([d,c]) => ({d,c})).sort((a,b) => a.d.localeCompare(b.d)); }
+function recentChk(n){ const out=[]; for(let i=0;i<n;i++){ const d=new Date(); d.setDate(d.getDate()-i);
+  const c=DB.checkins[dstr(d)]; if(c) out.push(c); } return out; }
+function mean(a){ const v=a.filter(x => x!=null && !isNaN(x)).map(Number); return v.length ? v.reduce((x,y)=>x+y,0)/v.length : null; }
+function pearson(xs,ys){ const n=xs.length; if(n<2) return null;
+  const mx=mean(xs), my=mean(ys); let a=0,bx=0,by=0;
+  for(let i=0;i<n;i++){ const dx=xs[i]-mx, dy=ys[i]-my; a+=dx*dy; bx+=dx*dx; by+=dy*dy; }
+  if(bx===0||by===0) return null; return a/Math.sqrt(bx*by); }
+function pairs(field, targetFn){ const xs=[],ys=[]; allChk().forEach(({c}) => {
+  const x=c[field], y=targetFn(c);
+  if(x!=null && !isNaN(x) && y!=null && !isNaN(y)){ xs.push(Number(x)); ys.push(y); } }); return {xs,ys}; }
+
+function patternInsights(){
+  const out=[]; const N=allChk().length; if(N<15) return out;
+  let best=null;
+  Object.keys(REL_LABEL).forEach(f => { const {xs,ys}=pairs(f, ckHap);
+    if(xs.length>=15){ const r=pearson(xs,ys); if(r!=null && r>=0.25 && (!best||r>best.r)) best={f,r}; } });
+  if(best) out.push({ score:62, tone:'good',
+    text:'Your happiest days are the ones with the most '+REL_LABEL[best.f]+' time.',
+    why:'A clear pattern across '+N+' logged days — worth protecting.' });
+  { const {xs,ys}=pairs('alcohol', ckAnx); if(xs.length>=15){ const r=pearson(xs,ys);
+    if(r!=null && r>=0.25) out.push({ score:58, tone:'watch',
+      text:'On days you drink, your anxiety tends to run a notch higher.',
+      why:'Holds across '+xs.length+' days with both logged.' }); } }
+  { const {xs,ys}=pairs('meditate', ckAnx); if(xs.length>=15){ const r=pearson(xs,ys);
+    if(r!=null && r<=-0.22) out.push({ score:52, tone:'good',
+      text:'Days you meditate, your anxiety tends to settle.',
+      why:'A gentle but real pattern in your logs.' }); } }
+  { const {xs,ys}=pairs('caffeine', ckAnx); if(xs.length>=15){ const r=pearson(xs,ys);
+    if(r!=null && r>=0.28) out.push({ score:48, tone:'info',
+      text:'More caffeine, more edge — anxiety leans up on heavy-coffee days.',
+      why:'Correlation across '+xs.length+' days.' }); } }
+  return out;
+}
+function recentInsights(){
+  const out=[];
+  const r3=recentChk(3); const prior=[];
+  for(let i=3;i<10;i++){ const d=new Date(); d.setDate(d.getDate()-i); const c=DB.checkins[dstr(d)]; if(c) prior.push(c); }
+  if(r3.length>=2){
+    const a3=mean(r3.map(ckAnx)), ap=mean(prior.map(ckAnx));
+    if(a3!=null && ap!=null && a3-ap>=1.2) out.push({ score:82, tone:'watch',
+      text:'Your anxiety has run higher the last few days.',
+      why:'Averaging '+a3.toFixed(1)+' vs '+ap.toFixed(1)+' the week before.' });
+    const h3=mean(r3.map(ckHap)), hp=mean(prior.map(ckHap));
+    if(h3!=null && hp!=null && hp-h3>=1.2) out.push({ score:72, tone:'info',
+      text:'Happiness has dipped a little this week.',
+      why:'Down from '+hp.toFixed(1)+' to '+h3.toFixed(1)+' — worth a gentle look at what changed.' });
+    if(a3!=null && a3<=3 && h3!=null && h3>=7) out.push({ score:40, tone:'good',
+      text:'You are in a calm, good stretch.', why:'Low anxiety and high happiness, three days running.' });
+  }
+  let streak=0;
+  for(let i=0;i<30;i++){ const d=new Date(); d.setDate(d.getDate()-i); const c=DB.checkins[dstr(d)];
+    if(c && c.meditate>0) streak++; else break; }
+  if(streak>=3) out.push({ score:44, tone:'good', text:streak+'-day meditation streak.', why:'Keep it going tonight.' });
+  const r7=recentChk(7);
+  if(r7.length>=4){ Object.keys(REL_LABEL).forEach(f => { const m=mean(r7.map(c=>c[f]));
+    if(m!=null && m<1.2) out.push({ score:50, tone:'info',
+      text:'Little '+REL_LABEL[f]+' time logged this week.', why:'Might be worth carving out an hour.' }); }); }
+  return out;
+}
+function lifeInsights(){
+  const out=[]; const tstr=today();
+  DB.friends.forEach(f => { const {bd,since,overdue}=friendStatus(f);
+    if(bd && bd.days===0) out.push({ score:100, tone:'watch', text:'It is '+f.name+'’s birthday today.', why:'Send some love.', act:{label:'Mark done', fn:"markContacted('"+f.id+"')"} });
+    else if(bd && bd.days<=10) out.push({ score:66, tone:'info', text:f.name+'’s birthday '+(bd.days===1?'tomorrow':'in '+bd.days+' days')+'.', why:bd.label });
+    if(overdue) out.push({ score:70, tone:'watch', text:'Reach out to '+f.name+'.', why:since==null?'No contact logged yet.':since+' days since you last talked.', act:{label:'Log a hello', fn:"markContacted('"+f.id+"')"} });
+  });
+  const evToday=DB.events.filter(e=>e.date===tstr);
+  if(evToday.length>=3) out.push({ score:36, tone:'info', text:'A full day — '+evToday.length+' things on the calendar.', why:'Protect a little space between them.' });
+  if(!DB.journal.some(j=>j.date===tstr)) out.push({ score:22, tone:'', text:'No journal entry yet today.', why:'A photo of the page is enough.', act:{label:'Open journal', fn:"showView('journal')"} });
+  if(DB.places && DB.places.weeks && DB.places.weeks[0]){ const w=DB.places.weeks[0];
+    if(w.newP>=1) out.push({ score:30, tone:'good', text:w.newP+' new place'+(w.newP>1?'s':'')+' in your latest week out.', why:'Somewhere new is on the map.' }); }
+  return out;
+}
+function computeInsights(){
+  const all=[...patternInsights(), ...recentInsights(), ...lifeInsights()];
+  all.sort((a,b) => b.score-a.score);
+  const seen=new Set(), pick=[];
+  for(const i of all){ if(seen.has(i.text)) continue; seen.add(i.text); pick.push(i); if(pick.length>=5) break; }
+  return pick;
+}
+function renderInsights(){
+  const items=computeInsights(); const el=$('attnList'); if(!el) return;
+  if(!items.length){ el.innerHTML='<div class="insight-card"><span class="idot"></span><div class="ibody"><div class="itext">All calm — nothing needs you right now.</div><div class="iwhy">Log a check-in and this begins learning your patterns.</div></div></div>'; return; }
+  el.innerHTML=items.map(i => {
+    const cls=i.tone==='watch'?'watch':i.tone==='info'?'info':'';
+    return '<div class="insight-card '+cls+'"><span class="idot"></span><div class="ibody">'+
+      '<div class="itext">'+esc(i.text)+'</div>'+
+      (i.why?'<div class="iwhy">'+esc(i.why)+'</div>':'')+
+      (i.act?'<div class="iact"><button onclick="'+i.act.fn+'">'+esc(i.act.label)+'</button></div>':'')+
+      '</div></div>'; }).join('');
+}
+function briefHTML(){
+  const t=today(); const s=[];
+  const ev=DB.events.filter(e=>e.date===t).sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+  if(!ev.length) s.push('The calendar is open today — nothing scheduled yet.');
+  else if(ev.length===1) s.push('One thing on the calendar'+(ev[0].time?' at '+fmtTime(ev[0].time):'')+': '+ev[0].title+'.');
+  else s.push(ev.length+' things on today’s calendar'+(ev[0].time?', starting with '+ev[0].title+' at '+fmtTime(ev[0].time):'')+'.');
+  const c=DB.checkins[t];
+  if(c){ const a=ckAnx(c), h=ckHap(c);
+    if(a!=null||h!=null) s.push('You’ve checked in'+(h!=null?' — happiness around '+h.toFixed(0):'')+(a!=null?', anxiety around '+a.toFixed(0):'')+'.'); }
+  else s.push(allChk().length ? 'You haven’t checked in yet — a quick note sets the tone.' : 'Start with a check-in and the app begins learning your rhythm.');
+  let nudge=null, soon=99;
+  DB.friends.forEach(f => { const {bd,overdue}=friendStatus(f);
+    if(bd && bd.days<=10 && bd.days<soon){ soon=bd.days; nudge=f.name+'’s birthday is '+(bd.days===0?'today':bd.days===1?'tomorrow':'in '+bd.days+' days'); }
+    else if(overdue && !nudge) nudge='it’s been a while since you talked with '+f.name; });
+  if(nudge) s.push('One heads-up: '+nudge+'.');
+  if(!c){ const p=patternInsights()[0]; if(p) s.push(p.text); }
+  return '<div class="brief"><div class="tag">'+SPARK+'<span>Written for you</span></div><p>'+esc(s.join(' '))+'</p></div>';
+}
+
+
 // ---------- render: dashboard ----------
 const TILES = [
   { key:'sleep',  label:'Sleep',  unit:'hrs',  dot:'var(--violet)', hint:'Fitbit — manual for now', ph:'e.g. 7.5' },
@@ -513,34 +660,11 @@ function renderToday(){
   bits.push(evToday.length ? evToday.length + (evToday.length === 1 ? ' event' : ' events') : 'no events');
   if (nudges.length) bits.push(nudges.length + (nudges.length === 1 ? ' follow-up' : ' follow-ups'));
   bits.push(hasJournal ? 'journal logged' : 'journal not logged');
-  $('greetSub').textContent = bits.join(' · ');
+  $('greetSub').textContent = '';  // the brief carries the summary now
 
-  // attention items
-  const items = [];
-  DB.friends.forEach(f => {
-    const { bd } = friendStatus(f);
-    if (bd && bd.days === 0) items.push({ cls:'birthday', html:
-      '<div class="txt"><b>It’s '+esc(f.name)+'’s birthday today!</b><div class="sub">Send some love</div></div>' +
-      '<button class="mini" onclick="markContacted(\''+f.id+'\')">Did it</button>',
-      icon:'M12 8v13M5 12h14M7.5 8c-1.4 0-2.5-1.1-2.5-2.5S6.1 3 7.5 3c2 0 4.5 2.5 4.5 5 0-2.5 2.5-5 4.5-5 1.4 0 2.5 1.1 2.5 2.5S17.9 8 16.5 8h-9ZM5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7' });
-    else if (bd && bd.days <= 14) items.push({ cls:'birthday', html:
-      '<div class="txt"><b>'+esc(f.name)+'’s birthday '+(bd.days === 1 ? 'tomorrow' : 'in '+bd.days+' days')+'</b><div class="sub">'+bd.label+'</div></div>',
-      icon:'M12 8v13M5 12h14M7.5 8c-1.4 0-2.5-1.1-2.5-2.5S6.1 3 7.5 3c2 0 4.5 2.5 4.5 5 0-2.5 2.5-5 4.5-5 1.4 0 2.5 1.1 2.5 2.5S17.9 8 16.5 8h-9ZM5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7' });
-  });
-  DB.friends.forEach(f => {
-    const { since, overdue } = friendStatus(f);
-    if (overdue) items.push({ cls:'warn', html:
-      '<div class="txt"><b>Reach out to '+esc(f.name)+'</b><div class="sub">'+(since === null ? 'no contact logged yet' : since+' days since last contact')+'</div></div>' +
-      '<button class="mini" onclick="markContacted(\''+f.id+'\')">Done</button>',
-      icon:'M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.9-.9L3 20l1-4.9a8.4 8.4 0 1 1 17-3.6Z' });
-  });
-  if (!hasJournal) items.push({ cls:'', html:
-    '<div class="txt"><b>No journal entry yet today</b><div class="sub">Snap a photo of your page</div></div>' +
-    '<button class="mini" onclick="showView(\'journal\')">Open</button>',
-    icon:'M5 4.5A1.5 1.5 0 0 1 6.5 3h11A1.5 1.5 0 0 1 19 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-15ZM9 7.5h6M9 11h6' });
-  $('attnList').innerHTML = items.length ? items.map(i =>
-    '<div class="attn-item '+i.cls+'"><svg class="icon" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="'+i.icon+'"/></svg>'+i.html+'</div>').join('')
-    : '<div class="attn-item" style="border-left-color:var(--good)"><div class="txt"><b>All caught up</b><div class="sub">Nothing needs your attention</div></div></div>';
+  // AI brief + assistant insights
+  $('briefCard').innerHTML = briefHTML();
+  renderInsights();
 
   // tiles
   const st = DB.stats[t] || {};
@@ -787,10 +911,10 @@ async function deleteEntry(id){
 }
 
 // ---------- settings ----------
-function applyTheme(){ document.documentElement.setAttribute('data-theme', DB.settings.theme || 'dark'); }
+function applyTheme(){ document.documentElement.setAttribute('data-theme', DB.settings.theme || 'light'); }
 function initSettings(){
   $('setName').value = DB.profile.name || '';
-  $('setTheme').value = DB.settings.theme || 'dark';
+  $('setTheme').value = DB.settings.theme || 'light';
   $('setApiKey').value = DB.settings.apiKey || '';
   $('setName').addEventListener('change', e => { DB.profile.name = e.target.value.trim(); save(); renderToday(); });
   $('setTheme').addEventListener('change', e => { DB.settings.theme = e.target.value; save(); applyTheme(); });
@@ -845,7 +969,7 @@ async function importData(e){
 }
 function initSettingsValues(){
   $('setName').value = DB.profile.name || '';
-  $('setTheme').value = DB.settings.theme || 'dark';
+  $('setTheme').value = DB.settings.theme || 'light';
   $('setApiKey').value = DB.settings.apiKey || '';
 }
 
