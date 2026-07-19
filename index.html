@@ -404,8 +404,14 @@ nav.tabbar {
         <div class="notice">Everything lives on this device. Export occasionally to keep a backup — it includes journal photos.</div>
         <button class="btn danger" id="wipeBtn">Erase all data</button>
       </div>
+      <div class="card">
+        <div style="font-size:15px;font-weight:650;margin-bottom:6px">Apple Health</div>
+        <div class="notice" style="margin-top:0">Apple doesn’t let a web app read Health directly. Instead, a free Apple <b>Shortcut</b> reads your Sleep, Steps, Active energy, Resting HR and HRV each morning and opens LifeOS with them — one tap, or on a schedule. Nothing leaves your phone.</div>
+        <button class="btn secondary" style="margin-top:12px" onclick="testHealthSync()">Test with sample data</button>
+        <div class="notice">Fills today’s numbers with example values so you can see it work. Ask Claude for the 2-minute Shortcut recipe.</div>
+      </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.0</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.1</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -602,8 +608,39 @@ function lifeInsights(){
     if(w.newP>=1) out.push({ score:30, tone:'good', text:w.newP+' new place'+(w.newP>1?'s':'')+' in your latest week out.', why:'Somewhere new is on the map.' }); }
   return out;
 }
+function statsVals(key, from, to){ const out=[]; for(let i=from;i<to;i++){ const d=new Date(); d.setDate(d.getDate()-i);
+  const s=DB.stats[dstr(d)]; if(s && s[key]!=null && !isNaN(s[key])) out.push(Number(s[key])); } return out; }
+function healthInsights(){
+  const out=[];
+  const r=statsVals('rhr',0,3), p=statsVals('rhr',3,10);
+  if(r.length>=2 && p.length>=2){ const mr=mean(r), mp=mean(p);
+    if(mp-mr>=1.5) out.push({ score:46, tone:'good', text:'Resting heart rate is trending down.', why:'Averaging '+mr.toFixed(0)+' bpm, from '+mp.toFixed(0)+' the week before.' });
+    else if(mr-mp>=2.5) out.push({ score:56, tone:'watch', text:'Resting heart rate has ticked up.', why:mr.toFixed(0)+' bpm vs '+mp.toFixed(0)+' — often fatigue or something coming on.' }); }
+  const last=statsVals('sleep',0,1);
+  if(last.length && last[0]<6) out.push({ score:60, tone:'watch', text:'Short sleep last night — '+last[0]+'h.', why:'Your logs tie low-sleep days to higher spending and anxiety.' });
+  const s7=statsVals('sleep',0,7), s14=statsVals('sleep',7,14);
+  if(s7.length>=4 && s14.length>=3){ const a=mean(s7), b=mean(s14); if(a-b>=0.5) out.push({ score:38, tone:'good', text:'Your sleep has improved this week.', why:'Up to '+a.toFixed(1)+'h a night on average.' }); }
+  // cross-source: sleep (Health) vs anxiety (check-in)
+  const xs=[], ys=[]; Object.keys(DB.checkins).forEach(d => { const st=DB.stats[d], c=DB.checkins[d];
+    if(st && st.sleep!=null && !isNaN(st.sleep) && c){ const a=ckAnx(c); if(a!=null){ xs.push(Number(st.sleep)); ys.push(a); } } });
+  if(xs.length>=12){ const rr=pearson(xs,ys); if(rr!=null && rr<=-0.25) out.push({ score:64, tone:'info', text:'You run more anxious on low-sleep nights.', why:'A real link across '+xs.length+' days of your own data.' }); }
+  return out;
+}
+function ingestHealth(){
+  const hash=(location.hash||'').replace(/^#/,'');
+  if(!/(?:^|&)(?:h|sleep|steps|energy|rhr|hrv)=/.test(hash)) return;
+  const q=new URLSearchParams(hash);
+  const date=(q.get('date')&&/^\d{4}-\d{2}-\d{2}$/.test(q.get('date')))?q.get('date'):today();
+  const st=DB.stats[date]||(DB.stats[date]={}); const got=[];
+  ['sleep','steps','energy','rhr','hrv'].forEach(k => { const v=q.get(k);
+    if(v!=null && v!=='' && !isNaN(v)){ st[k]=Number(v); got.push(k); } });
+  if(got.length){ save();
+    try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; }
+    setTimeout(()=>toast('Apple Health synced · '+got.length+' metric'+(got.length>1?'s':'')), 250); }
+}
+function testHealthSync(){ location.hash='sleep=7.4&steps=8241&energy=512&rhr=54&hrv=47'; ingestHealth(); renderAll(); showView('today'); }
 function computeInsights(){
-  const all=[...patternInsights(), ...recentInsights(), ...lifeInsights()];
+  const all=[...patternInsights(), ...healthInsights(), ...recentInsights(), ...lifeInsights()];
   all.sort((a,b) => b.score-a.score);
   const seen=new Set(), pick=[];
   for(const i of all){ if(seen.has(i.text)) continue; seen.add(i.text); pick.push(i); if(pick.length>=5) break; }
@@ -642,10 +679,12 @@ function briefHTML(){
 
 // ---------- render: dashboard ----------
 const TILES = [
-  { key:'sleep',  label:'Sleep',  unit:'hrs',  dot:'var(--violet)', hint:'Fitbit — manual for now', ph:'e.g. 7.5' },
-  { key:'steps',  label:'Steps',  unit:'',     dot:'var(--aqua)',   hint:'Fitbit — manual for now', ph:'e.g. 8200' },
-  { key:'budget', label:'Budget', unit:'',     dot:'var(--good)',   hint:'YNAB left to spend',      ph:'e.g. $430 left' },
-  { key:'lakers', label:'Lakers', unit:'',     dot:'var(--gold)',   hint:'last game',               ph:'e.g. W 112–104' },
+  { key:'sleep',  label:'Sleep',         unit:'hrs',  dot:'var(--violet)',  src:'health', hint:'Hours asleep last night', ph:'e.g. 7.5' },
+  { key:'steps',  label:'Steps',         unit:'',     dot:'var(--aqua)',    src:'health', hint:'Steps today', ph:'e.g. 8200', fmt:'int' },
+  { key:'rhr',    label:'Resting HR',    unit:'bpm',  dot:'var(--magenta)', src:'health', hint:'Resting heart rate (bpm)', ph:'e.g. 54' },
+  { key:'hrv',    label:'HRV',           unit:'ms',   dot:'var(--gold)',    src:'health', hint:'HRV (ms)', ph:'e.g. 48' },
+  { key:'energy', label:'Active energy', unit:'kcal', dot:'var(--serious)', src:'health', hint:'Active energy (kcal)', ph:'e.g. 540', fmt:'int' },
+  { key:'budget', label:'Budget',        unit:'',     dot:'var(--good)',    src:'manual', hint:'YNAB — manual for now', ph:'e.g. $430 left' },
 ];
 function renderToday(){
   const t = today();
@@ -669,11 +708,14 @@ function renderToday(){
   // tiles
   const st = DB.stats[t] || {};
   $('tiles').innerHTML = TILES.map(tl => {
-    const v = st[tl.key];
+    const raw = st[tl.key];
+    const has = raw != null && raw !== '';
+    const disp = has ? (tl.fmt === 'int' ? Number(raw).toLocaleString() : esc(String(raw))) : null;
+    const hint = tl.src === 'health' ? (has ? 'via Apple Health' : 'Sync from Health') : tl.hint;
     return '<div class="tile" onclick="editTile(\''+tl.key+'\')">' +
       '<div class="label"><span class="dot" style="background:'+tl.dot+'"></span>'+tl.label+'</div>' +
-      '<div class="value">'+(v ? esc(v)+(tl.unit ? '<span class="unit">'+tl.unit+'</span>' : '') : '<span style="color:var(--muted);font-size:18px">—</span>')+'</div>' +
-      '<div class="hint">'+tl.hint+'</div></div>';
+      '<div class="value">'+(has ? disp+(tl.unit ? '<span class="unit">'+tl.unit+'</span>' : '') : '<span style="color:var(--muted);font-size:18px">—</span>')+'</div>' +
+      '<div class="hint">'+hint+'</div></div>';
   }).join('');
 
   // today's events + journal status
@@ -687,7 +729,7 @@ function renderToday(){
 function editTile(key){
   const tl = TILES.find(x => x.key === key); const st = DB.stats[today()] || {};
   openSheet('<h3>'+tl.label+'</h3>' +
-    '<div class="field"><label>'+tl.hint+'</label><input id="tileVal" placeholder="'+tl.ph+'" value="'+esc(st[key] || '')+'"></div>' +
+    '<div class="field"><label>'+(tl.hint||tl.label)+'</label><input id="tileVal" placeholder="'+tl.ph+'" value="'+esc(st[key] || '')+'"></div>' +
     '<button class="btn" onclick="saveTile(\''+key+'\')">Save</button>');
   setTimeout(() => { const el = $('tileVal'); if (el) el.focus(); }, 60);
 }
@@ -1195,7 +1237,8 @@ $('tlInput').addEventListener('change', async e => {
 });
 function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
-applyTheme(); initSettings(); renderAll();
+applyTheme(); initSettings(); ingestHealth(); renderAll();
+window.addEventListener('hashchange', () => { ingestHealth(); renderAll(); });
 </script>
 </body>
 </html>
