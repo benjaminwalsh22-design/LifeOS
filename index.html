@@ -285,6 +285,11 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .wk-title{ font-size:14px; font-weight:650; }
 .wk-sub{ font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.5; }
 
+/* ---- calendar events ---- */
+.event.cal { }
+.event .caldot { flex: 0 0 24px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.event .caldot::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+
 /* ---- goals ---- */
 .goal { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 16px; padding: 16px 17px; margin-bottom: 11px; cursor: pointer; }
 .goal .g-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
@@ -480,8 +485,15 @@ nav.tabbar {
         <button class="btn secondary" style="margin-top:12px" onclick="testHealthSync()">Test with sample data</button>
         <div class="notice">Fills today’s numbers with example values so you can see it work. Ask Claude for the 2-minute Shortcut recipe.</div>
       </div>
+      <div class="card">
+        <div style="font-size:15px;font-weight:650;margin-bottom:6px">Calendar</div>
+        <div class="notice" style="margin-top:0">Your Schedule pulls from every calendar on your phone through a free Apple <b>Shortcut</b> — Google, iCloud and work together. Synced events show read-only alongside anything you add by hand. Nothing leaves your phone.</div>
+        <button class="btn secondary" style="margin-top:12px" onclick="testCalSync()">Test with sample events</button>
+        <button class="btn secondary" style="margin-top:10px" onclick="clearCal()">Clear synced events</button>
+        <div class="notice">Ask Claude for the 2-minute Shortcut recipe.</div>
+      </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.4</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.5</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -549,7 +561,7 @@ const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
 const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light'},
-  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, goals:[] };
+  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, goals:[], calEvents:[] };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
@@ -697,7 +709,7 @@ function lifeInsights(){
     else if(bd && bd.days<=10) out.push({ score:66, tone:'info', text:f.name+'’s birthday '+(bd.days===1?'tomorrow':'in '+bd.days+' days')+'.', why:bd.label });
     if(overdue) out.push({ score:70, tone:'watch', text:'Reach out to '+f.name+'.', why:since==null?'No contact logged yet.':since+' days since you last talked.', act:{label:'Log a hello', fn:"markContacted('"+f.id+"')"} });
   });
-  const evToday=DB.events.filter(e=>e.date===tstr);
+  const evToday=eventsOn(tstr);
   if(evToday.length>=3) out.push({ score:36, tone:'info', text:'A full day — '+evToday.length+' things on the calendar.', why:'Protect a little space between them.' });
   if(!DB.journal.some(j=>j.date===tstr)) out.push({ score:22, tone:'', text:'No journal entry yet today.', why:'A photo of the page is enough.', act:{label:'Open journal', fn:"showView('journal')"} });
   if(DB.places && DB.places.weeks && DB.places.weeks[0]){ const w=DB.places.weeks[0];
@@ -734,6 +746,32 @@ function ingestHealth(){
     try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; }
     setTimeout(()=>toast('Apple Health synced · '+got.length+' metric'+(got.length>1?'s':'')), 250); }
 }
+function ingestCal(){
+  const h = location.hash || '';
+  const m = h.match(/[#&]cal=([^&]*)/);
+  if(!m) return;
+  let b64; try{ b64 = decodeURIComponent(m[1]); }catch(e){ b64 = m[1]; }
+  b64 = b64.replace(/\s/g,'');
+  let text=''; try{ const bin=atob(b64); text=new TextDecoder().decode(Uint8Array.from(bin, c=>c.charCodeAt(0))); }
+  catch(e){ toast('Calendar sync: unreadable data'); return; }
+  const evs=[];
+  text.split(/\r?\n/).forEach(line=>{ line=line.trim(); if(!line) return;
+    const parts=line.split('|~|'); const dt=(parts[0]||'').trim(); const title=(parts[1]||'').trim();
+    if(!title) return;
+    const dm=dt.match(/(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?/); if(!dm) return;
+    const date=dm[1]; let time=dm[2]||''; if(time==='00:00') time='';
+    evs.push({ id:'c_'+date+(time||'')+'_'+title.replace(/\W+/g,'').slice(0,24), date, time, title, source:'cal' });
+  });
+  DB.calEvents=evs; save();
+  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; }
+  setTimeout(()=>toast('Calendar synced · '+evs.length+' event'+(evs.length===1?'':'s')), 250);
+}
+function testCalSync(){
+  const d=new Date(); const nx=n=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate()); };
+  const sample=[nx(0)+' 09:00|~|Team standup', nx(0)+' 12:30|~|Lunch with Sarah', nx(1)+' 18:00|~|Dentist', nx(2)+'|~|Mom\u2019s birthday'].join('\n');
+  const b=btoa(unescape(encodeURIComponent(sample))); location.hash='cal='+b; ingestCal(); renderAll(); showView('schedule');
+}
+function clearCal(){ DB.calEvents=[]; save(); renderAll(); toast('Synced calendar events cleared'); }
 function testHealthSync(){ location.hash='sleep=7.4&steps=8241&energy=512&rhr=54&hrv=47'; ingestHealth(); renderAll(); showView('today'); }
 function computeInsights(limit){ limit=limit||5;
   const all=[...patternInsights(), ...healthInsights(), ...goalInsights(), ...recentInsights(), ...lifeInsights()];
@@ -755,7 +793,7 @@ function renderInsights(){
 }
 function briefHTML(){
   const t=today(); const s=[];
-  const ev=DB.events.filter(e=>e.date===t).sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+  const ev=eventsOn(t);
   if(!ev.length) s.push('The calendar is open today — nothing scheduled yet.');
   else if(ev.length===1) s.push('One thing on the calendar'+(ev[0].time?' at '+fmtTime(ev[0].time):'')+': '+ev[0].title+'.');
   else s.push(ev.length+' things on today’s calendar'+(ev[0].time?', starting with '+ev[0].title+' at '+fmtTime(ev[0].time):'')+'.');
@@ -796,7 +834,7 @@ function renderToday(){
   const h = new Date().getHours();
   const name = DB.profile.name || 'there';
   $('greetHi').textContent = (h < 12 ? 'Good morning, ' : h < 18 ? 'Good afternoon, ' : 'Good evening, ') + name;
-  const evToday = DB.events.filter(e => e.date === t);
+  const evToday = eventsOn(t);
   const nudges = DB.friends.filter(f => friendStatus(f).overdue);
   const hasJournal = DB.journal.some(j => j.date === t);
   const bits = [];
@@ -814,7 +852,7 @@ function renderToday(){
   $('tiles').innerHTML = tilesHTML(st);
 
   // today's events + journal status
-  $('todayEvents').innerHTML = evToday.length ? evToday.slice().sort((a,b) => (a.time||'99').localeCompare(b.time||'99')).map(eventHTML).join('')
+  $('todayEvents').innerHTML = evToday.length ? evToday.map(eventHTML).join('')
     : '<div class="empty">Nothing scheduled. Enjoy the open day — or add something.</div>';
   const jToday = DB.journal.filter(j => j.date === t);
   $('todayJournal').innerHTML = jToday.length
@@ -844,19 +882,30 @@ function weekDays(){
 function renderSchedule(){
   const days = weekDays();
   if (!days.includes(selDate)) selDate = days[0];
-  const evDates = new Set(DB.events.map(e => e.date));
+  const evDates = new Set([...DB.events.map(e => e.date), ...(DB.calEvents||[]).map(e => e.date)]);
   $('weekstrip').innerHTML = days.map(d => { const dt = parseD(d);
     return '<div class="day-pill'+(d === selDate ? ' sel' : '')+(d === today() ? ' today' : '')+(evDates.has(d) ? ' has' : '')+'" onclick="selectDay(\''+d+'\')">' +
       '<div class="dow">'+DOW[dt.getDay()]+'</div><div class="num">'+dt.getDate()+'</div><div class="marker"></div></div>';
   }).join('');
   $('schedDayLabel').innerHTML = '<span style="cursor:pointer" onclick="shiftWeek(-1)">‹&nbsp;</span> ' +
     fmtDate(selDate) + ' <span style="cursor:pointer" onclick="shiftWeek(1)">&nbsp;›</span>';
-  const evs = DB.events.filter(e => e.date === selDate).sort((a,b) => (a.time||'99').localeCompare(b.time||'99'));
+  const evs = eventsOn(selDate);
   $('schedEvents').innerHTML = evs.length ? evs.map(eventHTML).join('') : '<div class="empty">Nothing on this day.</div>';
 }
 function shiftWeek(n){ weekOffset += n; const days = weekDays(); selDate = days.includes(today()) ? today() : days[0]; renderSchedule(); }
 function selectDay(d){ selDate = d; renderSchedule(); }
+function eventsOn(date){
+  const man = DB.events.filter(e => e.date === date).map(e => Object.assign({}, e, {_src:'manual'}));
+  const cal = (DB.calEvents||[]).filter(e => e.date === date).map(e => Object.assign({}, e, {_src:'cal'}));
+  return man.concat(cal).sort((a,b) => ((a.time||'99')+'').localeCompare((b.time||'99')+''));
+}
 function eventHTML(e){
+  if(e._src === 'cal'){
+    return '<div class="event cal"><span class="caldot"></span>' +
+      '<div class="time">'+(e.time ? fmtTime(e.time) : 'all day')+'</div>' +
+      '<div class="body"><div class="title">'+esc(e.title)+'</div>' +
+      '<div class="notes" style="color:var(--muted)">From your calendar</div></div></div>';
+  }
   return '<div class="event'+(e.done ? ' done' : '')+'">' +
     '<button class="check" onclick="toggleEvent(\''+e.id+'\');event.stopPropagation()">' +
     '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg></button>' +
@@ -1466,7 +1515,7 @@ function areaRow(view,cls,icon,name,sum){
 }
 function renderLife(){
   const el=$('lifeAreas'); if(!el) return; const t=today();
-  const up=DB.events.filter(e=>e.date>=t);
+  const up=[...DB.events, ...(DB.calEvents||[])].filter(e=>e.date>=t);
   const nextEv=up.slice().sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')))[0];
   const schedSum=up.length?(up.length+' upcoming'+(nextEv?' · next '+fmtDate(nextEv.date):'')):'Nothing scheduled';
   const needy=DB.friends.filter(f=>{const st=friendStatus(f);return st.overdue||(st.bd&&st.bd.days<=14);}).length;
@@ -1641,8 +1690,8 @@ $('tlInput').addEventListener('change', async e => {
 });
 function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderLife(); renderHealthView(); renderAssistant(); renderGoals(); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
-applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal();
-window.addEventListener('hashchange', () => { ingestHealth(); renderAll(); });
+applyTheme(); initSettings(); ingestHealth(); ingestCal(); renderAll(); loadJournal();
+window.addEventListener('hashchange', () => { ingestHealth(); ingestCal(); renderAll(); });
 </script>
 </body>
 </html>
