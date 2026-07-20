@@ -285,6 +285,32 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .wk-title{ font-size:14px; font-weight:650; }
 .wk-sub{ font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.5; }
 
+/* ---- friendship agent ---- */
+.avatar.big { flex: 0 0 74px; width: 74px; height: 74px; font-size: 30px; }
+.pd-hero { text-align: center; padding: 8px 0 4px; }
+.pd-hero .avatar.big { margin: 0 auto; }
+.pd-name { font-family: var(--serif); font-size: 26px; font-weight: 600; letter-spacing: -.01em; margin-top: 12px; }
+.pd-rel { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.pd-status { font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+.pd-actions { display: flex; gap: 8px; margin: 16px 0 4px; }
+.pd-actions button { flex: 1; padding: 12px 6px; border-radius: 12px; cursor: pointer; background: var(--ink); color: var(--paper); font-size: 13.5px; font-weight: 600; border: none; font-family: inherit; }
+.pd-actions button:last-child { background: var(--surface-2); color: var(--ink); }
+.pd-ai { display: flex; gap: 8px; }
+.pd-ai button { flex: 1; padding: 11px 4px; border-radius: 12px; cursor: pointer; background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 650; border: none; font-family: inherit; }
+.kv { display: flex; justify-content: space-between; gap: 14px; padding: 11px 0; font-size: 14.5px; }
+.kv + .kv { border-top: 1px solid var(--hairline); }
+.kv .k { color: var(--muted); flex: 0 0 auto; }
+.kv .v { text-align: right; font-weight: 540; color: var(--ink); white-space: pre-wrap; }
+.tl-doc, .tl-log { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+.tl-doc { cursor: pointer; }
+.td-top { display: flex; justify-content: space-between; align-items: baseline; }
+.td-top b { font-size: 13px; font-weight: 650; }
+.td-top span { font-size: 12px; color: var(--muted); }
+.td-prev { font-size: 13.5px; color: var(--ink-2); margin-top: 4px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.agentcard { background: var(--stone, var(--surface-2)); border-radius: 14px; padding: 14px 16px; margin-top: 14px; }
+.agentcard h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+.agentcard p { font-family: var(--serif); font-size: 15px; line-height: 1.55; color: var(--ink); }
+
 /* ---- calendar events ---- */
 .event.cal { }
 .event .caldot { flex: 0 0 24px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
@@ -427,6 +453,12 @@ nav.tabbar {
       <div id="friendList"></div>
     </section>
 
+    <!-- ============ PERSON (under Friends) ============ -->
+    <section class="view" id="view-person">
+      <div class="backrow" onclick="showView('friends')">&lsaquo; Friends</div>
+      <div id="personBody"></div>
+    </section>
+
     <!-- ============ JOURNAL ============ -->
     <section class="view" id="view-journal">
       <div class="capture-box" id="captureBox">
@@ -493,7 +525,7 @@ nav.tabbar {
         <div class="notice">Ask Claude for the 2-minute Shortcut recipe.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.5</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.6</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -607,9 +639,10 @@ function closeSheet(){ $('overlay').classList.remove('open'); $('sheet').innerHT
 $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) closeSheet(); });
 
 // ---------- navigation ----------
-const VIEWS = { today:'Today', life:'Life', schedule:'Schedule', friends:'Friends', places:'Places', health:'Health', goals:'Goals', journal:'Journal', assistant:'Assistant', settings:'Settings' };
-const TAB_OF = { today:'today', life:'life', schedule:'life', friends:'life', places:'life', health:'life', goals:'life', settings:'life', journal:'journal', assistant:'assistant' };
+const VIEWS = { today:'Today', life:'Life', schedule:'Schedule', friends:'Friends', person:'', places:'Places', health:'Health', goals:'Goals', journal:'Journal', assistant:'Assistant', settings:'Settings' };
+const TAB_OF = { today:'today', life:'life', schedule:'life', friends:'life', person:'life', places:'life', health:'life', goals:'life', settings:'life', journal:'journal', assistant:'assistant' };
 let currentView = 'today';
+let currentPersonId = null;
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
 function showView(v){ currentView = v;
   const tab = TAB_OF[v] || v;
@@ -630,11 +663,22 @@ function nextBirthday(bday){ // bday: YYYY-MM-DD; returns {days, dateStr} or nul
   if (next < now) next = new Date(now.getFullYear()+1, m-1, d);
   return { days: Math.round((next - now)/86400000), label: MON[m-1]+' '+d };
 }
+function upcomingEvents(p, within){
+  const out=[]; const now=parseD(today());
+  (p.events||[]).forEach(e=>{ if(!e.date) return; const pp=e.date.split('-').map(Number); const m=pp[1], d=pp[2]; let next;
+    if(e.recurring==='yearly'){ next=new Date(now.getFullYear(),m-1,d); if(next<now) next=new Date(now.getFullYear()+1,m-1,d); }
+    else next=new Date(pp[0],m-1,d);
+    const days=Math.round((next-now)/86400000);
+    if(days>=0 && days<=within) out.push({ id:e.id, title:e.title, kind:e.kind, days, dateLabel: days===0?'today':days===1?'tomorrow':'in '+days+' days' });
+  });
+  return out.sort((a,b)=>a.days-b.days);
+}
 function friendStatus(f){
   const bd = nextBirthday(f.birthday);
   const since = f.lastContact ? daysBetween(f.lastContact, today()) : null;
   const overdue = f.cadence > 0 && (since === null || since >= f.cadence);
-  return { bd, since, overdue };
+  const ev = upcomingEvents(f, 21);
+  return { bd, since, overdue, nextEvent: ev[0] || null };
 }
 function markContacted(id){ const f = DB.friends.find(x => x.id === id);
   if (f){ f.lastContact = today(); save(); renderAll(); toast('Nice — logged it'); } }
@@ -704,10 +748,11 @@ function recentInsights(){
 }
 function lifeInsights(){
   const out=[]; const tstr=today();
-  DB.friends.forEach(f => { const {bd,since,overdue}=friendStatus(f);
-    if(bd && bd.days===0) out.push({ score:100, tone:'watch', text:'It is '+f.name+'’s birthday today.', why:'Send some love.', act:{label:'Mark done', fn:"markContacted('"+f.id+"')"} });
-    else if(bd && bd.days<=10) out.push({ score:66, tone:'info', text:f.name+'’s birthday '+(bd.days===1?'tomorrow':'in '+bd.days+' days')+'.', why:bd.label });
-    if(overdue) out.push({ score:70, tone:'watch', text:'Reach out to '+f.name+'.', why:since==null?'No contact logged yet.':since+' days since you last talked.', act:{label:'Log a hello', fn:"markContacted('"+f.id+"')"} });
+  DB.friends.forEach(f => { const {bd,since,overdue,nextEvent}=friendStatus(f); const K=!!DB.settings.apiKey;
+    if(bd && bd.days===0) out.push({ score:100, tone:'watch', text:'It is '+f.name+'’s birthday today.', why:'Send some love.', act:{label:K?'Draft a note':'Mark done', fn:K?"draftMessage('"+f.id+"')":"markContacted('"+f.id+"')"} });
+    else if(bd && bd.days<=10) out.push({ score:66, tone:'info', text:f.name+'’s birthday '+(bd.days===1?'tomorrow':'in '+bd.days+' days')+'.', why:bd.label, act:{label:'Open', fn:"openPerson('"+f.id+"')"} });
+    if(nextEvent && nextEvent.days<=14) out.push({ score:64, tone:'info', text:nextEvent.title+' — '+f.name+' · '+nextEvent.dateLabel+'.', why:'A good reason to reach out.', act:{label:'Open', fn:"openPerson('"+f.id+"')"} });
+    if(overdue) out.push({ score:70, tone:'watch', text:'Reach out to '+f.name+'.', why:since==null?'No contact logged yet.':since+' days since you last talked.', act:{label:K?'Draft a hello':'Log a hello', fn:K?"draftMessage('"+f.id+"')":"markContacted('"+f.id+"')"} });
   });
   const evToday=eventsOn(tstr);
   if(evToday.length>=3) out.push({ score:36, tone:'info', text:'A full day — '+evToday.length+' things on the calendar.', why:'Protect a little space between them.' });
@@ -937,24 +982,25 @@ function deleteEvent(id){ DB.events = DB.events.filter(x => x.id !== id); save()
 // ---------- render: friends ----------
 function renderFriends(){
   if (!DB.friends.length){
-    $('friendList').innerHTML = '<div class="card"><b>Nobody here yet.</b><div style="font-size:14px;color:var(--ink-2);margin-top:4px">Add the people you want to stay close to — set their birthday and how often you want to be in touch, and the app will nudge you on the Today screen.</div></div>';
+    $('friendList').innerHTML = '<div class="card"><b>Nobody here yet.</b><div style="font-size:14px;color:var(--ink-2);margin-top:4px;line-height:1.5">Add the people you want to stay close to. Give each a profile, log your conversations, and the agent helps you keep up — birthdays, what to say, gift ideas.</div><button class="btn" style="margin-top:14px" onclick="editFriend(\'\')">Add someone</button></div>';
     return;
   }
   const scored = DB.friends.map(f => { const s = friendStatus(f);
     let score = 500 + (s.since || 0) - (f.cadence || 999);
     if (s.overdue) score += 1000;
     if (s.bd && s.bd.days <= 14) score += 2000 - s.bd.days;
+    if (s.nextEvent && s.nextEvent.days <= 14) score += 1500 - s.nextEvent.days;
     return { f, s, score };
   }).sort((a,b) => b.score - a.score);
   $('friendList').innerHTML = scored.map(({f, s}) => {
     const meta = [];
     if (s.bd && s.bd.days === 0) meta.push('<span class="bday">Birthday today!</span>');
     else if (s.bd && s.bd.days <= 14) meta.push('<span class="bday">Birthday '+(s.bd.days === 1 ? 'tomorrow' : 'in '+s.bd.days+'d')+'</span>');
-    else if (s.bd) meta.push('birthday '+s.bd.label);
+    if (s.nextEvent && s.nextEvent.days <= 14) meta.push('<span class="bday">'+esc(s.nextEvent.title)+' '+s.nextEvent.dateLabel+'</span>');
     if (s.overdue) meta.push('<span class="due">'+(s.since === null ? 'never logged' : s.since+'d since contact')+'</span>');
     else if (s.since !== null) meta.push('talked '+(s.since === 0 ? 'today' : s.since+'d ago'));
-    if (f.cadence > 0) meta.push('every '+f.cadence+'d');
-    return '<div class="friend" onclick="editFriend(\''+f.id+'\')">' +
+    if (!meta.length && f.relationship) meta.push(esc(f.relationship));
+    return '<div class="friend" onclick="openPerson(\''+f.id+'\')">' +
       '<div class="avatar" style="background:'+avColor(f.name)+'">'+esc(f.name[0].toUpperCase())+'</div>' +
       '<div class="info"><div class="name">'+esc(f.name)+'</div><div class="meta">'+meta.join(' · ')+'</div></div>' +
       '<button class="mini" onclick="markContacted(\''+f.id+'\');event.stopPropagation()">Contacted</button></div>';
@@ -962,28 +1008,173 @@ function renderFriends(){
 }
 function editFriend(id){
   const f = id ? DB.friends.find(x => x.id === id) : null;
-  const cads = [[7,'Weekly'],[14,'Every 2 weeks'],[30,'Monthly'],[60,'Every 2 months'],[90,'Quarterly'],[180,'Twice a year'],[0,'No cadence — birthdays only']];
-  openSheet('<h3>'+(f ? esc(f.name) : 'New friend')+'</h3>' +
+  const cads = [[7,'Weekly'],[14,'Every 2 weeks'],[30,'Monthly'],[60,'Every 2 months'],[90,'Quarterly'],[180,'Twice a year'],[0,'No cadence']];
+  openSheet('<h3>'+(f ? 'Edit '+esc(f.name) : 'New person')+'</h3>' +
     '<div class="field"><label>Name</label><input id="frName" value="'+esc(f ? f.name : '')+'"></div>' +
+    '<div class="field"><label>Relationship</label><input id="frRel" placeholder="Brother, college friend, coworker…" value="'+esc(f ? (f.relationship||'') : '')+'"></div>' +
     '<div class="row2"><div class="field"><label>Birthday</label><input id="frBday" type="date" value="'+(f ? f.birthday||'' : '')+'"></div>' +
     '<div class="field"><label>Stay in touch</label><select id="frCad">' +
-      cads.map(c => '<option value="'+c[0]+'"'+(f && f.cadence === c[0] ? ' selected' : (!f && c[0] === 30 ? ' selected' : ''))+'>'+c[1]+'</option>').join('') +
+      cads.map(c => '<option value="'+c[0]+'"'+((f && f.cadence === c[0])||(!f && c[0]===30) ? ' selected' : '')+'>'+c[1]+'</option>').join('') +
     '</select></div></div>' +
     '<div class="field"><label>Last contact</label><input id="frLast" type="date" value="'+(f ? f.lastContact||'' : today())+'"></div>' +
-    '<div class="field"><label>Notes</label><textarea id="frNotes" placeholder="Kids’ names, what you talked about last…">'+esc(f ? f.notes||'' : '')+'</textarea></div>' +
+    '<div class="field"><label>Family (partner, kids…)</label><textarea id="frFam" placeholder="Jess; Theo (6), June (2)">'+esc(f ? f.family||'' : '')+'</textarea></div>' +
+    '<div class="field"><label>Favorites &amp; interests</label><textarea id="frFav" placeholder="Bavel, half-marathons, pour-over coffee">'+esc(f ? f.favorites||'' : '')+'</textarea></div>' +
+    '<div class="row2"><div class="field"><label>Sports team</label><input id="frTeam" placeholder="Dodgers" value="'+esc(f ? f.team||'' : '')+'"></div>' +
+    '<div class="field"><label>How we met</label><input id="frHow" value="'+esc(f ? f.how||'' : '')+'"></div></div>' +
+    '<div class="field"><label>Gift ideas</label><textarea id="frGift" placeholder="Running vest, Dodgers tickets">'+esc(f ? f.giftIdeas||'' : '')+'</textarea></div>' +
+    '<div class="field"><label>Notes</label><textarea id="frNotes">'+esc(f ? f.notes||'' : '')+'</textarea></div>' +
     '<button class="btn" onclick="saveFriend(\''+(f ? f.id : '')+'\')">Save</button>' +
-    (f ? '<button class="btn danger" onclick="deleteFriend(\''+f.id+'\')">Remove</button>' : ''));
+    (f ? '<button class="btn danger" onclick="deleteFriend(\''+f.id+'\')">Remove person</button>' : ''));
   if (!f) setTimeout(() => { const el = $('frName'); if (el) el.focus(); }, 60);
 }
 function saveFriend(id){
   const name = $('frName').value.trim(); if (!name){ toast('Name needed'); return; }
-  const data = { name, birthday: $('frBday').value, cadence: Number($('frCad').value),
-    lastContact: $('frLast').value, notes: $('frNotes').value.trim() };
-  if (id) Object.assign(DB.friends.find(x => x.id === id), data);
-  else DB.friends.push(Object.assign({ id: uid() }, data));
-  save(); closeSheet(); renderAll();
+  const data = { name, relationship:$('frRel').value.trim(), birthday: $('frBday').value, cadence: Number($('frCad').value),
+    lastContact: $('frLast').value, family:$('frFam').value.trim(), favorites:$('frFav').value.trim(),
+    team:$('frTeam').value.trim(), how:$('frHow').value.trim(), giftIdeas:$('frGift').value.trim(), notes: $('frNotes').value.trim() };
+  if (id){ Object.assign(DB.friends.find(x => x.id === id), data); }
+  else { const p = Object.assign({ id: uid(), events:[], log:[], docs:[] }, data); DB.friends.push(p); currentPersonId=p.id; }
+  save(); closeSheet(); if(currentPersonId) renderPerson(); renderAll();
+  if(!id && currentPersonId) showView('person');
 }
-function deleteFriend(id){ DB.friends = DB.friends.filter(x => x.id !== id); save(); closeSheet(); renderAll(); }
+function deleteFriend(id){ DB.friends = DB.friends.filter(x => x.id !== id); save(); closeSheet(); if(currentPersonId===id){ currentPersonId=null; showView('friends'); } else renderAll(); }
+
+// ---------- friendship agent ----------
+function openPerson(id){ currentPersonId=id; showView('person'); }
+function docKindLabel(k){ return k==='thread'?'Text thread':k==='transcript'?'Call transcript':k==='call'?'Call':k==='text'?'Text':k==='inperson'?'In person':k==='note'?'Note':'Note'; }
+function renderPerson(){
+  const el=$('personBody'); if(!el) return;
+  const p=DB.friends.find(x=>x.id===currentPersonId);
+  if(!p){ el.innerHTML=''; return; }
+  const s=friendStatus(p), bd=s.bd, K=!!DB.settings.apiKey;
+  const sl=[]; sl.push(s.since!=null?('talked '+(s.since===0?'today':s.since+'d ago')):'no contact logged');
+  if(bd) sl.push('birthday '+(bd.days<=30?(bd.days===0?'today':'in '+bd.days+'d'):bd.label));
+  let h='<div class="pd-hero"><div class="avatar big" style="background:'+avColor(p.name)+'">'+esc(p.name[0].toUpperCase())+'</div>'+
+    '<div class="pd-name">'+esc(p.name)+'</div>'+(p.relationship?'<div class="pd-rel">'+esc(p.relationship)+'</div>':'')+
+    '<div class="pd-status">'+esc(sl.join(' · '))+'</div></div>';
+  h+='<div class="pd-actions"><button onclick="logChat(\''+p.id+'\')">Log a chat</button><button onclick="markContacted(\''+p.id+'\')">Contacted today</button></div>';
+  h+='<div class="ck-label">Agent</div><div class="pd-ai"><button onclick="draftMessage(\''+p.id+'\')">Draft a message</button><button onclick="whatToTalk(\''+p.id+'\')">What to talk about</button><button onclick="giftIdeas(\''+p.id+'\')">Gift ideas</button></div>';
+  if(!K) h+='<div class="notice">Add an Anthropic API key in Settings to switch the agent on.</div>';
+  h+='<div id="agentOut"></div>';
+  h+='<div class="section-head" style="margin-top:20px"><h2>Upcoming</h2><button class="action" onclick="addPersonEvent(\''+p.id+'\')">+ Date</button></div>';
+  const up=[]; if(bd) up.push({title:p.name+'’s birthday', label:(bd.days===0?'today':bd.days===1?'tomorrow':'in '+bd.days+' days'), days:bd.days});
+  upcomingEvents(p,180).forEach(e=>up.push({title:e.title,label:e.dateLabel,days:e.days,eid:e.id}));
+  up.sort((a,b)=>a.days-b.days);
+  h+= up.length? '<div class="card" style="padding:6px 16px">'+up.map(u=>'<div class="kv"><span class="k">'+esc(u.title)+(u.eid?' <span style="color:var(--faint);cursor:pointer" onclick="delPersonEvent(\''+p.id+'\',\''+u.eid+'\')">✕</span>':'')+'</span><span class="v">'+esc(u.label)+'</span></div>').join('')+'</div>' : '<div class="empty">No dates yet — add anniversaries, kids’ birthdays, work milestones.</div>';
+  h+='<div class="section-head" style="margin-top:20px"><h2>About</h2><button class="action" onclick="editFriend(\''+p.id+'\')">Edit</button></div>';
+  const ab=[['Family',p.family],['Favorites & interests',p.favorites],['Sports team',p.team],['How we met',p.how],['Gift ideas',p.giftIdeas],['Notes',p.notes],['Stay in touch',p.cadence?('every '+p.cadence+' days'):'']].filter(a=>a[1]);
+  h+= ab.length? '<div class="card" style="padding:6px 16px">'+ab.map(a=>'<div class="kv"><span class="k">'+esc(a[0])+'</span><span class="v">'+esc(a[1])+'</span></div>').join('')+'</div>' : '<div class="empty">Tap Edit to add family, interests, notes.</div>';
+  h+='<div class="section-head" style="margin-top:20px"><h2>History</h2><button class="action" onclick="importMaterial(\''+p.id+'\')">+ Import</button></div>';
+  const items=[].concat((p.log||[]).map(l=>Object.assign({},l,{_t:'log'})), (p.docs||[]).map(d=>Object.assign({},d,{_t:'doc'}))).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  h+= items.length? items.map(it=> it._t==='doc'
+    ? '<div class="tl-doc" onclick="openDoc(\''+p.id+'\',\''+it.id+'\')"><div class="td-top"><b>'+esc(docKindLabel(it.kind))+'</b><span>'+esc(it.date)+'</span></div><div class="td-prev">'+esc((it.text||'').slice(0,140))+'</div></div>'
+    : '<div class="tl-log"><div class="td-top"><b>'+esc(docKindLabel(it.kind))+'</b><span>'+esc(it.date)+'</span></div>'+(it.text?'<div class="td-prev">'+esc(it.text)+'</div>':'')+'</div>'
+  ).join('') : '<div class="empty">No history yet. Log a chat, or import a text thread or call transcript.</div>';
+  h+='<button class="btn danger" style="margin-top:18px" onclick="deleteFriend(\''+p.id+'\')">Remove person</button>';
+  el.innerHTML=h;
+}
+function logChat(id){
+  openSheet('<h3>Log a chat</h3>'+
+    '<div class="field"><label>Type</label><select id="lcType"><option value="inperson">In person</option><option value="call">Call</option><option value="text">Text</option><option value="note">Note</option></select></div>'+
+    '<div class="field"><label>Date</label><input id="lcDate" type="date" value="'+today()+'"></div>'+
+    '<div class="field"><label>What happened / talked about</label><textarea id="lcText" placeholder="Caught up about his new job, kids doing well…"></textarea></div>'+
+    '<button class="btn" onclick="saveLog(\''+id+'\')">Save</button>');
+}
+function saveLog(id){ const p=DB.friends.find(x=>x.id===id); if(!p) return; p.log=p.log||[];
+  const d=$('lcDate').value||today();
+  p.log.push({ id:uid(), ts:(parseD(d).getTime()||Date.now()), date:d, kind:$('lcType').value, text:$('lcText').value.trim() });
+  if(!p.lastContact || d>p.lastContact) p.lastContact=d;
+  save(); closeSheet(); renderPerson(); renderAll(); toast('Logged'); }
+function addPersonEvent(id){
+  openSheet('<h3>Add a date</h3>'+
+    '<div class="field"><label>What</label><input id="peTitle" placeholder="Work anniversary, Theo’s birthday, wedding…"></div>'+
+    '<div class="field"><label>Date</label><input id="peDate" type="date" value="'+today()+'"></div>'+
+    '<div class="field"><label>Repeat</label><select id="peRec"><option value="yearly">Every year</option><option value="once">One time</option></select></div>'+
+    '<button class="btn" onclick="savePersonEvent(\''+id+'\')">Save</button>');
+}
+function savePersonEvent(id){ const p=DB.friends.find(x=>x.id===id); const t=$('peTitle').value.trim(); if(!t){ toast('Name it'); return; }
+  p.events=p.events||[]; p.events.push({ id:uid(), title:t, date:$('peDate').value, recurring:$('peRec').value, kind:'other' });
+  save(); closeSheet(); renderPerson(); renderAll(); toast('Date added'); }
+function delPersonEvent(pid,eid){ const p=DB.friends.find(x=>x.id===pid); if(!p) return; p.events=(p.events||[]).filter(x=>x.id!==eid); save(); renderPerson(); renderAll(); }
+function importMaterial(id){
+  openSheet('<h3>Import material</h3>'+
+    '<div class="notice" style="margin-top:0">Paste a text thread, a call transcript, or a note. The agent draws on these when it suggests what to say or gift ideas. Stays on your phone.</div>'+
+    '<div class="field"><label>Kind</label><select id="imKind"><option value="thread">Text thread</option><option value="transcript">Call transcript</option><option value="note">Note</option></select></div>'+
+    '<div class="field"><label>Date</label><input id="imDate" type="date" value="'+today()+'"></div>'+
+    '<div class="field"><label>Paste text</label><textarea id="imText" style="min-height:150px"></textarea></div>'+
+    '<button class="btn secondary" onclick="$(\'imFile\').click()">Or import a .txt file</button><input type="file" id="imFile" accept=".txt,text/plain" hidden>'+
+    '<button class="btn" onclick="saveMaterial(\''+id+'\')">Save</button>');
+  setTimeout(()=>{ const fi=$('imFile'); if(fi) fi.onchange=async e=>{ const f=e.target.files[0]; if(f && $('imText')) $('imText').value=await f.text(); }; }, 60);
+}
+function saveMaterial(id){ const p=DB.friends.find(x=>x.id===id); const txt=$('imText').value.trim(); if(!txt){ toast('Nothing to save'); return; }
+  p.docs=p.docs||[]; const d=$('imDate').value||today();
+  p.docs.push({ id:uid(), ts:(parseD(d).getTime()||Date.now()), date:d, kind:$('imKind').value, text:txt });
+  save(); closeSheet(); renderPerson(); toast('Material saved'); }
+function openDoc(pid,did){ const p=DB.friends.find(x=>x.id===pid); const d=(p.docs||[]).find(x=>x.id===did); if(!d) return;
+  openSheet('<h3>'+docKindLabel(d.kind)+' · '+esc(d.date)+'</h3><div class="detail-block" style="max-height:52vh;overflow-y:auto"><p>'+esc(d.text)+'</p></div><button class="btn danger" onclick="deleteDoc(\''+pid+'\',\''+did+'\')">Delete</button>'); }
+function deleteDoc(pid,did){ const p=DB.friends.find(x=>x.id===pid); p.docs=(p.docs||[]).filter(x=>x.id!==did); save(); closeSheet(); renderPerson(); }
+async function askClaude(system, user, max){
+  const key=DB.settings.apiKey; if(!key) throw new Error('no key');
+  const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
+    headers:{ 'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+    body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:max||600, system, messages:[{ role:'user', content:user }] }) });
+  if(!res.ok) throw new Error('API '+res.status);
+  const d=await res.json(); return (d.content||[]).map(c=>c.text||'').join('').trim();
+}
+function personContext(p){
+  const b=[]; b.push('Name: '+p.name+(p.relationship?(' ('+p.relationship+')'):''));
+  if(p.family) b.push('Family: '+p.family);
+  if(p.favorites) b.push('Favorites/interests: '+p.favorites);
+  if(p.team) b.push('Sports team: '+p.team);
+  if(p.how) b.push('How they met: '+p.how);
+  if(p.giftIdeas) b.push('Gift ideas so far: '+p.giftIdeas);
+  if(p.notes) b.push('Notes: '+p.notes);
+  const bd=nextBirthday(p.birthday); if(bd) b.push('Birthday: '+p.birthday+(bd.days<=45?(' (in '+bd.days+' days)'):''));
+  const ev=upcomingEvents(p,90); if(ev.length) b.push('Upcoming: '+ev.map(e=>e.title+' '+e.dateLabel).join('; '));
+  const log=(p.log||[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,5);
+  if(log.length) b.push('Recent contact:\n'+log.map(l=>l.date+' ('+docKindLabel(l.kind)+'): '+(l.text||'')).join('\n'));
+  const docs=(p.docs||[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,3);
+  if(docs.length) b.push('Recent material:\n'+docs.map(d=>'['+docKindLabel(d.kind)+' '+d.date+']\n'+(d.text||'').slice(0,1600)).join('\n\n'));
+  return b.join('\n');
+}
+function agentBusy(msg){ if($('agentOut')) $('agentOut').innerHTML='<div class="agentcard"><p><span class="spinner"></span>'+esc(msg)+'</p></div>'; }
+function agentResult(title, inner){ if($('agentOut')) $('agentOut').innerHTML='<div class="agentcard"><h4>'+esc(title)+'</h4>'+inner+'</div>'; }
+function copyText(t){ if(navigator.clipboard){ navigator.clipboard.writeText(t).then(()=>toast('Copied')).catch(()=>toast('Copy failed')); } else toast('Copy not available'); }
+function draftMessage(id){
+  const p=DB.friends.find(x=>x.id===id); if(!p) return;
+  if(!DB.settings.apiKey){ toast('Add an API key in Settings'); return; }
+  openSheet('<h3>Draft a message to '+esc(p.name)+'</h3>'+
+    '<div class="field"><label>Occasion</label><select id="dmIntent"><option>Just checking in</option><option>Happy birthday</option><option>Congratulations</option><option>Thinking of you</option><option>Make plans to meet up</option></select></div>'+
+    '<div class="field"><label>Anything to include? (optional)</label><textarea id="dmExtra" placeholder="Mention his new job; keep it short"></textarea></div>'+
+    '<button class="btn" onclick="runDraft(\''+id+'\')">Generate</button><div id="dmOut"></div>');
+}
+async function runDraft(id){
+  const p=DB.friends.find(x=>x.id===id); const intent=$('dmIntent').value; const extra=$('dmExtra').value.trim();
+  $('dmOut').innerHTML='<div class="agentcard"><p><span class="spinner"></span>Writing…</p></div>';
+  const sys='You draft short, warm, natural personal text messages the user sends as themselves. Sound like a real person texting a friend: casual, specific, not formal, no corporate tone, no hashtags, emojis only if natural. 1 to 4 sentences. Output ONLY the message text.';
+  const u='Write a text message to '+p.name+'. Occasion: '+intent+'.'+(extra?(' Also: '+extra+'.'):'')+'\n\nContext about them:\n'+personContext(p);
+  try{ const msg=await askClaude(sys,u,400);
+    $('dmOut').innerHTML='<div class="agentcard"><h4>Draft</h4><p id="dmMsg">'+esc(msg)+'</p></div>'+
+      '<button class="btn" onclick="copyText(document.getElementById(\'dmMsg\').textContent)">Copy</button>'+
+      '<button class="btn secondary" style="margin-top:10px" onclick="runDraft(\''+id+'\')">Regenerate</button>';
+  }catch(e){ $('dmOut').innerHTML='<div class="notice">Couldn’t reach Claude just now.</div>'; }
+}
+async function whatToTalk(id){
+  const p=DB.friends.find(x=>x.id===id); if(!p) return;
+  if(!DB.settings.apiKey){ toast('Add an API key in Settings'); return; }
+  agentBusy('Thinking about '+p.name+'…');
+  const sys='You help someone reconnect with a friend. From the context, suggest 3-4 specific, natural things to ask about or bring up next time they talk. Reference their real life. Warm, brief. Each on its own line starting with "– ".';
+  try{ const r=await askClaude(sys, 'Friend context:\n'+personContext(p), 450); agentResult('What to talk about', '<p style="white-space:pre-wrap">'+esc(r)+'</p>'); }
+  catch(e){ agentResult('What to talk about', '<div class="notice">Couldn’t reach Claude just now.</div>'); }
+}
+async function giftIdeas(id){
+  const p=DB.friends.find(x=>x.id===id); if(!p) return;
+  if(!DB.settings.apiKey){ toast('Add an API key in Settings'); return; }
+  agentBusy('Finding gift ideas…');
+  const sys='Suggest 4-5 specific, thoughtful gift ideas for the described person across a range of prices. Reference their actual interests. Each on its own line starting with "– ". Brief, concrete (name real kinds of things).';
+  try{ const r=await askClaude(sys, 'Person:\n'+personContext(p), 450); agentResult('Gift ideas', '<p style="white-space:pre-wrap">'+esc(r)+'</p>'); }
+  catch(e){ agentResult('Gift ideas', '<div class="notice">Couldn’t reach Claude just now.</div>'); }
+}
 
 // ---------- journal ----------
 const thumbURLs = {};
@@ -1688,7 +1879,7 @@ $('tlInput').addEventListener('change', async e => {
     toast(parsed.visits.length + ' visits imported');
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
-function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderLife(); renderHealthView(); renderAssistant(); renderGoals(); }
+function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderLife(); renderHealthView(); renderAssistant(); renderGoals(); renderPerson(); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
 applyTheme(); initSettings(); ingestHealth(); ingestCal(); renderAll(); loadJournal();
 window.addEventListener('hashchange', () => { ingestHealth(); ingestCal(); renderAll(); });
