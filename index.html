@@ -285,6 +285,14 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .wk-title{ font-size:14px; font-weight:650; }
 .wk-sub{ font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.5; }
 
+/* ---- trends / sparklines ---- */
+.trend { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 14px; padding: 14px 15px 12px; margin-bottom: 10px; }
+.tr-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; }
+.tr-label { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.tr-val { font-family: var(--serif); font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.tr-unit { font-size: 13px; color: var(--ink-2); margin-left: 1px; font-family: var(--sans); }
+.tr-sub { font-size: 12.5px; color: var(--muted); margin-top: 9px; }
+
 /* ---- this week's people ---- */
 .pw-card { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 14px; padding: 11px 13px; margin-bottom: 8px; }
 .pw-card .avatar { flex: 0 0 38px; width: 38px; height: 38px; font-size: 15px; }
@@ -536,7 +544,7 @@ nav.tabbar {
         <div class="notice">Ask Claude for the 2-minute Shortcut recipe.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.0</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.1</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2039,11 +2047,54 @@ function reviewInsights(){
   if(due && (dow===0 || dow===6 || !last)) return [{ score:58, tone:'info', text:'Your weekly review is ready.', why:'A minute to reflect on the week just lived.', act:{label:'Open', fn:"showView('review')"} }];
   return [];
 }
+const TRENDS=[
+  {key:'sleep', kind:'stat', label:'Sleep', unit:'h', color:'var(--violet)', goodUp:true, dp:1},
+  {key:'rhr', kind:'stat', label:'Resting HR', unit:' bpm', color:'var(--magenta)', goodUp:false, dp:0},
+  {key:'steps', kind:'stat', label:'Steps', unit:'', color:'var(--aqua)', goodUp:true, dp:0, fmt:'int'},
+  {key:'hrv', kind:'stat', label:'HRV', unit:' ms', color:'var(--gold)', goodUp:true, dp:0},
+  {key:'hap', kind:'checkin', label:'Happiness', unit:'/10', color:'var(--accent)', goodUp:true, dp:1},
+  {key:'anx', kind:'checkin', label:'Anxiety', unit:'/10', color:'var(--warning)', goodUp:false, dp:1},
+];
+function trendSeries(kind, key, nDays){
+  const out=[]; for(let i=nDays-1;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); const ds=dstr(d);
+    let v=null;
+    if(kind==='stat'){ const st=DB.stats[ds]; v=(st && st[key]!=null && !isNaN(st[key]))?Number(st[key]):null; }
+    else { const c=DB.checkins[ds]; if(c) v=(key==='anx')?ckAnx(c):ckHap(c); }
+    out.push({ v }); }
+  return out;
+}
+function sparkline(vals, color){
+  const n=vals.length, W=320, H=44, pad=7;
+  const nn=vals.map((o,i)=>({i,v:o.v})).filter(o=>o.v!=null);
+  if(nn.length<2) return '';
+  const mn=Math.min.apply(null,nn.map(o=>o.v)), mx=Math.max.apply(null,nn.map(o=>o.v));
+  const X=i=>2+(i/(n-1))*(W-4), Y=v=> mx===mn ? H/2 : pad+(1-(v-mn)/(mx-mn))*(H-2*pad);
+  const line=nn.map(o=>X(o.i).toFixed(1)+','+Y(o.v).toFixed(1));
+  const last=nn[nn.length-1];
+  const area='M'+X(nn[0].i).toFixed(1)+','+H+' L'+line.join(' L')+' L'+X(last.i).toFixed(1)+','+H+' Z';
+  return '<svg width="100%" height="44" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="display:block">'+
+    '<path d="'+area+'" fill="'+color+'" opacity="0.09"/>'+
+    '<polyline points="'+line.join(' ')+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>'+
+    '<circle cx="'+X(last.i).toFixed(1)+'" cy="'+Y(last.v).toFixed(1)+'" r="2.6" fill="'+color+'"/></svg>';
+}
+function trendCardHTML(m){
+  const vals=trendSeries(m.kind, m.key, 30);
+  const nn=vals.filter(o=>o.v!=null); if(nn.length<3) return '';
+  const latest=nn[nn.length-1].v;
+  const nz=nn.map(o=>o.v); const last7=nz.slice(-7), prior=nz.slice(-14,-7);
+  const m7=mean(last7), mp=prior.length? mean(prior):null;
+  const spark=sparkline(vals, m.color); if(!spark) return '';
+  const disp = m.fmt==='int' ? Math.round(latest).toLocaleString() : (Math.round(latest*Math.pow(10,m.dp))/Math.pow(10,m.dp));
+  const sub = m7!=null ? ('7-day avg '+(m.fmt==='int'?Math.round(m7).toLocaleString():(Math.round(m7*10)/10))+m.unit+(mp!=null?arrowHTML(m7,mp,m.goodUp):'')+' <span style="color:var(--faint)">· '+nn.length+' days</span>') : (nn.length+' days logged');
+  return '<div class="trend"><div class="tr-top"><span class="tr-label">'+esc(m.label)+'</span><span class="tr-val">'+disp+'<span class="tr-unit">'+esc(m.unit)+'</span></span></div>'+spark+'<div class="tr-sub">'+sub+'</div></div>';
+}
 function renderInsightsView(){
   const ex=$('insightsExtra'); if(!ex) return;
   if($('tiles')) $('tiles').innerHTML = tilesHTML(DB.stats[today()]||{});
   const hi=healthInsights(), pat=patternInsights();
   let h='';
+  const trendCards=TRENDS.map(trendCardHTML).filter(Boolean);
+  if(trendCards.length){ h+='<div class="section-head" style="margin-top:22px"><h2>Trends</h2><span class="action" style="cursor:default">last 30 days</span></div>'+trendCards.join(''); }
   h+='<div class="section-head" style="margin-top:20px"><h2>Signals</h2></div>';
   h+= hi.length ? hi.map(insightCardHTML).join('') : '<div class="empty">Sync a few days from Apple Health and trends show up here.</div>';
   if(pat.length){ h+='<div class="section-head" style="margin-top:20px"><h2>Patterns in your data</h2></div>'+pat.map(insightCardHTML).join(''); }
