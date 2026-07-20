@@ -107,6 +107,13 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .greeting .sub { font-size: 14px; color: var(--ink-2); margin-top: 2px; }
 
 /* ---- AI brief ---- */
+.brief-quote { font-family: var(--serif); font-size: 18px; line-height: 1.5; color: var(--ink); }
+.brief-author { display: block; font-family: var(--sans); font-size: 12.5px; color: var(--muted); font-weight: 600; margin-top: 8px; }
+.brief-goals { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--hairline); }
+.brief-goal { font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.brief-goal + .brief-goal { margin-top: 9px; }
+.brief-goal b { color: var(--ink); font-weight: 650; }
+.brief-why { display: block; color: var(--muted); font-size: 13px; margin-top: 3px; }
 .brief { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 16px; padding: 18px 18px 20px; margin: 4px 0 16px; }
 .brief .tag { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
 .brief .tag svg { width: 14px; height: 14px; color: var(--warning); }
@@ -442,8 +449,6 @@ nav.tabbar {
       <div id="todayDigest"></div>
       <div class="section-head"><h2>Noticed</h2></div>
       <div class="attn" id="attnList"></div>
-      <div class="section-head"><h2>Today's schedule</h2><button class="action" id="todayAddEvent">+ Add</button></div>
-      <div id="todayEvents"></div>
       <div class="section-head" style="margin-top:20px"><h2>More</h2></div>
       <div id="todayMore"></div>
     </section>
@@ -536,15 +541,8 @@ nav.tabbar {
         <button class="btn secondary" style="margin-top:12px" onclick="testHealthSync()">Test with sample data</button>
         <div class="notice">Fills today’s numbers with example values so you can see it work. Ask Claude for the 2-minute Shortcut recipe.</div>
       </div>
-      <div class="card">
-        <div style="font-size:15px;font-weight:650;margin-bottom:6px">Calendar</div>
-        <div class="notice" style="margin-top:0">Your Schedule pulls from every calendar on your phone through a free Apple <b>Shortcut</b> — Google, iCloud and work together. Synced events show read-only alongside anything you add by hand. Nothing leaves your phone.</div>
-        <button class="btn secondary" style="margin-top:12px" onclick="testCalSync()">Test with sample events</button>
-        <button class="btn secondary" style="margin-top:10px" onclick="clearCal()">Clear synced events</button>
-        <div class="notice">Ask Claude for the 2-minute Shortcut recipe.</div>
-      </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.1</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.2</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -779,8 +777,6 @@ function lifeInsights(){
     if(nextEvent && nextEvent.days<=14) out.push({ score:64, tone:'info', text:nextEvent.title+' — '+f.name+' · '+nextEvent.dateLabel+'.', why:'A good reason to reach out.', act:{label:'Open', fn:"openPerson('"+f.id+"')"} });
     if(overdue) out.push({ score:70, tone:'watch', text:'Reach out to '+f.name+'.', why:since==null?'No contact logged yet.':since+' days since you last talked.', act:{label:K?'Draft a hello':'Log a hello', fn:K?"draftMessage('"+f.id+"')":"markContacted('"+f.id+"')"} });
   });
-  const evToday=eventsOn(tstr);
-  if(evToday.length>=3) out.push({ score:36, tone:'info', text:'A full day — '+evToday.length+' things on the calendar.', why:'Protect a little space between them.' });
   if(!DB.journal.some(j=>j.date===tstr)) out.push({ score:22, tone:'', text:'No journal entry yet today.', why:'A photo of the page is enough.', act:{label:'Open journal', fn:"showView('journal')"} });
   if(DB.places && DB.places.weeks && DB.places.weeks[0]){ const w=DB.places.weeks[0];
     if(w.newP>=1) out.push({ score:30, tone:'good', text:w.newP+' new place'+(w.newP>1?'s':'')+' in your latest week out.', why:'Somewhere new is on the map.' }); }
@@ -861,23 +857,53 @@ function renderInsights(){
   if(!full.length){ el.innerHTML='<div class="insight-card"><span class="idot"></span><div class="ibody"><div class="itext">All calm — nothing needs you right now.</div><div class="iwhy">Log a check-in and this begins learning your patterns.</div></div></div>'; return; }
   el.innerHTML=full.map(insightCardHTML).join('');
 }
+const QUOTES=[
+  ['The best way to predict the future is to create it.','Peter Drucker'],
+  ['Discipline is choosing between what you want now and what you want most.','Augusta F. Kantra'],
+  ['You do not rise to the level of your goals. You fall to the level of your systems.','James Clear'],
+  ['What you do every day matters more than what you do once in a while.','Gretchen Rubin'],
+  ['The two most important days in your life are the day you are born and the day you find out why.','Mark Twain'],
+  ['We are what we repeatedly do. Excellence, then, is not an act, but a habit.','Will Durant'],
+  ['Little by little, one travels far.','J.R.R. Tolkien'],
+  ['Action is the foundational key to all success.','Pablo Picasso'],
+  ['The man who moves a mountain begins by carrying away small stones.','Confucius'],
+  ['It always seems impossible until it is done.','Nelson Mandela'],
+  ['Well done is better than well said.','Benjamin Franklin'],
+  ['Do not wait; the time will never be just right.','Napoleon Hill'],
+  ['A year from now you may wish you had started today.','Karen Lamb'],
+  ['The secret of getting ahead is getting started.','Mark Twain'],
+  ['Motivation gets you going, but discipline keeps you growing.','John C. Maxwell'],
+  ['Small deeds done are better than great deeds planned.','Peter Marshall'],
+  ['He who has a why to live can bear almost any how.','Friedrich Nietzsche'],
+  ['Success is the sum of small efforts repeated day in and day out.','Robert Collier'],
+  ['The only way to do great work is to love what you do.','Steve Jobs'],
+  ['Fall in love with the process and the results will come.','Eric Thomas'],
+  ['You miss 100% of the shots you don’t take.','Wayne Gretzky'],
+  ['What we fear doing most is usually what we most need to do.','Tim Ferriss'],
+  ['Energy and persistence conquer all things.','Benjamin Franklin'],
+  ['Start where you are. Use what you have. Do what you can.','Arthur Ashe'],
+  ['The future depends on what you do today.','Mahatma Gandhi'],
+  ['Believe you can and you’re halfway there.','Theodore Roosevelt'],
+  ['Either you run the day or the day runs you.','Jim Rohn'],
+  ['Great things are not done by impulse, but by a series of small things brought together.','Vincent van Gogh'],
+];
+function dayOfYear(){ const n=new Date(); const s=new Date(n.getFullYear(),0,0); return Math.floor((n-s)/86400000); }
+function goalFocusHTML(){
+  const gs=(DB.goals||[]).filter(g=>goalPct(g)<1);
+  if(!gs.length) return '<div class="brief-goal" style="color:var(--muted)">Add a goal in Today → More → Goals, and your reason for it shows up here each morning to keep you moving.</div>';
+  const rank=g=>{ const m=goalMomentum(g).cls; return m==='low'?0:m==='steady'?1:2; };
+  gs.sort((a,b)=>rank(a)-rank(b));
+  return gs.slice(0,2).map(g=>{
+    let l='On <b>'+esc(g.name)+'</b> — '+esc(goalNext(g).replace(/\.$/,''))+'.';
+    if(g.why) l+='<span class="brief-why">Your why: “'+esc(g.why)+'.”</span>';
+    return '<div class="brief-goal">'+l+'</div>';
+  }).join('');
+}
 function briefHTML(){
-  const t=today(); const s=[];
-  const ev=eventsOn(t);
-  if(!ev.length) s.push('The calendar is open today — nothing scheduled yet.');
-  else if(ev.length===1) s.push('One thing on the calendar'+(ev[0].time?' at '+fmtTime(ev[0].time):'')+': '+ev[0].title+'.');
-  else s.push(ev.length+' things on today’s calendar'+(ev[0].time?', starting with '+ev[0].title+' at '+fmtTime(ev[0].time):'')+'.');
-  const c=DB.checkins[t];
-  if(c){ const a=ckAnx(c), h=ckHap(c);
-    if(a!=null||h!=null) s.push('You’ve checked in'+(h!=null?' — happiness around '+h.toFixed(0):'')+(a!=null?', anxiety around '+a.toFixed(0):'')+'.'); }
-  else s.push(allChk().length ? 'You haven’t checked in yet — a quick note sets the tone.' : 'Start with a check-in and the app begins learning your rhythm.');
-  let nudge=null, soon=99;
-  DB.friends.forEach(f => { const {bd,overdue}=friendStatus(f);
-    if(bd && bd.days<=10 && bd.days<soon){ soon=bd.days; nudge=f.name+'’s birthday is '+(bd.days===0?'today':bd.days===1?'tomorrow':'in '+bd.days+' days'); }
-    else if(overdue && !nudge) nudge='it’s been a while since you talked with '+f.name; });
-  if(nudge) s.push('One heads-up: '+nudge+'.');
-  if(!c){ const p=patternInsights()[0]; if(p) s.push(p.text); }
-  return '<div class="brief"><div class="tag">'+SPARK+'<span>Written for you</span></div><p>'+esc(s.join(' '))+'</p></div>';
+  const q=QUOTES[dayOfYear()%QUOTES.length];
+  return '<div class="brief"><div class="tag">'+SPARK+'<span>For today</span></div>'+
+    '<p class="brief-quote">“'+esc(q[0])+'”<span class="brief-author">— '+esc(q[1])+'</span></p>'+
+    '<div class="brief-goals">'+goalFocusHTML()+'</div></div>';
 }
 
 
@@ -915,16 +941,10 @@ function renderToday(){
   // full proactive feed (merged Assistant)
   renderInsights();
 
-  // today's events
-  const evToday = eventsOn(t);
-  $('todayEvents').innerHTML = evToday.length ? evToday.map(eventHTML).join('')
-    : '<div class="empty">Nothing scheduled. Enjoy the open day — or add something.</div>';
-
   // More hub
   $('todayMore').innerHTML =
-    areaRow('schedule','sage',IC_SCH,'Schedule','Your calendar &amp; events')+
-    areaRow('places','',IC_PIN,'Places',DB.places?(Object.keys(DB.places.clusters).length+' places mapped'):'Where you go')+
     areaRow('goals','sage',IC_GOAL,'Goals',(DB.goals||[]).length?((DB.goals.length)+' active'):'Set a life goal')+
+    areaRow('places','',IC_PIN,'Places',DB.places?(Object.keys(DB.places.clusters).length+' places mapped'):'Where you go')+
     areaRow('settings','',IC_GEAR,'Settings','Name, theme, API key, backups');
 }
 function editTile(key){
@@ -2104,7 +2124,6 @@ function renderInsightsView(){
   ex.innerHTML=h;
 }
 // ---------- wiring ----------
-$('todayAddEvent').addEventListener('click', () => { selDate = today(); editEvent(''); });
 $('schedAddEvent').addEventListener('click', () => editEvent(''));
 $('friendAdd').addEventListener('click', () => editFriend(''));
 $('goalAdd').addEventListener('click', () => editGoal(''));
@@ -2134,8 +2153,8 @@ function routeHash(){
   if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }
   return false;
 }
-applyTheme(); initSettings(); ingestHealth(); ingestCal(); renderAll(); loadJournal(); routeHash();
-window.addEventListener('hashchange', () => { ingestHealth(); ingestCal(); renderAll(); routeHash(); });
+applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal(); routeHash();
+window.addEventListener('hashchange', () => { ingestHealth(); renderAll(); routeHash(); });
 </script>
 </body>
 </html>
