@@ -537,12 +537,15 @@ nav.tabbar {
       </div>
       <div class="card">
         <div style="font-size:15px;font-weight:650;margin-bottom:6px">Apple Health</div>
-        <div class="notice" style="margin-top:0">Apple doesn’t let a web app read Health directly. Instead, a free Apple <b>Shortcut</b> reads your Sleep, Steps, Active energy, Resting HR and HRV each morning and opens LifeOS with them — one tap, or on a schedule. Nothing leaves your phone.</div>
-        <button class="btn secondary" style="margin-top:12px" onclick="testHealthSync()">Test with sample data</button>
-        <div class="notice">Fills today’s numbers with example values so you can see it work. Ask Claude for the 2-minute Shortcut recipe.</div>
+        <div class="notice" style="margin-top:0">Apple doesn’t let a web app read Health directly. Two ways in: a <b>Shortcut</b> that opens LifeOS with your numbers, or <b>live sync</b> — point the app at a private URL your Shortcut posts to, and it pulls the latest on its own.</div>
+        <div class="field" style="margin-top:12px"><label>Live sync URL (optional)</label><input id="setSyncUrl" type="url" placeholder="https://…/health?key=…"></div>
+        <button class="btn secondary" id="syncNowBtn">Sync now</button>
+        <div class="notice" id="syncStatus"></div>
+        <button class="btn secondary" style="margin-top:6px" onclick="testHealthSync()">Test with sample data</button>
+        <div class="notice">Ask Claude for the Shortcut recipe (opens-the-app) or the live-sync relay setup.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.2</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.3</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -615,7 +618,7 @@ const fmtTime = t => { if(!t) return ''; let [h,m] = t.split(':').map(Number);
 const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
-const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light'},
+const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light', healthSyncUrl:''}, briefLine:null,
   events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, goals:[], calEvents:[], reviews:[] };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
@@ -839,6 +842,29 @@ function testCalSync(){
 }
 function clearCal(){ DB.calEvents=[]; save(); renderAll(); toast('Synced calendar events cleared'); }
 function testHealthSync(){ location.hash='sleep=7.4&steps=8241&energy=512&rhr=54&hrv=47'; ingestHealth(); renderAll(); showView('today'); }
+let _hsTimer=null;
+async function syncHealthNow(silent){
+  const url=(DB.settings.healthSyncUrl||'').trim(); if(!url){ if(!silent) toast('Add a sync URL first'); return; }
+  try{
+    const res=await fetch(url, { cache:'no-store' }); if(!res.ok) throw new Error('http '+res.status);
+    const data=await res.json();
+    const days = Array.isArray(data) ? data : (Array.isArray(data.days) ? data.days : [data]);
+    let n=0;
+    days.forEach(d=>{ if(!d||typeof d!=='object') return;
+      const date=(d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date)) ? d.date : today();
+      const st=DB.stats[date]||(DB.stats[date]={});
+      ['sleep','steps','energy','rhr','hrv'].forEach(k=>{ if(d[k]!=null && !isNaN(d[k])){ st[k]=Number(d[k]); n++; } });
+    });
+    DB.settings.healthLastSync=Date.now(); save(); renderAll(); updateSyncStatus();
+    if(!silent) toast(n?('Synced '+n+' metric'+(n===1?'':'s')):'Connected — no new numbers');
+  }catch(e){ console.error(e); if(!silent) toast('Sync failed — check the URL & that it allows CORS'); }
+}
+function updateSyncStatus(){ const el=$('syncStatus'); if(!el) return;
+  const ls=DB.settings.healthLastSync; el.textContent = (DB.settings.healthSyncUrl||'').trim() ? (ls?('Last synced '+new Date(ls).toLocaleString()):'Not synced yet — tap Sync now') : 'Live sync is off'; }
+function startHealthPolling(){
+  if(_hsTimer) clearInterval(_hsTimer);
+  if((DB.settings.healthSyncUrl||'').trim()){ syncHealthNow(true); _hsTimer=setInterval(()=>syncHealthNow(true), 12*60000); }
+}
 function computeInsights(limit){ limit=limit||5;
   const all=[...patternInsights(), ...healthInsights(), ...goalInsights(), ...reviewInsights(), ...recentInsights(), ...lifeInsights()];
   all.sort((a,b) => b.score-a.score);
@@ -899,11 +925,31 @@ function goalFocusHTML(){
     return '<div class="brief-goal">'+l+'</div>';
   }).join('');
 }
+let _briefGen=false;
+async function ensureBriefLine(){
+  if(!DB.settings.apiKey) return;
+  if(DB.briefLine && DB.briefLine.date===today()) return;
+  if(_briefGen) return; _briefGen=true;
+  try{
+    const gs=(DB.goals||[]).filter(g=>goalPct(g)<1).slice(0,3).map(g=>g.name+' ('+goalNext(g)+(g.why?('; why: '+g.why):'')+')').join('; ');
+    const st=DB.stats[today()]||{}; const c=DB.checkins[today()];
+    const ctx='Goals: '+(gs||'none set')+'.'+(st.sleep?(' Slept '+st.sleep+'h last night.'):'')+(c&&ckHap(c)!=null?(' Mood is decent.'):'');
+    const sys='Write ONE short, punchy, motivating line (max 22 words) for someone starting their day, addressed to "you". Ground it in their goals and momentum when given. Warm and specific, never cheesy. No emojis, no surrounding quotation marks.';
+    const line=await askClaude(sys, ctx, 120);
+    if(line){ DB.briefLine={ date:today(), text:line.replace(/^["“']+|["”']+$/g,'').trim() }; save(); renderToday(); }
+  }catch(e){}
+  _briefGen=false;
+}
+function regenBrief(){ DB.briefLine=null; save(); ensureBriefLine(); toast('Refreshing…'); }
 function briefHTML(){
-  const q=QUOTES[dayOfYear()%QUOTES.length];
-  return '<div class="brief"><div class="tag">'+SPARK+'<span>For today</span></div>'+
-    '<p class="brief-quote">“'+esc(q[0])+'”<span class="brief-author">— '+esc(q[1])+'</span></p>'+
-    '<div class="brief-goals">'+goalFocusHTML()+'</div></div>';
+  const custom = (DB.briefLine && DB.briefLine.date===today()) ? DB.briefLine.text : null;
+  const tag = custom ? 'For you' : 'For today';
+  let head;
+  if(custom) head='<p class="brief-quote">'+esc(custom)+'</p>';
+  else { const q=QUOTES[dayOfYear()%QUOTES.length]; head='<p class="brief-quote">“'+esc(q[0])+'”<span class="brief-author">— '+esc(q[1])+'</span></p>'; }
+  const refresh = DB.settings.apiKey ? '<span style="margin-left:auto;cursor:pointer;color:var(--muted)" onclick="regenBrief()"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 1 0-.6 4M20 5v6h-6"/></svg></span>' : '';
+  return '<div class="brief"><div class="tag">'+SPARK+'<span>'+tag+'</span>'+refresh+'</div>'+
+    head+'<div class="brief-goals">'+goalFocusHTML()+'</div></div>';
 }
 
 
@@ -933,6 +979,7 @@ function renderToday(){
   $('greetSub').textContent = '';
 
   $('briefCard').innerHTML = briefHTML();
+  ensureBriefLine();
 
   // this week's people digest
   const pw = peopleThisWeek();
@@ -1390,6 +1437,9 @@ function initSettings(){
   $('setName').addEventListener('change', e => { DB.profile.name = e.target.value.trim(); save(); renderToday(); });
   $('setTheme').addEventListener('change', e => { DB.settings.theme = e.target.value; save(); applyTheme(); });
   $('setApiKey').addEventListener('change', e => { DB.settings.apiKey = e.target.value.trim(); save(); toast(DB.settings.apiKey ? 'Key saved — journal AI is on' : 'Key removed'); });
+  if($('setSyncUrl')){ $('setSyncUrl').value = DB.settings.healthSyncUrl || ''; updateSyncStatus();
+    $('setSyncUrl').addEventListener('change', e => { DB.settings.healthSyncUrl = e.target.value.trim(); save(); startHealthPolling(); updateSyncStatus(); toast(DB.settings.healthSyncUrl ? 'Live sync on' : 'Live sync off'); });
+    $('syncNowBtn').addEventListener('click', () => syncHealthNow(false)); }
   $('exportBtn').addEventListener('click', exportData);
   $('importBtn').addEventListener('click', () => $('importInput').click());
   $('importInput').addEventListener('change', importData);
@@ -2146,14 +2196,15 @@ $('tlInput').addEventListener('change', async e => {
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
 function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
-document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden){ renderAll();
+  if((DB.settings.healthSyncUrl||'').trim() && (!DB.settings.healthLastSync || Date.now()-DB.settings.healthLastSync>3e5)) syncHealthNow(true); } });
 function routeHash(){
   const m=(location.hash||'').match(/[#&]go=([a-z]+)/); if(!m) return false;
   const v=m[1]; try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
   if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }
   return false;
 }
-applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal(); routeHash();
+applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal(); routeHash(); startHealthPolling();
 window.addEventListener('hashchange', () => { ingestHealth(); renderAll(); routeHash(); });
 </script>
 </body>
