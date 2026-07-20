@@ -536,7 +536,7 @@ nav.tabbar {
         <div class="notice">Ask Claude for the 2-minute Shortcut recipe.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.8</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.9</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -558,6 +558,12 @@ nav.tabbar {
       <div class="backrow" onclick="showView('life')">&lsaquo; Life</div>
       <div class="section-head"><h2>Life goals</h2><button class="action" id="goalAdd">+ Add</button></div>
       <div id="goalList"></div>
+    </section>
+
+    <!-- ============ WEEKLY REVIEW (under Life) ============ -->
+    <section class="view" id="view-review">
+      <div class="backrow" onclick="showView('life')">&lsaquo; Life</div>
+      <div id="reviewBody"></div>
     </section>
   </main>
 
@@ -604,7 +610,7 @@ const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
 const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light'},
-  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, goals:[], calEvents:[] };
+  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, goals:[], calEvents:[], reviews:[] };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
@@ -650,8 +656,8 @@ function closeSheet(){ $('overlay').classList.remove('open'); $('sheet').innerHT
 $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) closeSheet(); });
 
 // ---------- navigation ----------
-const VIEWS = { today:'Today', life:'Life', schedule:'Schedule', friends:'Friends', person:'', places:'Places', health:'Health', goals:'Goals', journal:'Journal', assistant:'Assistant', settings:'Settings' };
-const TAB_OF = { today:'today', life:'life', schedule:'life', friends:'life', person:'life', places:'life', health:'life', goals:'life', settings:'life', journal:'journal', assistant:'assistant' };
+const VIEWS = { today:'Today', life:'Life', schedule:'Schedule', friends:'Friends', person:'', places:'Places', health:'Health', goals:'Goals', review:'Weekly Review', journal:'Journal', assistant:'Assistant', settings:'Settings' };
+const TAB_OF = { today:'today', life:'life', schedule:'life', friends:'life', person:'life', places:'life', health:'life', goals:'life', review:'life', settings:'life', journal:'journal', assistant:'assistant' };
 let currentView = 'today';
 let currentPersonId = null;
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
@@ -830,7 +836,7 @@ function testCalSync(){
 function clearCal(){ DB.calEvents=[]; save(); renderAll(); toast('Synced calendar events cleared'); }
 function testHealthSync(){ location.hash='sleep=7.4&steps=8241&energy=512&rhr=54&hrv=47'; ingestHealth(); renderAll(); showView('today'); }
 function computeInsights(limit){ limit=limit||5;
-  const all=[...patternInsights(), ...healthInsights(), ...goalInsights(), ...recentInsights(), ...lifeInsights()];
+  const all=[...patternInsights(), ...healthInsights(), ...goalInsights(), ...reviewInsights(), ...recentInsights(), ...lifeInsights()];
   all.sort((a,b) => b.score-a.score);
   const seen=new Set(), pick=[];
   for(const i of all){ if(seen.has(i.text)) continue; seen.add(i.text); pick.push(i); if(pick.length>=limit) break; }
@@ -1773,6 +1779,7 @@ function renderLife(){
   const placeSum=DB.places?(Object.keys(DB.places.clusters).length+' places mapped'):'Not imported yet';
   const st=DB.stats[t]||{}; const healthSum=st.sleep?('Slept '+st.sleep+'h'+(st.steps?' · '+Number(st.steps).toLocaleString()+' steps':'')):'Sync from Apple Health';
   const gs=DB.goals||[]; const gNeed=gs.filter(g=>goalMomentum(g).cls==='low').length; const gDone=gs.filter(g=>goalPct(g)>=1).length;
+  const rv0=(DB.reviews||[])[0]; const reviewSum=rv0?('Latest: week of '+fmtDate(rv0.weekStart)):'Reflect on your week';
   const goalSum=gs.length?(gs.length+' active'+(gNeed?' · '+gNeed+' need attention':(gDone?' · '+gDone+' complete':''))):'Set a life goal';
   el.innerHTML=
     areaRow('schedule','sage',IC_SCH,'Schedule',schedSum)+
@@ -1780,6 +1787,7 @@ function renderLife(){
     areaRow('places','',IC_PIN,'Places',placeSum)+
     areaRow('health','amber',IC_HRT,'Health & numbers',healthSum)+
     areaRow('goals','sage',IC_GOAL,'Goals',goalSum)+
+    areaRow('review','blue',IC_REVIEW,'Weekly Review',reviewSum)+
     '<div style="height:12px"></div>'+
     areaRow('settings','',IC_GEAR,'Settings','Name, theme, API key, backups');
 }
@@ -1922,6 +1930,117 @@ async function goalCoach(id){
   }catch(e){ if($('coachOut')) $('coachOut').innerHTML='<div class="notice">Couldn’t reach Claude just now.</div>'; }
 }
 
+// ---------- Weekly Review ----------
+const IC_REVIEW='<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19.5v-15Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 7.2c.3 1.8 1.5 3 3.3 3.3-1.8.3-3 1.5-3.3 3.3-.3-1.8-1.5-3-3.3-3.3 1.8-.3 3-1.5 3.3-3.3Z"/></svg>';
+function weekData(end){
+  end = end || today(); const endD=parseD(end);
+  const days=[]; for(let i=6;i>=0;i--){ const d=new Date(endD); d.setDate(d.getDate()-i); days.push(dstr(d)); }
+  const prior=[]; for(let i=13;i>=7;i--){ const d=new Date(endD); d.setDate(d.getDate()-i); prior.push(dstr(d)); }
+  const start=days[0];
+  const ck=days.map(d=>DB.checkins[d]).filter(Boolean);
+  const ckP=prior.map(d=>DB.checkins[d]).filter(Boolean);
+  const num=(arr,key)=>arr.map(d=>DB.stats[d]&&DB.stats[d][key]).filter(v=>v!=null&&!isNaN(v)).map(Number);
+  const js=(DB.journal||[]).filter(j=>j.date>=start&&j.date<=end);
+  const tc={}; js.forEach(j=>(j.themes||[]).forEach(t=>{ tc[t]=(tc[t]||0)+1; }));
+  const themes=Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>x[0]);
+  const connected=new Set();
+  (DB.friends||[]).forEach(f=>{ if(f.lastContact&&f.lastContact>=start&&f.lastContact<=end) connected.add(f.name.split(/\s+/)[0]);
+    (f.log||[]).forEach(l=>{ if(l.kind!=='journal'&&l.date>=start&&l.date<=end) connected.add(f.name.split(/\s+/)[0]); }); });
+  const overdue=(DB.friends||[]).filter(f=>friendStatus(f).overdue).map(f=>f.name.split(/\s+/)[0]);
+  const goalProg=(DB.goals||[]).filter(g=>(g.updates||[]).some(u=>u.date>=start&&u.date<=end)).map(g=>g.name);
+  return { start, end, ckN:ck.length,
+    anx:mean(ck.map(ckAnx)), anxP:mean(ckP.map(ckAnx)), hap:mean(ck.map(ckHap)), hapP:mean(ckP.map(ckHap)),
+    sleep:mean(num(days,'sleep')), rhr:mean(num(days,'rhr')), steps:mean(num(days,'steps')),
+    journalCount:js.length, themes, connected:[...connected], overdue, goalProg };
+}
+function weekFactsText(w){
+  const L=[]; const r1=v=>v==null?null:Math.round(v*10)/10;
+  L.push('Week: '+fmtDate(w.start)+' to '+fmtDate(w.end)+'.');
+  if(w.hap!=null) L.push('Happiness averaged '+r1(w.hap)+(w.hapP!=null?(' (prior week '+r1(w.hapP)+')'):'')+' out of 10.');
+  if(w.anx!=null) L.push('Anxiety averaged '+r1(w.anx)+(w.anxP!=null?(' (prior week '+r1(w.anxP)+')'):'')+' out of 10.');
+  if(w.ckN) L.push('Checked in '+w.ckN+' of 7 days.');
+  if(w.sleep!=null) L.push('Slept '+r1(w.sleep)+'h on average.');
+  if(w.rhr!=null) L.push('Resting heart rate averaged '+Math.round(w.rhr)+' bpm.');
+  if(w.steps!=null) L.push('Averaged '+Math.round(w.steps).toLocaleString()+' steps.');
+  L.push('Journaled '+w.journalCount+' time'+(w.journalCount===1?'':'s')+(w.themes.length?(', themes: '+w.themes.join(', ')):'')+'.');
+  L.push(w.connected.length?('Connected with: '+w.connected.join(', ')+'.'):'No contact logged with friends this week.');
+  if(w.overdue.length) L.push('Overdue to reach out: '+w.overdue.slice(0,5).join(', ')+'.');
+  if(w.goalProg.length) L.push('Made progress on goals: '+w.goalProg.join(', ')+'.');
+  return L.join('\n');
+}
+function factsSummary(w){
+  const s=[]; const r1=v=>v==null?null:Math.round(v*10)/10;
+  if(w.hap!=null&&w.anx!=null) s.push('Your week averaged '+r1(w.hap)+'/10 happiness and '+r1(w.anx)+'/10 anxiety.');
+  if(w.sleep!=null) s.push('You slept about '+r1(w.sleep)+' hours a night.');
+  if(w.connected.length) s.push('You connected with '+w.connected.join(', ')+'.');
+  else s.push('No friend contact was logged.');
+  if(w.journalCount) s.push('You journaled '+w.journalCount+' time'+(w.journalCount===1?'':'s')+'.');
+  if(w.goalProg.length) s.push('You moved on '+w.goalProg.join(', ')+'.');
+  return s.join(' ');
+}
+async function generateReview(){
+  const w=weekData(); let narrative='';
+  if(DB.settings.apiKey){
+    if($('reviewBody')) $('reviewBody').innerHTML='<div class="pagehead2"><div class="a-lead">Writing your review…</div></div><div class="brief" style="margin-top:8px"><p><span class="spinner"></span>Reading your week…</p></div>';
+    try{
+      const sys='You are writing a warm, honest weekly reflection for someone, addressed to "you". From the week’s data, write 2 short paragraphs that notice patterns and connect them across mood, sleep, relationships, goals, and what they journaled — editorial and human, not a data dump; cite a number only where it matters. End with a final line beginning "Into next week:" and ONE gentle, specific suggestion. No lists, no headers.';
+      narrative=await askClaude(sys, weekFactsText(w), 750);
+    }catch(e){ narrative=''; }
+  }
+  const rev={ id:uid(), ts:Date.now(), weekStart:w.start, weekEnd:w.end, stats:w, narrative };
+  DB.reviews=(DB.reviews||[]).filter(r=>!(r.weekStart===w.start&&r.weekEnd===w.end));
+  DB.reviews.unshift(rev); save(); renderReview(); renderAll(); toast('Weekly review ready');
+}
+function arrowHTML(cur, prior, goodUp){
+  if(cur==null||prior==null) return '';
+  const up=cur>prior, same=Math.abs(cur-prior)<0.05; if(same) return '';
+  const good = goodUp?up:!up;
+  return ' <span style="color:'+(good?'var(--good)':'var(--warning)')+';font-size:12px">'+(up?'▲':'▼')+'</span>';
+}
+function reviewNumbersHTML(w){
+  const r1=v=>v==null?'—':Math.round(v*10)/10;
+  const rows=[];
+  if(w.hap!=null) rows.push(['Happiness', r1(w.hap)+'/10'+arrowHTML(w.hap,w.hapP,true)]);
+  if(w.anx!=null) rows.push(['Anxiety', r1(w.anx)+'/10'+arrowHTML(w.anx,w.anxP,false)]);
+  if(w.sleep!=null) rows.push(['Sleep, avg', r1(w.sleep)+' h']);
+  if(w.rhr!=null) rows.push(['Resting HR', Math.round(w.rhr)+' bpm']);
+  rows.push(['Journal entries', String(w.journalCount)]);
+  rows.push(['Check-ins', w.ckN+' / 7']);
+  rows.push(['Connected with', w.connected.length?w.connected.join(', '):'—']);
+  if(w.goalProg.length) rows.push(['Goals moved', w.goalProg.join(', ')]);
+  return '<div class="card" style="padding:6px 16px">'+rows.map(r=>'<div class="kv"><span class="k">'+esc(r[0])+'</span><span class="v">'+r[1]+'</span></div>').join('')+'</div>';
+}
+function reviewBodyHTML(rev){
+  const w=rev.stats;
+  let h='<div class="overline">Week of '+esc(fmtDate(rev.weekStart))+' – '+esc(fmtDate(rev.weekEnd))+'</div>';
+  h+='<h1 class="editorial" style="margin-top:4px">The week, reviewed</h1>';
+  const body = rev.narrative || factsSummary(w);
+  h+='<div class="brief" style="margin-top:14px"><div class="tag">'+SPARK+'<span>'+(rev.narrative?'Written for you':'This week')+'</span></div><p style="white-space:pre-wrap">'+esc(body)+'</p></div>';
+  h+='<div class="ck-label">By the numbers</div>'+reviewNumbersHTML(w);
+  return h;
+}
+function renderReview(){
+  const el=$('reviewBody'); if(!el) return;
+  const revs=DB.reviews||[];
+  let h='<div class="section-head" style="margin-top:6px"><h2>Weekly Review</h2><button class="action" onclick="generateReview()">'+(revs.length&&revs[0].weekEnd>=weekData().start?'Regenerate':'Generate')+'</button></div>';
+  if(!revs.length){
+    h+='<div class="card"><b>Reflect on your week.</b><div style="font-size:14px;color:var(--ink-2);margin-top:6px;line-height:1.55">A weekly synthesis across your mood, sleep, the people you saw, your goals, and what you journaled — written for you. Best on a Sunday.</div><button class="btn" style="margin-top:14px" onclick="generateReview()">Generate this week’s review</button>'+(DB.settings.apiKey?'':'<div class="notice">Works without a key (shows the numbers); add one in Settings for the written reflection.</div>')+'</div>';
+    el.innerHTML=h; return;
+  }
+  h+=reviewBodyHTML(revs[0]);
+  if(revs.length>1){ h+='<div class="ck-label">Past reviews</div>'+revs.slice(1,13).map(r=>'<div class="tl-doc" onclick="openReview(\''+r.id+'\')"><div class="td-top"><b>Week of '+esc(fmtDate(r.weekStart))+'</b><span>'+esc(fmtDate(r.weekEnd))+'</span></div><div class="td-prev">'+esc((r.narrative||factsSummary(r.stats)).slice(0,110))+'</div></div>').join(''); }
+  el.innerHTML=h;
+}
+function openReview(id){ const r=(DB.reviews||[]).find(x=>x.id===id); if(!r) return; openSheet(reviewBodyHTML(r)); }
+function reviewInsights(){
+  const revs=DB.reviews||[]; const last=revs[0];
+  const hasData=(Object.keys(DB.checkins||{}).length>0)||(DB.journal||[]).length>0;
+  if(!hasData) return [];
+  const due = !last || daysBetween(last.weekEnd, today())>=7;
+  const dow=new Date().getDay(); // 0 Sun
+  if(due && (dow===0 || dow===6 || !last)) return [{ score:58, tone:'info', text:'Your weekly review is ready.', why:'A minute to reflect on the week just lived.', act:{label:'Open', fn:"showView('review')"} }];
+  return [];
+}
 // ---------- wiring ----------
 $('todayAddEvent').addEventListener('click', () => { selDate = today(); editEvent(''); });
 $('schedAddEvent').addEventListener('click', () => editEvent(''));
@@ -1945,7 +2064,7 @@ $('tlInput').addEventListener('change', async e => {
     toast(parsed.visits.length + ' visits imported');
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
-function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderLife(); renderHealthView(); renderAssistant(); renderGoals(); renderPerson(); }
+function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderLife(); renderHealthView(); renderAssistant(); renderGoals(); renderPerson(); renderReview(); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
 function routeHash(){
   const m=(location.hash||'').match(/[#&]go=([a-z]+)/); if(!m) return false;
