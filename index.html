@@ -536,7 +536,7 @@ nav.tabbar {
         <div class="notice">Ask Claude for the 2-minute Shortcut recipe.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.7</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.8</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1052,7 +1052,7 @@ function deleteFriend(id){ DB.friends = DB.friends.filter(x => x.id !== id); sav
 
 // ---------- friendship agent ----------
 function openPerson(id){ currentPersonId=id; showView('person'); }
-function docKindLabel(k){ return k==='thread'?'Text thread':k==='transcript'?'Call transcript':k==='call'?'Call':k==='text'?'Text':k==='inperson'?'In person':k==='note'?'Note':'Note'; }
+function docKindLabel(k){ return k==='thread'?'Text thread':k==='transcript'?'Call transcript':k==='call'?'Call':k==='text'?'Text':k==='inperson'?'In person':k==='note'?'Note':k==='journal'?'Journal':'Note'; }
 function renderPerson(){
   const el=$('personBody'); if(!el) return;
   const p=DB.friends.find(x=>x.id===currentPersonId);
@@ -1302,11 +1302,26 @@ async function analyzeEntry(id){
     Object.assign(m, { transcription: j.transcription || '', summary: j.summary || '',
       mood: j.mood || '', themes: Array.isArray(j.themes) ? j.themes : [], insight: j.insight || '', status: 'done' });
     toast('Entry analyzed');
+    const mp=mentionedFriends(m); if(mp.length) setTimeout(()=>toast('Mentions '+mp.slice(0,2).map(f=>f.name.split(/\s+/)[0]).join(' & ')+' — open to log'), 1400);
   } catch (err) {
     m.status = 'error'; console.error(err);
     toast('Analysis failed — open the entry to retry');
   }
   await putEntry(m); renderJournal(); renderToday();
+}
+function mentionedFriends(j){
+  const text=((j.transcription||'')+' '+(j.summary||'')+' '+(j.note||''));
+  return (DB.friends||[]).filter(f=>{ const first=(f.name||'').trim().split(/\s+/)[0]; if(!first || first.length<3) return false;
+    let re; try{ re=new RegExp('\\b'+first.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i'); }catch(e){ return false; }
+    return re.test(text); });
+}
+function loggedFromJournal(p, jid){ return (p.log||[]).some(l=>l.srcJournal===jid); }
+function logJournalToPerson(pid, jid){
+  const p=DB.friends.find(x=>x.id===pid); const j=DB.journal.find(x=>x.id===jid); if(!p||!j) return;
+  if(loggedFromJournal(p,jid)) return;
+  p.log=p.log||[];
+  p.log.push({ id:uid(), ts:(parseD(j.date).getTime()||Date.now()), date:j.date, kind:'journal', text:(j.summary||mentionSnippet(j,p.name)), srcJournal:j.id });
+  save(); toast('Logged to '+p.name.split(/\s+/)[0]); renderAll(); openEntry(jid);
 }
 async function openEntry(id){
   const j = DB.journal.find(x => x.id === id); if (!j) return;
@@ -1320,6 +1335,11 @@ async function openEntry(id){
     (j.insight ? '<div class="detail-block"><h4>Reflection</h4><p>'+esc(j.insight)+'</p></div>' : '') +
     (j.transcription ? '<div class="detail-block"><h4>Transcription</h4><p>'+esc(j.transcription)+'</p></div>' : '') +
     (j.note ? '<div class="detail-block"><h4>Your note</h4><p>'+esc(j.note)+'</p></div>' : '') +
+    (mentionedFriends(j).length ? '<div class="detail-block"><h4>People mentioned</h4><div class="pill-row">' +
+      mentionedFriends(j).map(f => loggedFromJournal(f, j.id)
+        ? '<span class="pill" style="opacity:.6">✓ '+esc(f.name.split(/\s+/)[0])+'</span>'
+        : '<span class="pill" style="cursor:pointer;background:var(--accent-soft);color:var(--accent)" onclick="logJournalToPerson(\''+f.id+'\',\''+j.id+'\')">+ Log to '+esc(f.name.split(/\s+/)[0])+'</span>').join('') +
+      '</div></div>' : '') +
     (j.status !== 'done' && j.status !== 'analyzing' ? '<button class="btn" onclick="analyzeEntry(\''+id+'\');closeSheet()">'+(DB.settings.apiKey ? 'Analyze with Claude' : 'Analyze (needs API key in Settings)')+'</button>' : '') +
     '<button class="btn danger" onclick="deleteEntry(\''+id+'\')">Delete entry</button>');
 }
@@ -1927,8 +1947,14 @@ $('tlInput').addEventListener('change', async e => {
 });
 function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderLife(); renderHealthView(); renderAssistant(); renderGoals(); renderPerson(); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
-applyTheme(); initSettings(); ingestHealth(); ingestCal(); renderAll(); loadJournal();
-window.addEventListener('hashchange', () => { ingestHealth(); ingestCal(); renderAll(); });
+function routeHash(){
+  const m=(location.hash||'').match(/[#&]go=([a-z]+)/); if(!m) return false;
+  const v=m[1]; try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+  if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }
+  return false;
+}
+applyTheme(); initSettings(); ingestHealth(); ingestCal(); renderAll(); loadJournal(); routeHash();
+window.addEventListener('hashchange', () => { ingestHealth(); ingestCal(); renderAll(); routeHash(); });
 </script>
 </body>
 </html>
