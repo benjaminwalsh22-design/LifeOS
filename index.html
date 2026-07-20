@@ -431,27 +431,28 @@ nav.tabbar {
         <div class="sub" id="greetSub"></div>
       </div>
       <div id="briefCard"></div>
+      <div id="todayDigest"></div>
       <div class="section-head"><h2>Noticed</h2></div>
       <div class="attn" id="attnList"></div>
+      <div class="section-head"><h2>Today's schedule</h2><button class="action" id="todayAddEvent">+ Add</button></div>
+      <div id="todayEvents"></div>
+      <div class="section-head" style="margin-top:20px"><h2>More</h2></div>
+      <div id="todayMore"></div>
+    </section>
+
+    <!-- ============ INSIGHTS ============ -->
+    <section class="view" id="view-insights">
+      <div class="pagehead2"><div class="a-lead">Insights</div><div class="a-sub">Your life, measured — and what it means.</div></div>
       <div class="section-head"><h2>Daily check-in</h2><button class="action" id="ckOpen">Check in</button></div>
       <div id="ckCard"></div>
       <div class="section-head"><h2>Daily numbers</h2><span class="action" style="cursor:default">tap to log</span></div>
       <div class="tiles" id="tiles"></div>
-      <div class="section-head"><h2>Today's schedule</h2><button class="action" id="todayAddEvent">+ Add</button></div>
-      <div id="todayEvents"></div>
-      <div class="section-head" style="margin-top:18px"><h2>Journal</h2></div>
-      <div id="todayJournal"></div>
+      <div id="insightsExtra"></div>
     </section>
 
     <!-- ============ SCHEDULE ============ -->
-    <!-- ============ LIFE ============ -->
-    <section class="view" id="view-life">
-      <div class="pagehead2"><div class="a-lead">Your life, in order</div><div class="a-sub">Each area, watched quietly.</div></div>
-      <div id="lifeAreas"></div>
-    </section>
-
     <section class="view" id="view-schedule">
-      <div class="backrow" onclick="showView('life')">&lsaquo; Life</div>
+      <div class="backrow" onclick="showView('today')">&lsaquo; Today</div>
       <div class="weekstrip" id="weekstrip"></div>
       <div class="section-head"><h2 id="schedDayLabel">Events</h2><button class="action" id="schedAddEvent">+ Add</button></div>
       <div id="schedEvents"></div>
@@ -459,7 +460,6 @@ nav.tabbar {
 
     <!-- ============ FRIENDS ============ -->
     <section class="view" id="view-friends">
-      <div class="backrow" onclick="showView('life')">&lsaquo; Life</div>
       <div class="section-head"><h2>Keep in touch</h2><button class="action" id="friendAdd">+ Add friend</button></div>
       <div id="friendList"></div>
     </section>
@@ -495,14 +495,14 @@ nav.tabbar {
 
     <!-- ============ PLACES ============ -->
     <section class="view" id="view-places">
-      <div class="backrow" onclick="showView('life')">&lsaquo; Life</div>
+      <div class="backrow" onclick="showView('today')">&lsaquo; Today</div>
       <input type="file" id="tlInput" accept=".json,application/json" hidden>
       <div id="placesBody"></div>
     </section>
 
     <!-- ============ SETTINGS ============ -->
     <section class="view" id="view-settings">
-      <div class="backrow" onclick="showView('life')">&lsaquo; Life</div>
+      <div class="backrow" onclick="showView('today')">&lsaquo; Today</div>
       <div class="card">
         <div class="field"><label>Your name</label><input id="setName" placeholder="Benjamin"></div>
         <div class="field"><label>Theme</label>
@@ -536,7 +536,7 @@ nav.tabbar {
         <div class="notice">Ask Claude for the 2-minute Shortcut recipe.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.9</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.0</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -544,7 +544,7 @@ nav.tabbar {
 
     <!-- ============ HEALTH (under Life) ============ -->
     <section class="view" id="view-health">
-      <div class="backrow" onclick="showView('life')">&lsaquo; Life</div>
+      <div class="backrow" onclick="showView('today')">&lsaquo; Today</div>
       <div id="healthBody"></div>
     </section>
 
@@ -555,14 +555,14 @@ nav.tabbar {
 
     <!-- ============ GOALS (under Life) ============ -->
     <section class="view" id="view-goals">
-      <div class="backrow" onclick="showView('life')">&lsaquo; Life</div>
+      <div class="backrow" onclick="showView('today')">&lsaquo; Today</div>
       <div class="section-head"><h2>Life goals</h2><button class="action" id="goalAdd">+ Add</button></div>
       <div id="goalList"></div>
     </section>
 
     <!-- ============ WEEKLY REVIEW (under Life) ============ -->
     <section class="view" id="view-review">
-      <div class="backrow" onclick="showView('life')">&lsaquo; Life</div>
+      <div class="backrow" onclick="showView('insights')">&lsaquo; Insights</div>
       <div id="reviewBody"></div>
     </section>
   </main>
@@ -571,15 +571,15 @@ nav.tabbar {
     <button class="tab active" data-view="today">
       <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m3 10.5 9-7 9 7V20a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 20v-9.5Z"/></svg>
       <span>Today</span></button>
-    <button class="tab" data-view="life">
-      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m15 9-2.2 4.8L8 16l2.2-4.8L15 9Z"/></svg>
-      <span>Life</span></button>
+    <button class="tab" data-view="friends">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path stroke-linecap="round" d="M3.5 19.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M15.5 6a3 3 0 1 1-1 5.8M16.5 14.6c2.2.4 3.6 2 4 4.9"/></svg>
+      <span>Friends</span></button>
     <button class="tab" data-view="journal">
       <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4.5A1.5 1.5 0 0 1 6.5 3h11A1.5 1.5 0 0 1 19 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-15Z"/><path stroke-linecap="round" d="M9 7.5h6M9 11h6M9 14.5h3.5"/></svg>
       <span>Journal</span></button>
-    <button class="tab" data-view="assistant">
-      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3.5c.7 4.6 3.9 7.8 8.5 8.5-4.6.7-7.8 3.9-8.5 8.5-.7-4.6-3.9-7.8-8.5-8.5 4.6-.7 7.8-3.9 8.5-8.5Z"/></svg>
-      <span>Assistant</span></button>
+    <button class="tab" data-view="insights">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.5 13.5h3l2.2-6.5 3.6 11 2.4-7 1.6 2.5h4.2"/></svg>
+      <span>Insights</span></button>
   </nav>
 
   <!-- modals -->
@@ -656,8 +656,8 @@ function closeSheet(){ $('overlay').classList.remove('open'); $('sheet').innerHT
 $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) closeSheet(); });
 
 // ---------- navigation ----------
-const VIEWS = { today:'Today', life:'Life', schedule:'Schedule', friends:'Friends', person:'', places:'Places', health:'Health', goals:'Goals', review:'Weekly Review', journal:'Journal', assistant:'Assistant', settings:'Settings' };
-const TAB_OF = { today:'today', life:'life', schedule:'life', friends:'life', person:'life', places:'life', health:'life', goals:'life', review:'life', settings:'life', journal:'journal', assistant:'assistant' };
+const VIEWS = { today:'Today', friends:'Friends', person:'', journal:'Journal', insights:'Insights', schedule:'Schedule', places:'Places', health:'Health', goals:'Goals', review:'Weekly Review', settings:'Settings' };
+const TAB_OF = { today:'today', schedule:'today', places:'today', goals:'today', settings:'today', friends:'friends', person:'friends', journal:'journal', insights:'insights', health:'insights', review:'insights' };
 let currentView = 'today';
 let currentPersonId = null;
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
@@ -849,9 +849,9 @@ function insightCardHTML(i){ const cls=i.tone==='watch'?'watch':i.tone==='info'?
     (i.act?'<div class="iact"><button onclick="'+i.act.fn+'">'+esc(i.act.label)+'</button></div>':'')+
     '</div></div>'; }
 function renderInsights(){
-  const full=computeInsights(50); const items=full.slice(0,3); const el=$('attnList'); if(!el) return;
+  const full=computeInsights(50); const el=$('attnList'); if(!el) return;
   if(!full.length){ el.innerHTML='<div class="insight-card"><span class="idot"></span><div class="ibody"><div class="itext">All calm — nothing needs you right now.</div><div class="iwhy">Log a check-in and this begins learning your patterns.</div></div></div>'; return; }
-  el.innerHTML=items.map(insightCardHTML).join('') + (full.length>3?'<div class="seeall" onclick="showView(\'assistant\')">See all '+full.length+' in Assistant &rarr;</div>':'');
+  el.innerHTML=full.map(insightCardHTML).join('');
 }
 function briefHTML(){
   const t=today(); const s=[];
@@ -896,30 +896,28 @@ function renderToday(){
   const h = new Date().getHours();
   const name = DB.profile.name || 'there';
   $('greetHi').textContent = (h < 12 ? 'Good morning, ' : h < 18 ? 'Good afternoon, ' : 'Good evening, ') + name;
-  const evToday = eventsOn(t);
-  const nudges = DB.friends.filter(f => friendStatus(f).overdue);
-  const hasJournal = DB.journal.some(j => j.date === t);
-  const bits = [];
-  bits.push(evToday.length ? evToday.length + (evToday.length === 1 ? ' event' : ' events') : 'no events');
-  if (nudges.length) bits.push(nudges.length + (nudges.length === 1 ? ' follow-up' : ' follow-ups'));
-  bits.push(hasJournal ? 'journal logged' : 'journal not logged');
-  $('greetSub').textContent = '';  // the brief carries the summary now
+  $('greetSub').textContent = '';
 
-  // AI brief + assistant insights
   $('briefCard').innerHTML = briefHTML();
+
+  // this week's people digest
+  const pw = peopleThisWeek();
+  $('todayDigest').innerHTML = pw.length ? '<div class="ck-label" style="margin-top:2px">This week\u2019s people</div>'+pw.map(pwCardHTML).join('') : '';
+
+  // full proactive feed (merged Assistant)
   renderInsights();
 
-  // tiles
-  const st = DB.stats[t] || {};
-  $('tiles').innerHTML = tilesHTML(st);
-
-  // today's events + journal status
+  // today's events
+  const evToday = eventsOn(t);
   $('todayEvents').innerHTML = evToday.length ? evToday.map(eventHTML).join('')
     : '<div class="empty">Nothing scheduled. Enjoy the open day — or add something.</div>';
-  const jToday = DB.journal.filter(j => j.date === t);
-  $('todayJournal').innerHTML = jToday.length
-    ? jToday.map(j => '<div class="card" style="cursor:pointer" onclick="openEntry(\''+j.id+'\')"><div style="font-size:13px;font-weight:600;color:var(--good)">Logged today</div><div style="font-size:14px;color:var(--ink-2);margin-top:3px">'+esc(j.summary || j.note || 'Photo saved' + (j.status === 'analyzing' ? ' — analyzing…' : '')) +'</div></div>').join('')
-    : '<div class="empty">No entry yet.</div>';
+
+  // More hub
+  $('todayMore').innerHTML =
+    areaRow('schedule','sage',IC_SCH,'Schedule','Your calendar &amp; events')+
+    areaRow('places','',IC_PIN,'Places',DB.places?(Object.keys(DB.places.clusters).length+' places mapped'):'Where you go')+
+    areaRow('goals','sage',IC_GOAL,'Goals',(DB.goals||[]).length?((DB.goals.length)+' active'):'Set a life goal')+
+    areaRow('settings','',IC_GEAR,'Settings','Name, theme, API key, backups');
 }
 function editTile(key){
   const tl = TILES.find(x => x.key === key); const st = DB.stats[today()] || {};
@@ -2041,6 +2039,19 @@ function reviewInsights(){
   if(due && (dow===0 || dow===6 || !last)) return [{ score:58, tone:'info', text:'Your weekly review is ready.', why:'A minute to reflect on the week just lived.', act:{label:'Open', fn:"showView('review')"} }];
   return [];
 }
+function renderInsightsView(){
+  const ex=$('insightsExtra'); if(!ex) return;
+  if($('tiles')) $('tiles').innerHTML = tilesHTML(DB.stats[today()]||{});
+  const hi=healthInsights(), pat=patternInsights();
+  let h='';
+  h+='<div class="section-head" style="margin-top:20px"><h2>Signals</h2></div>';
+  h+= hi.length ? hi.map(insightCardHTML).join('') : '<div class="empty">Sync a few days from Apple Health and trends show up here.</div>';
+  if(pat.length){ h+='<div class="section-head" style="margin-top:20px"><h2>Patterns in your data</h2></div>'+pat.map(insightCardHTML).join(''); }
+  const rv=(DB.reviews||[])[0];
+  h+='<div class="section-head" style="margin-top:20px"><h2>Weekly Review</h2><button class="action" onclick="showView(\'review\')">Open</button></div>';
+  h+='<div class="area" onclick="showView(\'review\')"><span class="a-icon blue">'+IC_REVIEW+'</span><span class="a-body"><span class="a-name">Weekly Review</span><span class="a-sum">'+(rv?('Latest: week of '+esc(fmtDate(rv.weekStart))):'Reflect on your week')+'</span></span><span class="chev">'+CHEV+'</span></div>';
+  ex.innerHTML=h;
+}
 // ---------- wiring ----------
 $('todayAddEvent').addEventListener('click', () => { selDate = today(); editEvent(''); });
 $('schedAddEvent').addEventListener('click', () => editEvent(''));
@@ -2064,7 +2075,7 @@ $('tlInput').addEventListener('change', async e => {
     toast(parsed.visits.length + ' visits imported');
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
-function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderLife(); renderHealthView(); renderAssistant(); renderGoals(); renderPerson(); renderReview(); }
+function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
 function routeHash(){
   const m=(location.hash||'').match(/[#&]go=([a-z]+)/); if(!m) return false;
