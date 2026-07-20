@@ -285,6 +285,17 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .wk-title{ font-size:14px; font-weight:650; }
 .wk-sub{ font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.5; }
 
+/* ---- this week's people ---- */
+.pw-card { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 14px; padding: 11px 13px; margin-bottom: 8px; }
+.pw-card .avatar { flex: 0 0 38px; width: 38px; height: 38px; font-size: 15px; }
+.pw-body { flex: 1; min-width: 0; }
+.pw-name { font-size: 15px; font-weight: 650; letter-spacing: -.005em; }
+.pw-reason { font-size: 12.5px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pw-acts { display: flex; gap: 6px; flex: 0 0 auto; }
+.pw-acts button { border: none; border-radius: 9px; font-size: 12.5px; font-weight: 650; padding: 7px 11px; cursor: pointer; font-family: inherit; }
+.pw-draft { background: var(--fill); color: var(--fill-ink); }
+.pw-open { background: var(--surface-2); color: var(--ink); }
+
 /* ---- friendship agent ---- */
 .avatar.big { flex: 0 0 74px; width: 74px; height: 74px; font-size: 30px; }
 .pd-hero { text-align: center; padding: 8px 0 4px; }
@@ -525,7 +536,7 @@ nav.tabbar {
         <div class="notice">Ask Claude for the 2-minute Shortcut recipe.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.6</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.7</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1064,6 +1075,9 @@ function renderPerson(){
   h+='<div class="section-head" style="margin-top:20px"><h2>About</h2><button class="action" onclick="editFriend(\''+p.id+'\')">Edit</button></div>';
   const ab=[['Family',p.family],['Favorites & interests',p.favorites],['Sports team',p.team],['How we met',p.how],['Gift ideas',p.giftIdeas],['Notes',p.notes],['Stay in touch',p.cadence?('every '+p.cadence+' days'):'']].filter(a=>a[1]);
   h+= ab.length? '<div class="card" style="padding:6px 16px">'+ab.map(a=>'<div class="kv"><span class="k">'+esc(a[0])+'</span><span class="v">'+esc(a[1])+'</span></div>').join('')+'</div>' : '<div class="empty">Tap Edit to add family, interests, notes.</div>';
+  const jm=journalMentions(p.name,5);
+  if(jm.length){ h+='<div class="section-head" style="margin-top:20px"><h2>From your journal</h2></div>'+
+    jm.map(j=>'<div class="tl-doc" onclick="openEntry(\''+j.id+'\')"><div class="td-top"><b>Journal</b><span>'+esc(fmtDate(j.date))+'</span></div><div class="td-prev">'+esc(mentionSnippet(j,p.name))+'</div></div>').join(''); }
   h+='<div class="section-head" style="margin-top:20px"><h2>History</h2><button class="action" onclick="importMaterial(\''+p.id+'\')">+ Import</button></div>';
   const items=[].concat((p.log||[]).map(l=>Object.assign({},l,{_t:'log'})), (p.docs||[]).map(d=>Object.assign({},d,{_t:'doc'}))).sort((a,b)=>(b.ts||0)-(a.ts||0));
   h+= items.length? items.map(it=> it._t==='doc'
@@ -1121,6 +1135,29 @@ async function askClaude(system, user, max){
   if(!res.ok) throw new Error('API '+res.status);
   const d=await res.json(); return (d.content||[]).map(c=>c.text||'').join('').trim();
 }
+function journalMentions(name, limit){
+  const first=(name||'').trim().split(/\s+/)[0]; if(!first || first.length<3) return [];
+  let re; try{ re=new RegExp('\\b'+first.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i'); }catch(e){ return []; }
+  return (DB.journal||[]).filter(j=> re.test((j.transcription||'')+' '+(j.summary||'')+' '+(j.note||'')))
+    .sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0, limit||3);
+}
+function mentionSnippet(j, name){
+  const first=(name||'').trim().split(/\s+/)[0]; const text=(j.transcription||j.summary||j.note||'');
+  const idx=text.toLowerCase().indexOf(first.toLowerCase());
+  if(idx<0) return (j.summary||text).slice(0,120);
+  const start=Math.max(0, idx-40); return (start>0?'…':'')+text.slice(start, idx+90).replace(/\s+/g,' ').trim()+'…';
+}
+function peopleThisWeek(){
+  const now=today(); const out=[];
+  (DB.friends||[]).forEach(f=>{ const st=friendStatus(f); let score=0, reason='';
+    if(st.bd && st.bd.days<=7){ score=200-st.bd.days; reason=st.bd.days===0?'Birthday today':('Birthday '+(st.bd.days===1?'tomorrow':'in '+st.bd.days+' days')); }
+    else if(st.nextEvent && st.nextEvent.days<=7){ score=180-st.nextEvent.days; reason=st.nextEvent.title+' '+st.nextEvent.dateLabel; }
+    else if(st.overdue){ score=100+Math.min(40,(st.since||30)); reason=(st.since==null?'No contact logged yet':st.since+' days since you talked'); }
+    else { const jm=journalMentions(f.name,1); if(jm.length){ const dz=daysBetween(jm[0].date, now); if(dz>=0 && dz<=10 && (st.since==null || st.since>=7)){ score=60; reason='You journaled about '+f.name.split(/\s+/)[0]+' recently'; } } }
+    if(score>0) out.push({ f, score, reason });
+  });
+  return out.sort((a,b)=>b.score-a.score).slice(0,6);
+}
 function personContext(p){
   const b=[]; b.push('Name: '+p.name+(p.relationship?(' ('+p.relationship+')'):''));
   if(p.family) b.push('Family: '+p.family);
@@ -1135,6 +1172,8 @@ function personContext(p){
   if(log.length) b.push('Recent contact:\n'+log.map(l=>l.date+' ('+docKindLabel(l.kind)+'): '+(l.text||'')).join('\n'));
   const docs=(p.docs||[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,3);
   if(docs.length) b.push('Recent material:\n'+docs.map(d=>'['+docKindLabel(d.kind)+' '+d.date+']\n'+(d.text||'').slice(0,1600)).join('\n\n'));
+  const jm=journalMentions(p.name,3);
+  if(jm.length) b.push('Journal mentions:\n'+jm.map(j=>j.date+': '+mentionSnippet(j,p.name)).join('\n'));
   return b.join('\n');
 }
 function agentBusy(msg){ if($('agentOut')) $('agentOut').innerHTML='<div class="agentcard"><p><span class="spinner"></span>'+esc(msg)+'</p></div>'; }
@@ -1731,12 +1770,19 @@ function renderHealthView(){
     '<div class="section-head" style="margin-top:20px"><h2>Signals</h2></div>'+
     (hi.length? hi.map(insightCardHTML).join('') : '<div class="empty">Sync a few days from Apple Health and trends show up here.</div>');
 }
+function pwCardHTML(x){ const f=x.f, K=!!DB.settings.apiKey;
+  return '<div class="pw-card"><div class="avatar" style="background:'+avColor(f.name)+'">'+esc(f.name[0].toUpperCase())+'</div>'+
+    '<div class="pw-body"><div class="pw-name">'+esc(f.name)+'</div><div class="pw-reason">'+esc(x.reason)+'</div></div>'+
+    '<div class="pw-acts">'+(K?'<button class="pw-draft" onclick="draftMessage(\''+f.id+'\')">Draft</button>':'')+'<button class="pw-open" onclick="openPerson(\''+f.id+'\')">Open</button></div></div>';
+}
 function renderAssistant(){
-  const el=$('assistantFeed'); if(!el) return; const full=computeInsights(50);
-  el.innerHTML='<div class="pagehead2"><div class="a-lead">Seen, not searched.</div><div class="a-sub">What LifeOS notices across your life, ranked by what matters.</div></div>'+
-    (full.length? full.map(insightCardHTML).join('')
+  const el=$('assistantFeed'); if(!el) return; const full=computeInsights(50); const pw=peopleThisWeek();
+  let html='<div class="pagehead2"><div class="a-lead">Seen, not searched.</div><div class="a-sub">What LifeOS notices across your life, ranked by what matters.</div></div>';
+  if(pw.length){ html+='<div class="ck-label" style="margin-top:2px">This week\u2019s people</div>'+pw.map(pwCardHTML).join('')+'<div style="height:8px"></div>'; }
+  html+= (full.length? full.map(insightCardHTML).join('')
       : '<div class="insight-card"><span class="idot"></span><div class="ibody"><div class="itext">All calm.</div><div class="iwhy">Check in and sync Health, and the assistant starts surfacing patterns.</div></div></div>')+
     '<div class="jbtns" style="margin-top:16px"><button id="asstAsk" onclick="openAsk()">Ask your journal</button><button onclick="openCheckin()">Daily check-in</button></div>';
+  el.innerHTML=html;
 }
 
 // ---------- Goals ----------
