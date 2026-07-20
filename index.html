@@ -285,6 +285,27 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .wk-title{ font-size:14px; font-weight:650; }
 .wk-sub{ font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.5; }
 
+/* ---- goals ---- */
+.goal { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 16px; padding: 16px 17px; margin-bottom: 11px; cursor: pointer; }
+.goal .g-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.goal .g-name { font-family: var(--serif); font-size: 18px; font-weight: 600; letter-spacing: -.005em; }
+.goal .g-mom { font-size: 12px; font-weight: 700; flex: 0 0 auto; }
+.g-mom.up { color: var(--good); } .g-mom.steady { color: var(--muted); } .g-mom.low { color: var(--warning); }
+.goal .g-prog { font-size: 13.5px; color: var(--ink-2); margin-top: 5px; }
+.goal .g-bar { height: 4px; border-radius: 2px; background: var(--surface-2); margin-top: 11px; overflow: hidden; }
+.goal .g-bar i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+.goal .g-next { display: flex; gap: 8px; margin-top: 11px; align-items: flex-start; }
+.goal .g-next svg { width: 14px; height: 14px; color: var(--warning); flex: 0 0 auto; margin-top: 2px; }
+.goal .g-next p { font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+.g-bar { height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.g-bar i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+.mile { display: flex; align-items: center; gap: 11px; padding: 11px 2px; cursor: pointer; }
+.mile + .mile { border-top: 1px solid var(--hairline); }
+.mile .mk { flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--muted); display: flex; align-items: center; justify-content: center; color: transparent; }
+.mile.done .mk { background: var(--good); border-color: var(--good); color: #fff; }
+.mile .mt { font-size: 14.5px; }
+.mile.done .mt { color: var(--muted); text-decoration: line-through; }
+
 /* ---- life hub / assistant ---- */
 .pagehead2 { margin: 6px 2px 16px; }
 .pagehead2 .a-lead { font-family: var(--serif); font-size: 26px; font-weight: 600; letter-spacing: -.01em; line-height: 1.15; }
@@ -460,7 +481,7 @@ nav.tabbar {
         <div class="notice">Fills today’s numbers with example values so you can see it work. Ask Claude for the 2-minute Shortcut recipe.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.3</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v3.4</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -475,6 +496,13 @@ nav.tabbar {
     <!-- ============ ASSISTANT ============ -->
     <section class="view" id="view-assistant">
       <div id="assistantFeed"></div>
+    </section>
+
+    <!-- ============ GOALS (under Life) ============ -->
+    <section class="view" id="view-goals">
+      <div class="backrow" onclick="showView('life')">&lsaquo; Life</div>
+      <div class="section-head"><h2>Life goals</h2><button class="action" id="goalAdd">+ Add</button></div>
+      <div id="goalList"></div>
     </section>
   </main>
 
@@ -521,7 +549,7 @@ const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
 const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light'},
-  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{} };
+  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, goals:[] };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
@@ -567,8 +595,8 @@ function closeSheet(){ $('overlay').classList.remove('open'); $('sheet').innerHT
 $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) closeSheet(); });
 
 // ---------- navigation ----------
-const VIEWS = { today:'Today', life:'Life', schedule:'Schedule', friends:'Friends', places:'Places', health:'Health', journal:'Journal', assistant:'Assistant', settings:'Settings' };
-const TAB_OF = { today:'today', life:'life', schedule:'life', friends:'life', places:'life', health:'life', settings:'life', journal:'journal', assistant:'assistant' };
+const VIEWS = { today:'Today', life:'Life', schedule:'Schedule', friends:'Friends', places:'Places', health:'Health', goals:'Goals', journal:'Journal', assistant:'Assistant', settings:'Settings' };
+const TAB_OF = { today:'today', life:'life', schedule:'life', friends:'life', places:'life', health:'life', goals:'life', settings:'life', journal:'journal', assistant:'assistant' };
 let currentView = 'today';
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
 function showView(v){ currentView = v;
@@ -708,7 +736,7 @@ function ingestHealth(){
 }
 function testHealthSync(){ location.hash='sleep=7.4&steps=8241&energy=512&rhr=54&hrv=47'; ingestHealth(); renderAll(); showView('today'); }
 function computeInsights(limit){ limit=limit||5;
-  const all=[...patternInsights(), ...healthInsights(), ...recentInsights(), ...lifeInsights()];
+  const all=[...patternInsights(), ...healthInsights(), ...goalInsights(), ...recentInsights(), ...lifeInsights()];
   all.sort((a,b) => b.score-a.score);
   const seen=new Set(), pick=[];
   for(const i of all){ if(seen.has(i.text)) continue; seen.add(i.text); pick.push(i); if(pick.length>=limit) break; }
@@ -1445,11 +1473,14 @@ function renderLife(){
   const friendSum=DB.friends.length?(DB.friends.length+' people'+(needy?' · '+needy+' need you':'')):'Add the people who matter';
   const placeSum=DB.places?(Object.keys(DB.places.clusters).length+' places mapped'):'Not imported yet';
   const st=DB.stats[t]||{}; const healthSum=st.sleep?('Slept '+st.sleep+'h'+(st.steps?' · '+Number(st.steps).toLocaleString()+' steps':'')):'Sync from Apple Health';
+  const gs=DB.goals||[]; const gNeed=gs.filter(g=>goalMomentum(g).cls==='low').length; const gDone=gs.filter(g=>goalPct(g)>=1).length;
+  const goalSum=gs.length?(gs.length+' active'+(gNeed?' · '+gNeed+' need attention':(gDone?' · '+gDone+' complete':''))):'Set a life goal';
   el.innerHTML=
     areaRow('schedule','sage',IC_SCH,'Schedule',schedSum)+
     areaRow('friends','blue',IC_PPL,'Friends',friendSum)+
     areaRow('places','',IC_PIN,'Places',placeSum)+
     areaRow('health','amber',IC_HRT,'Health & numbers',healthSum)+
+    areaRow('goals','sage',IC_GOAL,'Goals',goalSum)+
     '<div style="height:12px"></div>'+
     areaRow('settings','',IC_GEAR,'Settings','Name, theme, API key, backups');
 }
@@ -1468,10 +1499,128 @@ function renderAssistant(){
     '<div class="jbtns" style="margin-top:16px"><button id="asstAsk" onclick="openAsk()">Ask your journal</button><button onclick="openCheckin()">Daily check-in</button></div>';
 }
 
+// ---------- Goals ----------
+const IC_GOAL='<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 21V4.5M6 4.5h11l-2.2 3.2L17 11H6"/></svg>';
+const CHECK='<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>';
+function goalPct(g){
+  if(g.kind==='milestones'){ const m=g.milestones||[]; return m.length? m.filter(x=>x.done).length/m.length : 0; }
+  const cur=Number(g.current)||0, tgt=Number(g.target)||0;
+  const clamp=v=>Math.max(0, Math.min(1, v));
+  if(g.direction==='down'){ const start=(g.start!=null)?Number(g.start):cur; if(start===tgt) return cur<=tgt?1:0; return clamp((start-cur)/(start-tgt)); }
+  if(tgt===0) return 0; return clamp(cur/tgt);
+}
+function goalMomentum(g){
+  if(goalPct(g)>=1) return {label:'Complete', cls:'up'};
+  const days=g.lastProgressTs? Math.floor((Date.now()-g.lastProgressTs)/86400000) : 999;
+  if(days<=10) return {label:'Rising', cls:'up'};
+  if(days<=28) return {label:'Steady', cls:'steady'};
+  return {label:'Needs attention', cls:'low'};
+}
+function goalProgressText(g){
+  if(g.kind==='milestones'){ const m=g.milestones||[]; return m.filter(x=>x.done).length+' of '+m.length+' milestones'; }
+  const cur=Number(g.current)||0, tgt=Number(g.target)||0, u=g.unit?(' '+g.unit):'';
+  return cur+u+' of '+tgt+u+(g.targetDate?(' · by '+fmtDate(g.targetDate)):'');
+}
+function goalNext(g){
+  if(goalPct(g)>=1) return 'Done — mark it complete or set the next one.';
+  if(g.kind==='milestones'){ const nx=(g.milestones||[]).find(x=>!x.done); return nx?('Next: '+nx.text):'Add a milestone to keep momentum.'; }
+  const cur=Number(g.current)||0, tgt=Number(g.target)||0, u=g.unit?(' '+g.unit):'';
+  const remain=Math.abs(g.direction==='down'?(cur-tgt):(tgt-cur));
+  if(g.targetDate){ const wl=Math.max(1, Math.round((parseD(g.targetDate)-parseD(today()))/604800000)); const per=Math.round((remain/wl)*10)/10; return '≈ '+per+u+'/week to hit '+fmtDate(g.targetDate)+'.'; }
+  return (Math.round(remain*10)/10)+u+' to go.';
+}
+function goalInsights(){ const out=[]; (DB.goals||[]).forEach(g=>{ const p=goalPct(g), m=goalMomentum(g);
+  if(p>=1) out.push({score:55,tone:'good',text:'You hit your goal: '+g.name+'.',why:'Worth a moment — then pick the next one.'});
+  else if(m.cls==='low') out.push({score:54,tone:'watch',text:'“'+g.name+'” has gone quiet.',why:'No progress logged in a few weeks.'});
+  else if(p>=0.85) out.push({score:50,tone:'info',text:'Almost there on “'+g.name+'.”',why:goalNext(g)});
+}); return out.slice(0,3); }
+function renderGoals(){
+  const el=$('goalList'); if(!el) return; const gs=DB.goals||[];
+  if(!gs.length){ el.innerHTML='<div class="card"><b>No goals yet.</b><div style="font-size:14px;color:var(--ink-2);margin-top:4px;line-height:1.55">Set a life goal — a number to move (books read, pounds, dollars saved, hours practiced) or a project with milestones. LifeOS tracks momentum and nudges you toward the next step.</div><button class="btn" style="margin-top:14px" onclick="editGoal(\'\')">Add your first goal</button></div>'; return; }
+  el.innerHTML=gs.map(g=>{ const p=goalPct(g), m=goalMomentum(g);
+    return '<div class="goal" onclick="openGoal(\''+g.id+'\')"><div class="g-top"><span class="g-name">'+esc(g.name)+'</span><span class="g-mom '+m.cls+'">'+m.label+'</span></div>'+
+      '<div class="g-prog">'+esc(goalProgressText(g))+'</div>'+
+      '<div class="g-bar"><i style="width:'+Math.round(p*100)+'%'+(m.cls==='low'?';background:var(--warning)':'')+'"></i></div>'+
+      '<div class="g-next">'+SPARK+'<p>'+esc(goalNext(g))+'</p></div></div>';
+  }).join('');
+}
+function openGoal(id){
+  const g=(DB.goals||[]).find(x=>x.id===id); if(!g) return; const p=goalPct(g), m=goalMomentum(g);
+  let body='<h3>'+esc(g.name)+'</h3>';
+  if(g.why) body+='<div class="notice" style="margin-top:0">'+esc(g.why)+'</div>';
+  body+='<div class="g-bar" style="margin:14px 0 7px"><i style="width:'+Math.round(p*100)+'%"></i></div>';
+  body+='<div style="font-size:13.5px;color:var(--ink-2)">'+esc(goalProgressText(g))+' · '+m.label+'</div>';
+  body+='<div class="g-next" style="margin-top:12px">'+SPARK+'<p>'+esc(goalNext(g))+'</p></div>';
+  if(g.kind==='milestones'){ body+='<div class="ck-label">Milestones</div>'+(g.milestones||[]).map(x=>'<div class="mile'+(x.done?' done':'')+'" onclick="toggleMilestone(\''+g.id+'\',\''+x.id+'\')"><span class="mk">'+CHECK+'</span><span class="mt">'+esc(x.text)+'</span></div>').join(''); }
+  else { body+='<button class="btn" style="margin-top:16px" onclick="logProgress(\''+g.id+'\')">Log progress</button>'; }
+  if(DB.settings.apiKey) body+='<button class="btn secondary" style="margin-top:10px" onclick="goalCoach(\''+g.id+'\')">Ask for a nudge</button><div id="coachOut"></div>';
+  body+='<button class="btn secondary" style="margin-top:10px" onclick="editGoal(\''+g.id+'\')">Edit goal</button>';
+  body+='<button class="btn danger" onclick="deleteGoal(\''+g.id+'\')">Delete goal</button>';
+  openSheet(body);
+}
+function toggleMilestone(gid, mid){ const g=DB.goals.find(x=>x.id===gid); if(!g) return; const mm=(g.milestones||[]).find(x=>x.id===mid); if(mm){ mm.done=!mm.done; g.lastProgressTs=Date.now(); save(); openGoal(gid); renderAll(); } }
+function logProgress(id){ const g=DB.goals.find(x=>x.id===id); if(!g) return;
+  openSheet('<h3>Log progress</h3><div class="field"><label>Current '+(g.unit||'value')+'</label><input id="gpv" type="number" inputmode="decimal" value="'+(g.current!=null?g.current:'')+'"></div><button class="btn" onclick="saveProgress(\''+id+'\')">Save</button>');
+  setTimeout(()=>{ const e=$('gpv'); if(e) e.focus(); },60);
+}
+function saveProgress(id){ const g=DB.goals.find(x=>x.id===id); if(!g) return; const v=Number($('gpv').value); if(isNaN(v)){ return; }
+  g.current=v; g.updates=g.updates||[]; g.updates.push({date:today(), ts:Date.now(), value:v}); g.lastProgressTs=Date.now(); save(); closeSheet(); renderAll(); toast('Progress logged'); }
+function gKindToggle(){ const k=$('gKind').value; if($('gNum')) $('gNum').style.display=(k==='number')?'':'none'; if($('gMile')) $('gMile').style.display=(k==='milestones')?'':'none'; }
+function editGoal(id){
+  const g=id?DB.goals.find(x=>x.id===id):null; const k=g?g.kind:'number';
+  const opt=(v,l,sel)=>'<option value="'+v+'"'+(sel?' selected':'')+'>'+l+'</option>';
+  openSheet('<h3>'+(g?'Edit goal':'New goal')+'</h3>'+
+    '<div class="field"><label>Goal</label><input id="gName" placeholder="Read 25 books, Visit Japan…" value="'+esc(g?g.name:'')+'"></div>'+
+    '<div class="field"><label>Why it matters (optional)</label><textarea id="gWhy" placeholder="A line to remind future-you…">'+esc(g?(g.why||''):'')+'</textarea></div>'+
+    '<div class="field"><label>Type</label><select id="gKind" onchange="gKindToggle()">'+opt('number','A number to move',k==='number')+opt('milestones','A project with milestones',k==='milestones')+'</select></div>'+
+    '<div id="gNum">'+
+      '<div class="row2"><div class="field"><label>Direction</label><select id="gDir">'+opt('up','Increase',!g||g.direction!=='down')+opt('down','Decrease',g&&g.direction==='down')+'</select></div>'+
+      '<div class="field"><label>Unit</label><input id="gUnit" placeholder="books, lbs, $, hrs" value="'+esc(g?(g.unit||''):'')+'"></div></div>'+
+      '<div class="row2"><div class="field"><label>Current</label><input id="gCur" type="number" inputmode="decimal" value="'+(g&&g.current!=null?g.current:'')+'"></div>'+
+      '<div class="field"><label>Target</label><input id="gTgt" type="number" inputmode="decimal" value="'+(g&&g.target!=null?g.target:'')+'"></div></div>'+
+      '<div class="field"><label>Target date (optional)</label><input id="gDate" type="date" value="'+(g?(g.targetDate||''):'')+'"></div>'+
+    '</div>'+
+    '<div id="gMile" style="display:none"><div class="field"><label>Milestones (one per line)</label><textarea id="gMiles" placeholder="Draft the outline&#10;Build v1&#10;Ship it">'+esc(g&&g.milestones?g.milestones.map(m=>m.text).join('\n'):'')+'</textarea></div></div>'+
+    '<button class="btn" onclick="saveGoal(\''+(g?g.id:'')+'\')">Save goal</button>'+
+    (g?'<button class="btn danger" onclick="deleteGoal(\''+g.id+'\')">Delete goal</button>':''));
+  setTimeout(gKindToggle, 40);
+}
+function saveGoal(id){
+  const name=$('gName').value.trim(); if(!name){ toast('Give it a name'); return; }
+  const kind=$('gKind').value;
+  let g=id?DB.goals.find(x=>x.id===id):{ id:uid(), createdTs:Date.now(), updates:[] };
+  g.name=name; g.why=$('gWhy').value.trim(); g.kind=kind;
+  if(kind==='number'){ g.direction=$('gDir').value; g.unit=$('gUnit').value.trim();
+    g.current=Number($('gCur').value)||0; g.target=Number($('gTgt').value)||0; g.targetDate=$('gDate').value;
+    if(!id || g.start==null) g.start=g.current; g.milestones=g.milestones||[]; }
+  else { const lines=$('gMiles').value.split('\n').map(x=>x.trim()).filter(Boolean); const prev=g.milestones||[];
+    g.milestones=lines.map(t=>{ const ex=prev.find(pp=>pp.text===t); return { id:ex?ex.id:uid(), text:t, done:ex?ex.done:false }; }); }
+  if(!g.lastProgressTs) g.lastProgressTs=Date.now();
+  if(!id){ DB.goals=DB.goals||[]; DB.goals.push(g); }
+  save(); closeSheet(); renderAll(); toast('Goal saved');
+}
+function deleteGoal(id){ DB.goals=(DB.goals||[]).filter(x=>x.id!==id); save(); closeSheet(); renderAll(); }
+async function goalCoach(id){
+  const g=DB.goals.find(x=>x.id===id); if(!g||!DB.settings.apiKey) return;
+  $('coachOut').innerHTML='<div class="detail-block" style="margin-top:12px"><p><span class="spinner"></span>Thinking…</p></div>';
+  const recent=(g.updates||[]).slice(-6).map(u=>u.date+': '+u.value).join(', ');
+  const ctx='Goal: '+g.name+'. Type: '+g.kind+'. '+goalProgressText(g)+'. Momentum: '+goalMomentum(g).label+'. Next: '+goalNext(g)+(g.why?('. Why it matters: '+g.why):'')+(recent?('. Recent log: '+recent):'');
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
+      headers:{ 'content-type':'application/json','x-api-key':DB.settings.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+      body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:300,
+        system:'You are a warm, practical coach. Given a personal goal and its progress, give ONE specific, encouraging next step in 1-2 sentences. No lists, no platitudes.',
+        messages:[{ role:'user', content:ctx }] }) });
+    if(!res.ok) throw new Error('api'); const d=await res.json(); const tx=(d.content||[]).map(c=>c.text||'').join('').trim();
+    if($('coachOut')) $('coachOut').innerHTML='<div class="detail-block" style="margin-top:12px"><h4>A nudge</h4><p>'+esc(tx)+'</p></div>';
+  }catch(e){ if($('coachOut')) $('coachOut').innerHTML='<div class="notice">Couldn’t reach Claude just now.</div>'; }
+}
+
 // ---------- wiring ----------
 $('todayAddEvent').addEventListener('click', () => { selDate = today(); editEvent(''); });
 $('schedAddEvent').addEventListener('click', () => editEvent(''));
 $('friendAdd').addEventListener('click', () => editFriend(''));
+$('goalAdd').addEventListener('click', () => editGoal(''));
 $('archiveBtn').addEventListener('click', () => $('archiveInput').click());
 $('archiveInput').addEventListener('change', e => { const files = [...e.target.files]; e.target.value=''; if (files.length) openArchiveSheet(files); });
 $('jSearch').addEventListener('input', e => { jState.q = e.target.value; renderJournalList(); });
@@ -1490,7 +1639,7 @@ $('tlInput').addEventListener('change', async e => {
     toast(parsed.visits.length + ' visits imported');
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
-function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderLife(); renderHealthView(); renderAssistant(); }
+function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderLife(); renderHealthView(); renderAssistant(); renderGoals(); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
 applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal();
 window.addEventListener('hashchange', () => { ingestHealth(); renderAll(); });
