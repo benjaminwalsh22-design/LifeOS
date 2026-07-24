@@ -391,6 +391,14 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .jbtns button { flex: 1; background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
 .jbtns button#jAsk { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
 
+/* ---- focus mode (single-pillar apps) ---- */
+.topgear { display: none; background: none; border: none; color: var(--ink-2); cursor: pointer; padding: 2px; }
+.topgear svg { width: 22px; height: 22px; display: block; }
+body[data-focus] .topbar .date { display: none; }
+body[data-focus] .topgear { display: block; }
+body[data-focus] nav.tabbar { display: none; }
+body[data-focus] main { padding-bottom: calc(env(safe-area-inset-bottom) + 26px); }
+
 /* ---- tab bar ---- */
 nav.tabbar {
   flex: 0 0 auto; z-index: 30;
@@ -437,6 +445,9 @@ nav.tabbar {
   <header class="topbar">
     <h1 id="topTitle">Today</h1>
     <div class="date" id="topDate"></div>
+    <button class="topgear" id="topGear" onclick="showView('settings')" aria-label="Settings">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .34 1.87 2 2 0 1 1-2.83 2.83 1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0 1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34 2 2 0 1 1-2.83-2.83A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1H3a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.5-1.11 1.7 1.7 0 0 0-.34-1.87 2 2 0 1 1 2.83-2.83A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0 1.7 1.7 0 0 0 1.11 1.5 1.7 1.7 0 0 0 1.87-.34 2 2 0 1 1 2.83 2.83A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.56 1Z"/></svg>
+    </button>
   </header>
   <main>
     <!-- ============ TODAY ============ -->
@@ -465,7 +476,7 @@ nav.tabbar {
 
     <!-- ============ SCHEDULE ============ -->
     <section class="view" id="view-schedule">
-      <div class="backrow" onclick="showView('today')">&lsaquo; Today</div>
+      <div class="backrow" onclick="backHome()">&lsaquo; Back</div>
       <div class="weekstrip" id="weekstrip"></div>
       <div class="section-head"><h2 id="schedDayLabel">Events</h2><button class="action" id="schedAddEvent">+ Add</button></div>
       <div id="schedEvents"></div>
@@ -508,14 +519,14 @@ nav.tabbar {
 
     <!-- ============ PLACES ============ -->
     <section class="view" id="view-places">
-      <div class="backrow" onclick="showView('today')">&lsaquo; Today</div>
+      <div class="backrow" onclick="backHome()">&lsaquo; Back</div>
       <input type="file" id="tlInput" accept=".json,application/json" hidden>
       <div id="placesBody"></div>
     </section>
 
     <!-- ============ SETTINGS ============ -->
     <section class="view" id="view-settings">
-      <div class="backrow" onclick="showView('today')">&lsaquo; Today</div>
+      <div class="backrow" onclick="backHome()">&lsaquo; Back</div>
       <div class="card">
         <div class="field"><label>Your name</label><input id="setName" placeholder="Benjamin"></div>
         <div class="field"><label>Theme</label>
@@ -545,7 +556,7 @@ nav.tabbar {
         <div class="notice">Ask Claude for the Shortcut recipe (opens-the-app) or the live-sync relay setup.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.3</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.4</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -553,7 +564,7 @@ nav.tabbar {
 
     <!-- ============ HEALTH (under Life) ============ -->
     <section class="view" id="view-health">
-      <div class="backrow" onclick="showView('today')">&lsaquo; Today</div>
+      <div class="backrow" onclick="backHome()">&lsaquo; Back</div>
       <div id="healthBody"></div>
     </section>
 
@@ -564,7 +575,7 @@ nav.tabbar {
 
     <!-- ============ GOALS (under Life) ============ -->
     <section class="view" id="view-goals">
-      <div class="backrow" onclick="showView('today')">&lsaquo; Today</div>
+      <div class="backrow" onclick="backHome()">&lsaquo; Back</div>
       <div class="section-head"><h2>Life goals</h2><button class="action" id="goalAdd">+ Add</button></div>
       <div id="goalList"></div>
     </section>
@@ -669,6 +680,18 @@ const VIEWS = { today:'Today', friends:'Friends', person:'', journal:'Journal', 
 const TAB_OF = { today:'today', schedule:'today', places:'today', goals:'today', settings:'today', friends:'friends', person:'friends', journal:'journal', insights:'insights', health:'insights', review:'insights' };
 let currentView = 'today';
 let currentPersonId = null;
+const FOCUS_APPS = { journal:{title:'Journal', tab:'journal'}, friends:{title:'Friends', tab:'friends'}, insights:{title:'Insights', tab:'insights'} };
+const FOCUS = (new URLSearchParams(location.search).get('app')||'').toLowerCase();
+const FOCUS_APP = FOCUS_APPS[FOCUS] || null;
+function applyFocus(){
+  if(!FOCUS_APP) return;
+  document.body.setAttribute('data-focus', FOCUS);
+  document.title = FOCUS_APP.title + ' — LifeOS';
+  const mt=document.querySelector('meta[name=\'apple-mobile-web-app-title\']'); if(mt) mt.setAttribute('content', FOCUS_APP.title);
+  let link=document.querySelector('link[rel=\'apple-touch-icon\']'); if(!link){ link=document.createElement('link'); link.rel='apple-touch-icon'; document.head.appendChild(link); }
+  link.href='icon-'+FOCUS+'.png';
+}
+function backHome(){ showView(FOCUS_APP ? FOCUS_APP.tab : 'today'); }
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
 function showView(v){ currentView = v;
   const tab = TAB_OF[v] || v;
@@ -2204,7 +2227,7 @@ function routeHash(){
   if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }
   return false;
 }
-applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal(); routeHash(); startHealthPolling();
+applyFocus(); applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal(); routeHash(); startHealthPolling(); if(FOCUS_APP) showView(FOCUS_APP.tab);
 window.addEventListener('hashchange', () => { ingestHealth(); renderAll(); routeHash(); });
 </script>
 </body>
