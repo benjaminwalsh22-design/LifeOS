@@ -608,12 +608,13 @@ nav.tabbar {
         <div class="notice">Ask Claude for the Shortcut recipe (opens-the-app) or the live-sync relay setup.</div>
       </div>
       <div class="card" id="lockCard"></div>
+      <div class="card" id="notifCard"></div>
       <div class="card">
         <div style="font-size:15px;font-weight:650;margin-bottom:6px">Account &amp; Sync</div>
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.0</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.1</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2616,6 +2617,81 @@ function routeHash(){
   if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }
   return false;
 }
+// ---------- push notifications ----------
+const VAPID_PUB='BHgSSYmn51dokFYyuoQFSTzrIDrxIofgRLZZhgp9D3gzm9IVfxk7s_fCmPuqSkP-CAqojISNE7P2Hy9Ac-sqA18';
+const PUSH_FN='https://vksoorkybevxsbdqhjhx.supabase.co/functions/v1/push-tick';
+let _swReg=null;
+async function regSW(){ if(!('serviceWorker' in navigator)) return null;
+  try{ _swReg=await navigator.serviceWorker.register('sw.js'); return _swReg; }catch(e){ return null; } }
+function b64ToU8(b64){ const pad='='.repeat((4-b64.length%4)%4); const raw=atob((b64+pad).replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0))); }
+function notifPrefs(){ return Object.assign({ journalOn:true, journalHour:21, birthdaysOn:true, reviewOn:true }, DB.settings.notifPrefs||{}); }
+async function pushSubRow(){ if(!_swReg) return null; try{ return await _swReg.pushManager.getSubscription(); }catch(e){ return null; } }
+async function enablePush(){
+  if(!SUPA||!SUPA.session){ toast('Log in first (Account & Sync)'); return; }
+  if(!('Notification' in window)){ toast('This browser has no notification support'); return; }
+  if(!window.matchMedia('(display-mode: standalone)').matches && /iPhone|iPad/.test(navigator.userAgent)) toast('Tip: install to Home Screen first');
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted'){ toast('Notifications not allowed'); renderNotifCard(); return; }
+  const reg=_swReg||await regSW(); if(!reg){ toast('Service worker unavailable'); return; }
+  try{
+    const sub=await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:b64ToU8(VAPID_PUB) });
+    const row=[{ endpoint:sub.endpoint, user_id:SUPA.session.user.id, sub:sub.toJSON(), tz_offset:-new Date().getTimezoneOffset(), prefs:notifPrefs() }];
+    const r=await supaRest('push_subs?on_conflict=endpoint',{ method:'POST', prefer:'resolution=merge-duplicates,return=minimal', body:row });
+    if(!r.ok) throw new Error('save '+r.status);
+    DB.settings.pushOn=true; save(); renderNotifCard(); toast('Notifications on for this device');
+  }catch(e){ console.error(e); toast('Could not subscribe — '+String(e.message||e).slice(0,60)); }
+}
+async function disablePush(){
+  try{ const sub=await pushSubRow();
+    if(sub){ if(SUPA&&SUPA.session) await supaRest('push_subs?endpoint=eq.'+encodeURIComponent(sub.endpoint),{ method:'DELETE' });
+      await sub.unsubscribe(); } }catch(e){}
+  DB.settings.pushOn=false; save(); renderNotifCard(); toast('Notifications off for this device');
+}
+async function savePushPrefs(){
+  const p={ journalOn:$('npJournal').classList.contains('on'), journalHour:Number($('npHour').value),
+    birthdaysOn:$('npBday').classList.contains('on'), reviewOn:$('npReview').classList.contains('on') };
+  DB.settings.notifPrefs=p; save();
+  const sub=await pushSubRow();
+  if(sub && SUPA && SUPA.session)
+    await supaRest('push_subs?endpoint=eq.'+encodeURIComponent(sub.endpoint),{ method:'PATCH', body:{ prefs:p, tz_offset:-new Date().getTimezoneOffset() } });
+  toast('Notification settings saved');
+}
+async function testPush(){
+  if(!SUPA||!SUPA.session){ toast('Log in first'); return; }
+  toast('Sending test…');
+  try{
+    const r=await fetch(PUSH_FN,{ method:'POST', headers:{ 'Content-Type':'application/json','Authorization':'Bearer '+SUPA.session.access_token }, body:JSON.stringify({test:true}) });
+    const d=await r.json().catch(()=>({}));
+    if(r.ok) toast(d.devices? ('Test sent to '+d.devices+' device'+(d.devices===1?'':'s')) : 'No subscribed devices yet');
+    else toast('Test failed ('+r.status+')');
+  }catch(e){ toast('Test failed — offline?'); }
+}
+function tglBtn(id,on,label){ return '<button class="tgl '+(on?'on':'')+'" id="'+id+'" onclick="this.classList.toggle(\'on\')">'+label+'</button>'; }
+async function renderNotifCard(){
+  const el=$('notifCard'); if(!el) return;
+  const p=notifPrefs();
+  const supported=('Notification' in window)&&('serviceWorker' in navigator)&&('PushManager' in window);
+  const sub=supported? await pushSubRow() : null;
+  let h='<div style="font-size:15px;font-weight:650;margin-bottom:6px">Notifications</div>';
+  if(!supported){ el.innerHTML=h+'<div class="notice" style="margin-top:0">Not supported here. On iPhone: install LifeOS to your Home Screen (iOS 16.4+), then enable from inside the app.</div>'; return; }
+  if(!sub){
+    h+='<div class="notice" style="margin-top:0">Journal reminders, birthday alerts and the Sunday review — delivered even when the app is closed.</div>'+
+       '<button class="btn" style="margin-top:12px" onclick="enablePush()">Enable on this device</button>';
+    if(!(SUPA&&SUPA.session)) h+='<div class="notice">Requires being logged in (Account &amp; Sync).</div>';
+  } else {
+    h+='<div class="notice" style="margin-top:0">On for this device.</div>'+
+      '<div class="ck-label">Journal reminder</div><div class="toggle-row">'+tglBtn('npJournal',p.journalOn,'Remind me')+
+      '<select id="npHour" class="tgl" style="appearance:auto">'+[19,20,21,22].map(hh=>'<option value="'+hh+'"'+(p.journalHour===hh?' selected':'')+'>'+(hh>12?hh-12:hh)+' PM</option>').join('')+'</select></div>'+
+      '<div class="ck-label">Also send</div><div class="toggle-row">'+tglBtn('npBday',p.birthdaysOn,'Birthdays')+tglBtn('npReview',p.reviewOn,'Sunday review')+'</div>'+
+      '<button class="btn" style="margin-top:14px" onclick="savePushPrefs()">Save settings</button>'+
+      '<button class="btn secondary" style="margin-top:10px" onclick="testPush()">Send test notification</button>'+
+      '<button class="btn danger" onclick="disablePush()">Turn off on this device</button>';
+  }
+  el.innerHTML=h;
+}
+regSW().then(()=>renderNotifCard());
+
 // ---------- app lock (device-local PIN) ----------
 const LOCK_KEY='lifeos_lock';
 function lockCfg(){ try{ return JSON.parse(store.getItem(LOCK_KEY)||'null'); }catch(e){ return null; } }
