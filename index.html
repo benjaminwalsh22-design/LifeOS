@@ -573,8 +573,12 @@ nav.tabbar {
         <button class="btn secondary" style="margin-top:6px" onclick="testHealthSync()">Test with sample data</button>
         <div class="notice">Ask Claude for the Shortcut recipe (opens-the-app) or the live-sync relay setup.</div>
       </div>
+      <div class="card">
+        <div style="font-size:15px;font-weight:650;margin-bottom:6px">Account &amp; Sync</div>
+        <div id="acctBody"></div>
+      </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.5</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.6</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -648,11 +652,11 @@ const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
 const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light', healthSyncUrl:''}, briefLine:null,
-  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, goals:[], calEvents:[], reviews:[] };
+  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, goals:[], calEvents:[], reviews:[], tomb:{} };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
-const save = () => { const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); };
+const save = () => { const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); if (window._syncDirty) window._syncDirty(); };
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 
 // IndexedDB for photos
@@ -1168,7 +1172,7 @@ function saveFriend(id){
   save(); closeSheet(); if(currentPersonId) renderPerson(); renderAll();
   if(!id && currentPersonId) showView('person');
 }
-function deleteFriend(id){ DB.friends = DB.friends.filter(x => x.id !== id); save(); closeSheet(); if(currentPersonId===id){ currentPersonId=null; showView('friends'); } else renderAll(); }
+function deleteFriend(id){ DB.tomb = DB.tomb || {}; DB.tomb[id] = Date.now(); DB.friends = DB.friends.filter(x => x.id !== id); save(); closeSheet(); if(currentPersonId===id){ currentPersonId=null; showView('friends'); } else renderAll(); }
 
 // ---------- friendship agent ----------
 function openPerson(id){ currentPersonId=id; showView('person'); }
@@ -1464,6 +1468,7 @@ async function openEntry(id){
     '<button class="btn danger" onclick="deleteEntry(\''+id+'\')">Delete entry</button>');
 }
 async function deleteEntry(id){
+  DB.tomb = DB.tomb || {}; DB.tomb[id] = Date.now();
   DB.journal = DB.journal.filter(x => x.id !== id);
   if (thumbURLs[id]){ URL.revokeObjectURL(thumbURLs[id]); delete thumbURLs[id]; }
   await delPhoto(id); await delEntryDB(id); save(); closeSheet(); renderAll();
@@ -2030,7 +2035,7 @@ function saveGoal(id){
   if(!id){ DB.goals=DB.goals||[]; DB.goals.push(g); }
   save(); closeSheet(); renderAll(); toast('Goal saved');
 }
-function deleteGoal(id){ DB.goals=(DB.goals||[]).filter(x=>x.id!==id); save(); closeSheet(); renderAll(); }
+function deleteGoal(id){ DB.tomb = DB.tomb || {}; DB.tomb[id] = Date.now(); DB.goals=(DB.goals||[]).filter(x=>x.id!==id); save(); closeSheet(); renderAll(); }
 async function goalCoach(id){
   const g=DB.goals.find(x=>x.id===id); if(!g||!DB.settings.apiKey) return;
   $('coachOut').innerHTML='<div class="detail-block" style="margin-top:12px"><p><span class="spinner"></span>Thinking…</p></div>';
@@ -2214,6 +2219,130 @@ function renderInsightsView(){
   h+='<div class="area" onclick="showView(\'review\')"><span class="a-icon blue">'+IC_REVIEW+'</span><span class="a-body"><span class="a-name">Weekly Review</span><span class="a-sum">'+(rv?('Latest: week of '+esc(fmtDate(rv.weekStart))):'Reflect on your week')+'</span></span><span class="chev">'+CHEV+'</span></div>';
   ex.innerHTML=h;
 }
+// ---------- account sync (Supabase) ----------
+const SUPA_KEY='lifeos_supa_cfg';
+let SUPA=null; try{ SUPA=JSON.parse(store.getItem(SUPA_KEY)||'null'); }catch(e){}
+function supaSave(){ try{ store.setItem(SUPA_KEY, JSON.stringify(SUPA)); }catch(e){} }
+async function supaAuth(path, body){
+  const r=await fetch(SUPA.url+'/auth/v1/'+path,{ method:'POST',
+    headers:{ 'apikey':SUPA.key, 'Content-Type':'application/json' }, body:JSON.stringify(body) });
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.msg||d.error_description||d.message||('Auth error '+r.status));
+  return d;
+}
+async function supaRefresh(){
+  if(!SUPA||!SUPA.session||!SUPA.session.refresh_token) return false;
+  try{ const d=await supaAuth('token?grant_type=refresh_token',{refresh_token:SUPA.session.refresh_token});
+    SUPA.session=d; supaSave(); return true; }catch(e){ return false; }
+}
+async function supaRest(path, opts){
+  opts=opts||{};
+  const mk=()=>{ const h={ 'apikey':SUPA.key, 'Authorization':'Bearer '+(SUPA.session?SUPA.session.access_token:SUPA.key), 'Content-Type':'application/json' };
+    if(opts.prefer) h['Prefer']=opts.prefer; return h; };
+  let r=await fetch(SUPA.url+'/rest/v1/'+path,{ method:opts.method||'GET', headers:mk(), body:opts.body!=null?JSON.stringify(opts.body):undefined });
+  if(r.status===401 && SUPA.session && await supaRefresh())
+    r=await fetch(SUPA.url+'/rest/v1/'+path,{ method:opts.method||'GET', headers:mk(), body:opts.body!=null?JSON.stringify(opts.body):undefined });
+  return r;
+}
+function buildPayload(){ const p=Object.assign({}, DB); return p; }
+function mergeRemote(db){
+  if(!db||typeof db!=='object') return;
+  const tomb=Object.assign({}, db.tomb||{}, DB.tomb||{});
+  ['events','friends','journal','goals','reviews','calEvents'].forEach(k=>{
+    const local=DB[k]||[]; const ids=new Set(local.map(x=>x&&x.id));
+    (db[k]||[]).forEach(x=>{ if(x&&x.id&&!ids.has(x.id)) local.push(x); });
+    DB[k]=local.filter(x=>x&&!tomb[x.id]);
+  });
+  ['stats','checkins','placeNames'].forEach(k=> DB[k]=Object.assign({}, db[k]||{}, DB[k]||{}));
+  DB.profile=Object.assign({}, db.profile||{}, DB.profile||{});
+  DB.settings=Object.assign({}, db.settings||{}, DB.settings||{});
+  if(db.places && !DB.places) DB.places=db.places;
+  if(db.briefLine && (!DB.briefLine || (db.briefLine.date||'')>(DB.briefLine.date||''))) DB.briefLine=db.briefLine;
+  DB.tomb=tomb;
+}
+let _syncTimer=null, _syncing=false;
+function scheduleSync(){ if(!SUPA||!SUPA.session) return; clearTimeout(_syncTimer); _syncTimer=setTimeout(()=>syncPush(), 4000); }
+window._syncDirty = () => { if(SUPA && SUPA.session){ SUPA.dirty=true; scheduleSync(); } };
+async function syncPush(){
+  if(!SUPA||!SUPA.session||_syncing) return; _syncing=true;
+  try{
+    const row=[{ user_id:SUPA.session.user.id, payload:buildPayload(), updated_at:new Date().toISOString() }];
+    const r=await supaRest('lifeos_data?on_conflict=user_id',{ method:'POST', prefer:'resolution=merge-duplicates,return=representation', body:row });
+    if(r.ok){ const rows=await r.json().catch(()=>[]); SUPA.dirty=false; SUPA.lastSync=Date.now();
+      if(rows[0]&&rows[0].updated_at) SUPA.lastRemoteTs=rows[0].updated_at; supaSave(); renderAcct(); }
+  }catch(e){ console.error('sync push', e); }
+  _syncing=false;
+}
+async function syncPull(force){
+  if(!SUPA||!SUPA.session) return;
+  try{
+    const head=await supaRest('lifeos_data?select=updated_at',{});
+    if(!head.ok) return;
+    const rows=await head.json();
+    const ts=rows[0]?rows[0].updated_at:null;
+    if(!ts){ SUPA.dirty=true; return syncPush(); }
+    if(!force && ts===SUPA.lastRemoteTs) return;
+    const r=await supaRest('lifeos_data?select=payload,updated_at',{});
+    if(!r.ok) return;
+    const data=(await r.json())[0]; if(!data) return;
+    mergeRemote(data.payload||{});
+    SUPA.lastRemoteTs=data.updated_at; SUPA.lastSync=Date.now(); supaSave();
+    save();
+    for(const e of DB.journal){ try{ await putEntry(e); }catch(_){} }
+    applyTheme(); renderAll(); initSettingsValues(); renderAcct();
+    SUPA.dirty=true; scheduleSync(); // push back the union
+  }catch(e){ console.error('sync pull', e); }
+}
+async function acctSubmit(mode){
+  const url=($('acctUrl').value||'').trim().replace(/\/+$/,'');
+  const key=($('acctKey').value||'').trim();
+  const email=($('acctEmail').value||'').trim();
+  const pw=$('acctPw').value;
+  if(!url||!key){ toast('Paste your Supabase URL and key first'); return; }
+  if(!email||!pw){ toast('Email and password needed'); return; }
+  SUPA={ url, key, session:null };
+  try{
+    if(mode==='signup'){
+      const d=await supaAuth('signup',{ email, password:pw });
+      if(!d.access_token){ // confirmations on, or session not returned
+        try{ SUPA.session=await supaAuth('token?grant_type=password',{ email, password:pw }); }
+        catch(e){ supaSave(); renderAcct(); toast('Account created — confirm via the email Supabase sent, then log in'); return; }
+      } else SUPA.session=d;
+    } else {
+      SUPA.session=await supaAuth('token?grant_type=password',{ email, password:pw });
+    }
+    supaSave(); renderAcct(); toast('Signed in — syncing…');
+    await syncPull(true);
+    toast('Synced');
+  }catch(e){ toast(String(e.message||e).slice(0,80)); }
+}
+function acctLogout(){ if(SUPA){ SUPA.session=null; supaSave(); } renderAcct(); toast('Logged out — data stays on this device'); }
+function renderAcct(){
+  const el=$('acctBody'); if(!el) return;
+  if(SUPA && SUPA.session){
+    const em=(SUPA.session.user&&SUPA.session.user.email)||'you';
+    el.innerHTML='<div class="kv"><span class="k">Signed in</span><span class="v">'+esc(em)+'</span></div>'+
+      '<div class="kv"><span class="k">Last synced</span><span class="v">'+(SUPA.lastSync?esc(new Date(SUPA.lastSync).toLocaleString()):'—')+(SUPA.dirty?' · pending':'')+'</span></div>'+
+      '<button class="btn secondary" style="margin-top:10px" onclick="syncPull(true)">Sync now</button>'+
+      '<button class="btn danger" onclick="acctLogout()">Log out</button>'+
+      '<div class="notice">Entries, check-ins, friends, goals and reviews sync to your Supabase project and follow your login to any device. Journal <b>photos</b> stay on each device for now — transcriptions travel.</div>';
+  } else {
+    el.innerHTML='<div class="notice" style="margin-top:0">Log in and everything (except photos) saves to your own private cloud database — open LifeOS on any device, sign in, and it’s all there.</div>'+
+      '<div class="field" style="margin-top:10px"><label>Supabase project URL</label><input id="acctUrl" type="url" placeholder="https://xxxx.supabase.co" value="'+esc(SUPA?SUPA.url||'':'')+'"></div>'+
+      '<div class="field"><label>Supabase anon / publishable key</label><input id="acctKey" placeholder="sb_publishable_… or eyJ…" value="'+esc(SUPA?SUPA.key||'':'')+'"></div>'+
+      '<div class="row2"><div class="field"><label>Email</label><input id="acctEmail" type="email" autocomplete="username"></div>'+
+      '<div class="field"><label>Password</label><input id="acctPw" type="password" autocomplete="current-password"></div></div>'+
+      '<button class="btn" onclick="acctSubmit(\'login\')">Log in</button>'+
+      '<button class="btn secondary" style="margin-top:10px" onclick="acctSubmit(\'signup\')">Create account</button>'+
+      '<div class="notice">One-time setup: ask Claude for the 5-minute Supabase recipe (free).</div>';
+  }
+}
+async function initSync(){
+  renderAcct();
+  if(SUPA && SUPA.session){ await supaRefresh(); await syncPull(); }
+  setInterval(()=>{ if(SUPA && SUPA.session && SUPA.dirty) syncPush(); }, 60000);
+}
+
 // ---------- wiring ----------
 $('schedAddEvent').addEventListener('click', () => editEvent(''));
 $('friendAdd').addEventListener('click', () => editFriend(''));
@@ -2237,7 +2366,8 @@ $('tlInput').addEventListener('change', async e => {
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
 function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
-document.addEventListener('visibilitychange', () => { if (!document.hidden){ renderAll();
+document.addEventListener('visibilitychange', () => { if (document.hidden){ if(SUPA && SUPA.session && SUPA.dirty) syncPush(); return; } if (!document.hidden){ renderAll();
+  if(SUPA && SUPA.session) syncPull();
   if((DB.settings.healthSyncUrl||'').trim() && (!DB.settings.healthLastSync || Date.now()-DB.settings.healthLastSync>3e5)) syncHealthNow(true); } });
 function routeHash(){
   const m=(location.hash||'').match(/[#&]go=([a-z]+)/); if(!m) return false;
@@ -2245,7 +2375,7 @@ function routeHash(){
   if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }
   return false;
 }
-applyFocus(); applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal(); routeHash(); startHealthPolling(); if(FOCUS_APP) showView(FOCUS_APP.tab);
+applyFocus(); applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal().then(initSync); routeHash(); startHealthPolling(); if(FOCUS_APP) showView(FOCUS_APP.tab);
 window.addEventListener('hashchange', () => { ingestHealth(); renderAll(); routeHash(); });
 </script>
 </body>
