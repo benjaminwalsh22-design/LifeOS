@@ -578,7 +578,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.8</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.9</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -652,7 +652,7 @@ const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
 const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light', healthSyncUrl:''}, briefLine:null,
-  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, goals:[], calEvents:[], reviews:[], tomb:{} };
+  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, placeGeo:{}, goals:[], calEvents:[], reviews:[], tomb:{} };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
@@ -1530,7 +1530,7 @@ async function importData(e){
       const ids = new Set(merged[k].map(x => x.id));
       (db[k] || []).forEach(x => { if (!ids.has(x.id)) merged[k].push(x); });
     });
-    ['stats','checkins','placeNames'].forEach(k =>
+    ['stats','checkins','placeNames','placeGeo'].forEach(k =>
       merged[k] = Object.assign({}, db[k] || {}, merged[k] || {}));
     merged.profile  = Object.assign({}, db.profile  || {}, merged.profile  || {});
     merged.settings = Object.assign({}, db.settings || {}, merged.settings || {});
@@ -1687,12 +1687,49 @@ function buildPlaces(parsed){
 function placeName(key){
   const c = DB.places.clusters[key]; if (!c) return 'Unknown';
   if (DB.placeNames[key]) return DB.placeNames[key];
-  if (c.name) return c.name;
   if (c.type){ const t = c.type.toLowerCase();
     if (t.includes('home')) return 'Home';
     if (t.includes('work')) return 'Work'; }
+  if (c.name) return c.name;
+  if (DB.placeGeo && DB.placeGeo[key] && DB.placeGeo[key].label) return DB.placeGeo[key].label;
   return c.lat.toFixed(3) + ', ' + c.lng.toFixed(3);
 }
+// ---------- reverse geocoding (OpenStreetMap Nominatim) ----------
+let _geoRunning=false;
+function geoPending(){
+  if(!DB.places) return [];
+  return Object.entries(DB.places.clusters)
+    .filter(([k,c]) => !DB.placeNames[k] && !c.name && !(DB.placeGeo&&DB.placeGeo[k]) &&
+      !(c.type && /home|work/i.test(c.type)))
+    .sort((a,b) => b[1].ms - a[1].ms).map(([k]) => k);
+}
+async function lookupPlaceNames(){
+  if(_geoRunning) return; const queue=geoPending().slice(0,80);
+  if(!queue.length){ toast('All named already'); return; }
+  _geoRunning=true; DB.placeGeo=DB.placeGeo||{};
+  let done=0;
+  toast('Looking up '+queue.length+' places…');
+  for(const key of queue){
+    const c=DB.places.clusters[key]; if(!c) continue;
+    try{
+      const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+c.lat+'&lon='+c.lng+'&zoom=18&addressdetails=1');
+      if(r.ok){
+        const d=await r.json(); const a=d.address||{};
+        const road=a.road||a.pedestrian||a.footway||a.square||'';
+        const area=a.neighbourhood||a.suburb||a.village||a.town||a.city_district||a.city||a.county||'';
+        const label=(d.name&&d.name.trim()) || [road, area].filter(Boolean).join(', ') ||
+          (d.display_name?d.display_name.split(',').slice(0,2).join(',').trim():'');
+        if(label){ DB.placeGeo[key]={ label:label.slice(0,60), ts:Date.now() }; done++; }
+        else DB.placeGeo[key]={ label:'', ts:Date.now() };
+      } else if(r.status===429){ break; }
+    }catch(e){ break; }
+    if(done%8===0){ save(); renderPlaces(); }
+    await new Promise(res=>setTimeout(res, 1150));
+  }
+  save(); _geoRunning=false; renderPlaces(); renderLifeSafe();
+  toast(done? done+' places named' : 'Lookup finished');
+}
+function renderLifeSafe(){ try{ renderToday(); }catch(e){} }
 const hrs = ms => { const h = ms/3600000; return h >= 100 ? Math.round(h)+' hrs' : (Math.round(h*10)/10)+' hrs'; };
 const mi = m => Math.round(m/1609.34) + ' mi';
 function renderPlaces(){
@@ -1730,8 +1767,9 @@ function renderPlaces(){
       (w.newP ? ' · '+w.newP+' new place'+(w.newP>1?'s':'') : '')+
       (w.top ? '<br>Most time: <b style="color:var(--ink-2)">'+esc(placeName(w.top))+'</b>' : '')+'</div></div>';
     }).join('')+'</div>'+
+    (geoPending().length? '<button class="btn" style="margin-top:14px" onclick="lookupPlaceNames()">'+(_geoRunning?'Looking up names…':'Find place names ('+geoPending().length+')')+'</button>':'')+
     '<button class="btn secondary" style="margin-top:14px" onclick="$(\'tlInput\').click()">Re-import newer export</button>'+
-    '<div class="notice">Your location data lives only on this phone. Re-import any time — it replaces the summary with the newer export.</div>';
+    '<div class="notice">Re-import any time — it replaces the summary with the newer export. Auto-names via OpenStreetMap (© OpenStreetMap contributors); your own names always win.</div>';
 }
 function namePlace(key){
   openSheet('<h3>Name this place</h3>'+
@@ -2262,7 +2300,7 @@ function mergeRemote(db){
     (db[k]||[]).forEach(x=>{ if(x&&x.id&&!ids.has(x.id)) local.push(x); });
     DB[k]=local.filter(x=>x&&!tomb[x.id]);
   });
-  ['stats','checkins','placeNames'].forEach(k=> DB[k]=Object.assign({}, db[k]||{}, DB[k]||{}));
+  ['stats','checkins','placeNames','placeGeo'].forEach(k=> DB[k]=Object.assign({}, db[k]||{}, DB[k]||{}));
   DB.profile=Object.assign({}, db.profile||{}, DB.profile||{});
   DB.settings=Object.assign({}, db.settings||{}, DB.settings||{});
   if(db.places && !DB.places) DB.places=db.places;
@@ -2428,6 +2466,7 @@ $('tlInput').addEventListener('change', async e => {
     if (!parsed.visits.length){ toast('No visits found in that file'); return; }
     DB.places = buildPlaces(parsed); save(); renderPlaces();
     toast(parsed.visits.length + ' visits imported');
+    setTimeout(()=>lookupPlaceNames(), 1200);
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
 function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
