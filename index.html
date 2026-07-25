@@ -380,6 +380,16 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .backrow { display: inline-flex; align-items: center; gap: 3px; color: var(--accent); font-size: 15px; font-weight: 600; cursor: pointer; padding: 4px 6px 12px 0; }
 .seeall { text-align: center; color: var(--accent); font-size: 13.5px; font-weight: 600; padding: 10px; cursor: pointer; }
 
+/* ---- journal home buttons ---- */
+.jgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0 4px; }
+.jbtn-big { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 16px; padding: 22px 12px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 11px; transition: transform .12s var(--ease); }
+.jbtn-big:active { transform: scale(.97); }
+.jbtn-big svg { width: 28px; height: 28px; color: var(--accent); }
+.jbtn-big .lbl { font-size: 14px; font-weight: 650; letter-spacing: -.005em; color: var(--ink); line-height: 1.25; }
+.jbtn-big.primary { background: var(--fill); border-color: var(--fill); }
+.jbtn-big.primary svg { color: var(--fill-ink); }
+.jbtn-big.primary .lbl { color: var(--fill-ink); }
+
 /* ---- journal archive + tools ---- */
 .pbar { height: 6px; background: var(--surface-2); border-radius: 3px; margin-top: 12px; overflow: hidden; }
 .pbar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
@@ -496,22 +506,30 @@ nav.tabbar {
 
     <!-- ============ JOURNAL ============ -->
     <section class="view" id="view-journal">
-      <div class="capture-box" id="captureBox">
-        <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.8 7h-1A2.8 2.8 0 0 0 3 9.8v7.4A2.8 2.8 0 0 0 5.8 20h12.4a2.8 2.8 0 0 0 2.8-2.8V9.8A2.8 2.8 0 0 0 18.2 7h-1l-1.2-2.1A1.8 1.8 0 0 0 14.4 4H9.6a1.8 1.8 0 0 0-1.6.9L6.8 7Z"/><circle cx="12" cy="13" r="3.4"/></svg>
-        <div class="big">Photograph today's journal page</div>
-        <div style="font-size:12.5px;margin-top:3px">It'll be stored, transcribed &amp; analyzed</div>
-      </div>
       <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
-      <button class="btn secondary" id="archiveBtn" style="margin-top:0">Import old journals (bulk)</button>
       <input type="file" id="archiveInput" accept="image/*" multiple hidden>
-      <div id="archiveProgress" style="margin-top:14px"></div>
+      <div class="jgrid">
+        <div class="jbtn-big primary" id="jScan">
+          <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.8 7h-1A2.8 2.8 0 0 0 3 9.8v7.4A2.8 2.8 0 0 0 5.8 20h12.4a2.8 2.8 0 0 0 2.8-2.8V9.8A2.8 2.8 0 0 0 18.2 7h-1l-1.2-2.1A1.8 1.8 0 0 0 14.4 4H9.6a1.8 1.8 0 0 0-1.6.9L6.8 7Z"/><circle cx="12" cy="13" r="3.4"/></svg>
+          <div class="lbl">Scan Today’s Journal</div>
+        </div>
+        <div class="jbtn-big" id="jChat">
+          <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 12a7.5 7.5 0 0 1-10.9 6.7L4 20l1.3-4.4A7.5 7.5 0 1 1 20.5 12Z"/></svg>
+          <div class="lbl">Chat</div>
+        </div>
+        <div class="jbtn-big" id="jBulk">
+          <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15V4m0 0-4 4m4-4 4 4M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>
+          <div class="lbl">Bulk Upload</div>
+        </div>
+        <div class="jbtn-big" id="jExportBtn">
+          <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+          <div class="lbl">Export</div>
+        </div>
+      </div>
+      <div id="archiveProgress" style="margin-top:6px"></div>
       <div class="jtools">
         <input id="jSearch" placeholder="Search your journal…">
         <select id="jYear"></select>
-      </div>
-      <div class="jbtns">
-        <button id="jAsk">Ask your journal</button>
-        <button id="jExport">Export</button>
       </div>
       <div class="section-head"><h2 id="journalCount">Entries</h2></div>
       <div id="journalList"></div>
@@ -556,7 +574,7 @@ nav.tabbar {
         <div class="notice">Ask Claude for the Shortcut recipe (opens-the-app) or the live-sync relay setup.</div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.4</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.5</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1360,7 +1378,7 @@ async function renderJournalList(){
   }));
   $('journalList').innerHTML = rows.join('') + (list.length>150 ? '<div class="empty">Showing 150 of '+list.length+' — search to narrow.</div>' : '');
 }
-$('captureBox').addEventListener('click', () => $('photoInput').click());
+$('jScan').addEventListener('click', () => $('photoInput').click());
 $('photoInput').addEventListener('change', async e => {
   const file = e.target.files[0]; e.target.value = '';
   if (!file) return;
@@ -2200,12 +2218,12 @@ function renderInsightsView(){
 $('schedAddEvent').addEventListener('click', () => editEvent(''));
 $('friendAdd').addEventListener('click', () => editFriend(''));
 $('goalAdd').addEventListener('click', () => editGoal(''));
-$('archiveBtn').addEventListener('click', () => $('archiveInput').click());
+$('jBulk').addEventListener('click', () => $('archiveInput').click());
 $('archiveInput').addEventListener('change', e => { const files = [...e.target.files]; e.target.value=''; if (files.length) openArchiveSheet(files); });
 $('jSearch').addEventListener('input', e => { jState.q = e.target.value; renderJournalList(); });
 $('jYear').addEventListener('change', e => { jState.year = e.target.value; renderJournalList(); });
-$('jAsk').addEventListener('click', openAsk);
-$('jExport').addEventListener('click', exportJournalMenu);
+$('jChat').addEventListener('click', openAsk);
+$('jExportBtn').addEventListener('click', exportJournalMenu);
 $('ckOpen').addEventListener('click', openCheckin);
 $('tlInput').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = '';
