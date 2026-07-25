@@ -578,7 +578,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.7</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.8</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1343,7 +1343,12 @@ async function giftIdeas(id){
 const thumbURLs = {};
 async function thumbURL(id){
   if (thumbURLs[id]) return thumbURLs[id];
-  const b = await getPhoto(id); if (!b) return null;
+  let b = await getPhoto(id);
+  if (!b && typeof SUPA!=='undefined' && SUPA && SUPA.session){
+    const e = DB.journal.find(j => j.id === id);
+    if (e && e.psync) b = await downloadPhoto(id);
+  }
+  if (!b) return null;
   return (thumbURLs[id] = URL.createObjectURL(b));
 }
 let jState = { q:'', year:'' };
@@ -1401,7 +1406,9 @@ async function saveJournalEntry(){
     transcription:'', summary:'', mood:'', themes:[], insight:'', status: DB.settings.apiKey ? 'analyzing' : 'saved' };
   const blob = await resizeToBlob(file, 1600, 0.85);
   await putPhoto(id, blob);
+  entry.psync = false;
   DB.journal.push(entry); await putEntry(entry); save(); closeSheet();
+  if (typeof SUPA!=='undefined' && SUPA && SUPA.session) setTimeout(()=>photoSyncRun(), 1200);
   window._pendingPhoto = null;
   renderAll(); toast('Entry saved');
   if (DB.settings.apiKey) analyzeEntry(id);
@@ -1468,6 +1475,8 @@ async function openEntry(id){
     '<button class="btn danger" onclick="deleteEntry(\''+id+'\')">Delete entry</button>');
 }
 async function deleteEntry(id){
+  const _e = DB.journal.find(x => x.id === id);
+  if (_e && _e.psync && typeof SUPA!=='undefined' && SUPA && SUPA.session){ try{ storageReq(photoUrl(id), { method:'DELETE' }); }catch(err){} }
   DB.tomb = DB.tomb || {}; DB.tomb[id] = Date.now();
   DB.journal = DB.journal.filter(x => x.id !== id);
   if (thumbURLs[id]){ URL.revokeObjectURL(thumbURLs[id]); delete thumbURLs[id]; }
@@ -1805,7 +1814,7 @@ async function runArchive(){
     await new Promise(r=>setTimeout(r,120));
   }
   if(ARCHIVE) ARCHIVE.running=false; wakeOff();
-  if(ARCHIVE && ARCHIVE.i>=ARCHIVE.files.length){ const ok=ARCHIVE.ok, fail=ARCHIVE.fail; ARCHIVE=null; toast('Batch done · '+ok+' transcribed'+(fail?' · '+fail+' need retry':'')); }
+  if(ARCHIVE && ARCHIVE.i>=ARCHIVE.files.length){ const ok=ARCHIVE.ok, fail=ARCHIVE.fail; ARCHIVE=null; toast('Batch done · '+ok+' transcribed'+(fail?' · '+fail+' need retry':'')); if(typeof SUPA!=='undefined' && SUPA && SUPA.session) setTimeout(()=>photoSyncRun(), 1500); }
   renderArchiveProgress(); renderJournal(); renderToday();
 }
 function pauseArchive(){ if(ARCHIVE){ ARCHIVE.running=false; wakeOff(); renderArchiveProgress(); toast('Paused'); } }
@@ -2291,6 +2300,7 @@ async function syncPull(force){
     for(const e of DB.journal){ try{ await putEntry(e); }catch(_){} }
     applyTheme(); renderAll(); initSettingsValues(); renderAcct();
     SUPA.dirty=true; scheduleSync(); // push back the union
+    setTimeout(()=>photoSyncRun(), 1500);
   }catch(e){ console.error('sync pull', e); }
 }
 async function acctSubmit(mode){
@@ -2326,9 +2336,11 @@ function renderAcct(){
     const em=(SUPA.session.user&&SUPA.session.user.email)||'you';
     el.innerHTML='<div class="kv"><span class="k">Signed in</span><span class="v">'+esc(em)+'</span></div>'+
       '<div class="kv"><span class="k">Last synced</span><span class="v">'+(SUPA.lastSync?esc(new Date(SUPA.lastSync).toLocaleString()):'—')+(SUPA.dirty?' · pending':'')+'</span></div>'+
+      (function(){ const ps=photoStats(); return '<div class="kv"><span class="k">Photos</span><span class="v">'+(_photoSyncing?'syncing…':(ps.synced+' of '+ps.total+' synced'))+'</span></div>'; })()+
       '<button class="btn secondary" style="margin-top:10px" onclick="syncPull(true)">Sync now</button>'+
+      '<button class="btn secondary" style="margin-top:10px" onclick="photoSyncRun()">Sync photos now</button>'+
       '<button class="btn danger" onclick="acctLogout()">Log out</button>'+
-      '<div class="notice">Entries, check-ins, friends, goals and reviews sync to your Supabase project and follow your login to any device. Journal <b>photos</b> stay on each device for now — transcriptions travel.</div>';
+      '<div class="notice">Entries, check-ins, friends, goals and reviews sync to your Supabase project and follow your login to any device. Journal <b>photos</b> sync too — uploaded in the background to your private storage and fetched on any device you sign into.</div>';
   } else {
     el.innerHTML='<div class="notice" style="margin-top:0">Log in and everything (except photos) saves to your own private cloud database — open LifeOS on any device, sign in, and it’s all there.</div>'+
       '<div class="field" style="margin-top:10px"><label>Supabase project URL</label><input id="acctUrl" type="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://xxxx.supabase.co" value="'+esc(SUPA?SUPA.url||'':'')+'"></div>'+
@@ -2340,9 +2352,59 @@ function renderAcct(){
       '<div class="notice">One-time setup: ask Claude for the 5-minute Supabase recipe (free).</div>';
   }
 }
+// ---------- photo sync (Supabase Storage) ----------
+let _photoSyncing=false, _dlActive=0; const _dlWait=[];
+async function dlSlot(){ while(_dlActive>=4) await new Promise(r=>_dlWait.push(r)); _dlActive++; }
+function dlDone(){ _dlActive--; const r=_dlWait.shift(); if(r) r(); }
+function photoUrl(id){ return SUPA.url+'/storage/v1/object/journal-photos/'+SUPA.session.user.id+'/'+encodeURIComponent(id)+'.jpg'; }
+async function storageReq(url, opts, retry){
+  const mk=()=>{ const h={ 'apikey':SUPA.key, 'Authorization':'Bearer '+SUPA.session.access_token };
+    if(opts&&opts.type) h['Content-Type']=opts.type; if(opts&&opts.upsert) h['x-upsert']='true'; return h; };
+  let r=await fetch(url,{ method:(opts&&opts.method)||'GET', headers:mk(), body:opts&&opts.body });
+  if(r.status===401 && retry!==false && await supaRefresh())
+    r=await fetch(url,{ method:(opts&&opts.method)||'GET', headers:mk(), body:opts&&opts.body });
+  return r;
+}
+async function uploadPhoto(id){
+  const blob=await getPhoto(id); if(!blob) return false;
+  const r=await storageReq(photoUrl(id), { method:'POST', type:'image/jpeg', upsert:true, body:blob });
+  return r.ok;
+}
+async function downloadPhoto(id){
+  await dlSlot();
+  try{
+    const r=await storageReq(photoUrl(id));
+    if(!r.ok) return null;
+    const blob=await r.blob(); await putPhoto(id, blob); return blob;
+  } finally { dlDone(); }
+}
+async function localPhotoIds(){ const db=await idb(); return new Promise((res, rej) => {
+  const q=db.transaction('photos').objectStore('photos').getAllKeys();
+  q.onsuccess=()=>res(new Set(q.result||[])); q.onerror=()=>rej(q.error); }); }
+function photoStats(){ const t=DB.journal.length; return { total:t, synced:DB.journal.filter(e=>e.psync).length }; }
+async function photoSyncRun(){
+  if(_photoSyncing || !SUPA || !SUPA.session) return;
+  _photoSyncing=true; renderAcct();
+  try{
+    const local=await localPhotoIds();
+    let up=0, down=0, upFail=0;
+    for(const e of DB.journal.slice()){
+      if(!SUPA || !SUPA.session) break;
+      if(local.has(e.id) && !e.psync){
+        if(await uploadPhoto(e.id)){ e.psync=true; up++; await putEntry(e); if(up%20===0){ save(); renderAcct(); } }
+        else { upFail++; if(upFail>=3) break; }
+      } else if(!local.has(e.id) && e.psync){
+        if(await downloadPhoto(e.id)) down++;
+      }
+    }
+    if(up){ save(); }
+    if(down){ renderJournal(); renderToday(); }
+  }catch(err){ console.error('photo sync', err); }
+  _photoSyncing=false; renderAcct();
+}
 async function initSync(){
   renderAcct();
-  if(SUPA && SUPA.session){ await supaRefresh(); await syncPull(); }
+  if(SUPA && SUPA.session){ await supaRefresh(); await syncPull(); photoSyncRun(); }
   setInterval(()=>{ if(SUPA && SUPA.session && SUPA.dirty) syncPush(); }, 60000);
 }
 
