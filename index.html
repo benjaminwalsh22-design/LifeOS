@@ -578,7 +578,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.6</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.7</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2294,8 +2294,11 @@ async function syncPull(force){
   }catch(e){ console.error('sync pull', e); }
 }
 async function acctSubmit(mode){
-  const url=($('acctUrl').value||'').trim().replace(/\/+$/,'');
-  const key=($('acctKey').value||'').trim();
+  let url=($('acctUrl').value||'').replace(/[\s\u200B-\u200D\uFEFF]/g,'').replace(/\/+$/,'');
+  if(url && !/^https?:\/\//i.test(url)) url='https://'+url;
+  url=url.replace(/^http:/i,'https:');
+  let key=($('acctKey').value||'').replace(/[\s\u200B-\u200D\uFEFF]/g,'');
+  key=key.replace(/^S(b_(publishable|secret)_)/,'s$1').replace(/^EYJ/,'eyJ');
   const email=($('acctEmail').value||'').trim();
   const pw=$('acctPw').value;
   if(!url||!key){ toast('Paste your Supabase URL and key first'); return; }
@@ -2328,9 +2331,9 @@ function renderAcct(){
       '<div class="notice">Entries, check-ins, friends, goals and reviews sync to your Supabase project and follow your login to any device. Journal <b>photos</b> stay on each device for now — transcriptions travel.</div>';
   } else {
     el.innerHTML='<div class="notice" style="margin-top:0">Log in and everything (except photos) saves to your own private cloud database — open LifeOS on any device, sign in, and it’s all there.</div>'+
-      '<div class="field" style="margin-top:10px"><label>Supabase project URL</label><input id="acctUrl" type="url" placeholder="https://xxxx.supabase.co" value="'+esc(SUPA?SUPA.url||'':'')+'"></div>'+
-      '<div class="field"><label>Supabase anon / publishable key</label><input id="acctKey" placeholder="sb_publishable_… or eyJ…" value="'+esc(SUPA?SUPA.key||'':'')+'"></div>'+
-      '<div class="row2"><div class="field"><label>Email</label><input id="acctEmail" type="email" autocomplete="username"></div>'+
+      '<div class="field" style="margin-top:10px"><label>Supabase project URL</label><input id="acctUrl" type="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://xxxx.supabase.co" value="'+esc(SUPA?SUPA.url||'':'')+'"></div>'+
+      '<div class="field"><label>Supabase anon / publishable key</label><input id="acctKey" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="sb_publishable_… or eyJ…" value="'+esc(SUPA?SUPA.key||'':'')+'"></div>'+
+      '<div class="row2"><div class="field"><label>Email</label><input id="acctEmail" type="email" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username"></div>'+
       '<div class="field"><label>Password</label><input id="acctPw" type="password" autocomplete="current-password"></div></div>'+
       '<button class="btn" onclick="acctSubmit(\'login\')">Log in</button>'+
       '<button class="btn secondary" style="margin-top:10px" onclick="acctSubmit(\'signup\')">Create account</button>'+
