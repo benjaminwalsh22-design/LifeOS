@@ -409,6 +409,30 @@ body[data-focus] .topgear { display: block; }
 body[data-focus] nav.tabbar { display: none; }
 body[data-focus] main { padding-bottom: calc(env(safe-area-inset-bottom) + 26px); }
 
+/* ---- app lock ---- */
+.lockscreen { position: fixed; inset: 0; z-index: 200; background: var(--page); display: flex; align-items: center; justify-content: center; }
+.lock-inner { text-align: center; width: 100%; max-width: 260px; padding: 20px; color: var(--ink); }
+.lock-inner svg { color: var(--muted); }
+.lock-title { font-family: var(--serif); font-size: 20px; font-weight: 600; margin: 12px 0 18px; }
+.lock-inner input { width: 100%; text-align: center; font-size: 22px; letter-spacing: .35em; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.lock-inner .btn { margin: 0 auto; }
+.lock-forgot { margin-top: 16px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.lockscreen.shake .lock-inner input { animation: lkshake .3s; border-color: var(--critical); }
+@keyframes lkshake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+/* ---- relationship rhythm ---- */
+.rh-row { display: flex; gap: 8px; align-items: flex-end; }
+.rh-col { flex: 1; text-align: center; }
+.rh-bar { height: 44px; display: flex; align-items: flex-end; justify-content: center; }
+.rh-bar i { display: block; width: 60%; max-width: 26px; border-radius: 4px 4px 2px 2px; background: var(--accent); }
+.rh-col span { display: block; font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; margin-top: 5px; }
+.rh-col b { display: block; font-size: 11px; color: var(--ink-2); }
+
+/* ---- review tabs ---- */
+.rv-tabs { display: flex; gap: 8px; margin-top: 6px; }
+.rv-tabs button { flex: 1; background: var(--surface-2); border: 1px solid var(--border); color: var(--ink-2); border-radius: 999px; padding: 9px; font-size: 13.5px; font-weight: 650; cursor: pointer; font-family: inherit; }
+.rv-tabs button.on { background: var(--fill); border-color: var(--fill); color: var(--fill-ink); }
+
 /* ---- pull to sync ---- */
 .ptr { flex: 0 0 auto; height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 600; background: var(--page); transition: height .25s var(--ease); }
 .ptr.drag { transition: none; }
@@ -476,6 +500,7 @@ nav.tabbar {
       </div>
       <div id="briefCard"></div>
       <div id="todayDigest"></div>
+      <div id="onThisDay"></div>
       <div class="section-head"><h2>Noticed</h2></div>
       <div class="attn" id="attnList"></div>
       <div class="section-head" style="margin-top:20px"><h2>More</h2></div>
@@ -535,6 +560,7 @@ nav.tabbar {
         </div>
       </div>
       <div id="archiveProgress" style="margin-top:6px"></div>
+      <div id="jOnThisDay"></div>
       <div class="jtools">
         <input id="jSearch" placeholder="Search your journal…">
         <select id="jYear"></select>
@@ -581,12 +607,13 @@ nav.tabbar {
         <button class="btn secondary" style="margin-top:6px" onclick="testHealthSync()">Test with sample data</button>
         <div class="notice">Ask Claude for the Shortcut recipe (opens-the-app) or the live-sync relay setup.</div>
       </div>
+      <div class="card" id="lockCard"></div>
       <div class="card">
         <div style="font-size:15px;font-weight:650;margin-bottom:6px">Account &amp; Sync</div>
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.10</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.0</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -632,6 +659,16 @@ nav.tabbar {
       <span>Insights</span></button>
   </nav>
 
+  <!-- app lock -->
+  <div class="lockscreen" id="lockscreen" style="display:none">
+    <div class="lock-inner">
+      <svg width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path stroke-linecap="round" d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
+      <div class="lock-title">LifeOS is locked</div>
+      <input id="lockPin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" maxlength="8">
+      <button class="btn" style="max-width:220px" onclick="tryUnlock()">Unlock</button>
+      <div class="lock-forgot" onclick="lockForgot()">Forgot PIN?</div>
+    </div>
+  </div>
   <!-- modals -->
   <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
   <div class="toast" id="toast"></div>
@@ -831,6 +868,7 @@ function lifeInsights(){
     if(bd && bd.days===0) out.push({ score:100, tone:'watch', text:'It is '+f.name+'’s birthday today.', why:'Send some love.', act:{label:K?'Draft a note':'Mark done', fn:K?"draftMessage('"+f.id+"')":"markContacted('"+f.id+"')"} });
     else if(bd && bd.days<=10) out.push({ score:66, tone:'info', text:f.name+'’s birthday '+(bd.days===1?'tomorrow':'in '+bd.days+' days')+'.', why:bd.label, act:{label:'Open', fn:"openPerson('"+f.id+"')"} });
     if(nextEvent && nextEvent.days<=14) out.push({ score:64, tone:'info', text:nextEvent.title+' — '+f.name+' · '+nextEvent.dateLabel+'.', why:'A good reason to reach out.', act:{label:'Open', fn:"openPerson('"+f.id+"')"} });
+    if(bd && bd.days>=11 && bd.days<=24) out.push({ score:56, tone:'info', text:'Gift time: '+f.name+'’s birthday in '+bd.days+' days.', why:(f.giftIdeas?('Your ideas: '+f.giftIdeas.slice(0,60)):'Order now and it arrives with time to spare.'), act:{label:(f.giftIdeas?'See ideas':'Get ideas'), fn:"openPerson('"+f.id+"')"} });
     if(overdue) out.push({ score:70, tone:'watch', text:'Reach out to '+f.name+'.', why:since==null?'No contact logged yet.':since+' days since you last talked.', act:{label:K?'Draft a hello':'Log a hello', fn:K?"draftMessage('"+f.id+"')":"markContacted('"+f.id+"')"} });
   });
   if(!DB.journal.some(j=>j.date===tstr)) out.push({ score:22, tone:'', text:'No journal entry yet today.', why:'A photo of the page is enough.', act:{label:'Open journal', fn:"showView('journal')"} });
@@ -919,7 +957,7 @@ function startHealthPolling(){
   if((DB.settings.healthSyncUrl||'').trim()){ syncHealthNow(true); _hsTimer=setInterval(()=>syncHealthNow(true), 12*60000); }
 }
 function computeInsights(limit){ limit=limit||5;
-  const all=[...patternInsights(), ...healthInsights(), ...goalInsights(), ...reviewInsights(), ...recentInsights(), ...lifeInsights()];
+  const all=[...patternInsights(), ...healthInsights(), ...goalInsights(), ...reviewInsights(), ...friendTrendInsights(), ...recentInsights(), ...lifeInsights()];
   all.sort((a,b) => b.score-a.score);
   const seen=new Set(), pick=[];
   for(const i of all){ if(seen.has(i.text)) continue; seen.add(i.text); pick.push(i); if(pick.length>=limit) break; }
@@ -1185,6 +1223,44 @@ function deleteFriend(id){ DB.tomb = DB.tomb || {}; DB.tomb[id] = Date.now(); DB
 // ---------- friendship agent ----------
 function openPerson(id){ currentPersonId=id; showView('person'); }
 function docKindLabel(k){ return k==='thread'?'Text thread':k==='transcript'?'Call transcript':k==='call'?'Call':k==='text'?'Text':k==='inperson'?'In person':k==='note'?'Note':k==='journal'?'Journal':'Note'; }
+function contactDates(p){
+  const set=new Set();
+  (p.log||[]).forEach(l=>{ if(l.date && l.kind!=='journal') set.add(l.date); });
+  if(p.lastContact) set.add(p.lastContact);
+  return set;
+}
+function rhythmCounts(p, months){
+  months = months || 6; const out=[]; const now=new Date();
+  const dates=[...contactDates(p)];
+  for(let i=months-1;i>=0;i--){
+    const d=new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const pref=d.getFullYear()+'-'+pad(d.getMonth()+1);
+    out.push({ label:MON[d.getMonth()], n:dates.filter(x=>x.startsWith(pref)).length });
+  }
+  return out;
+}
+function driftStatus(p){
+  const dates=[...contactDates(p)]; const t=today();
+  const in60=dates.filter(d=>daysBetween(d,t)>=0 && daysBetween(d,t)<60).length;
+  const prior60=dates.filter(d=>daysBetween(d,t)>=60 && daysBetween(d,t)<120).length;
+  return { in60, prior60, drifting: prior60>=2 && in60<=Math.floor(prior60/2) };
+}
+function rhythmHTML(p){
+  const rc=rhythmCounts(p,6); const max=Math.max.apply(null, rc.map(r=>r.n).concat([1]));
+  if(rc.every(r=>!r.n)) return '';
+  return '<div class="ck-label" style="margin-top:20px">Rhythm — contacts per month</div>'+
+    '<div class="card" style="padding:14px 16px"><div class="rh-row">'+rc.map(r=>
+      '<div class="rh-col"><div class="rh-bar"><i style="height:'+Math.max(6, Math.round(r.n/max*40))+'px'+(r.n?'':';background:var(--surface-2)')+'"></i></div><span>'+r.label+'</span><b>'+(r.n||'')+'</b></div>').join('')+'</div>'+
+    (function(){ const d=driftStatus(p); return d.drifting? '<div style="font-size:13px;color:var(--warning);margin-top:10px;font-weight:600">Drifting — '+d.in60+' in the last two months vs '+d.prior60+' before</div>':''; })()+
+    '</div>';
+}
+function friendTrendInsights(){
+  const out=[];
+  (DB.friends||[]).forEach(f=>{ const d=driftStatus(f);
+    if(d.drifting) out.push({ score:57, tone:'watch', text:'You and '+f.name+' are talking less.', why:d.in60+' contact'+(d.in60===1?'':'s')+' in two months, down from '+d.prior60+'.', act:{label:(DB.settings.apiKey?'Draft a hello':'Open'), fn:(DB.settings.apiKey?"draftMessage('"+f.id+"')":"openPerson('"+f.id+"')")} });
+  });
+  return out.slice(0,2);
+}
 function renderPerson(){
   const el=$('personBody'); if(!el) return;
   const p=DB.friends.find(x=>x.id===currentPersonId);
@@ -1207,6 +1283,7 @@ function renderPerson(){
   h+='<div class="section-head" style="margin-top:20px"><h2>About</h2><button class="action" onclick="editFriend(\''+p.id+'\')">Edit</button></div>';
   const ab=[['Family',p.family],['Favorites & interests',p.favorites],['Sports team',p.team],['How we met',p.how],['Gift ideas',p.giftIdeas],['Notes',p.notes],['Stay in touch',p.cadence?('every '+p.cadence+' days'):'']].filter(a=>a[1]);
   h+= ab.length? '<div class="card" style="padding:6px 16px">'+ab.map(a=>'<div class="kv"><span class="k">'+esc(a[0])+'</span><span class="v">'+esc(a[1])+'</span></div>').join('')+'</div>' : '<div class="empty">Tap Edit to add family, interests, notes.</div>';
+  h+=rhythmHTML(p);
   const jm=journalMentions(p.name,5);
   if(jm.length){ h+='<div class="section-head" style="margin-top:20px"><h2>From your journal</h2></div>'+
     jm.map(j=>'<div class="tl-doc" onclick="openEntry(\''+j.id+'\')"><div class="td-top"><b>Journal</b><span>'+esc(fmtDate(j.date))+'</span></div><div class="td-prev">'+esc(mentionSnippet(j,p.name))+'</div></div>').join(''); }
@@ -1373,7 +1450,7 @@ function fillYearFilter(){
   const years = [...new Set(DB.journal.map(j => (j.date||'').slice(0,4)).filter(Boolean))].sort().reverse();
   sel.innerHTML = '<option value="">All years</option>' + years.map(y => '<option value="'+y+'"'+(y===jState.year?' selected':'')+'>'+y+'</option>').join('');
 }
-function renderJournal(){ renderArchiveProgress(); fillYearFilter(); renderJournalList(); }
+function renderJournal(){ renderArchiveProgress(); fillYearFilter(); renderJournalList(); renderOnThisDay(); }
 async function renderJournalList(){
   const list = journalFiltered(); const total = DB.journal.length;
   if ($('journalCount')) $('journalCount').textContent = (jState.q||jState.year) ? (list.length+' of '+total) : (total+(total===1?' entry':' entries'));
@@ -1480,6 +1557,7 @@ async function openEntry(id){
         : '<span class="pill" style="cursor:pointer;background:var(--accent-soft);color:var(--accent)" onclick="logJournalToPerson(\''+f.id+'\',\''+j.id+'\')">+ Log to '+esc(f.name.split(/\s+/)[0])+'</span>').join('') +
       '</div></div>' : '') +
     (j.status !== 'done' && j.status !== 'analyzing' ? '<button class="btn" onclick="analyzeEntry(\''+id+'\');closeSheet()">'+(DB.settings.apiKey ? 'Analyze with Claude' : 'Analyze (needs API key in Settings)')+'</button>' : '') +
+    '<button class="btn secondary" style="margin-top:10px" onclick="editEntryText(\''+id+'\')">Edit text</button>' +
     '<button class="btn danger" onclick="deleteEntry(\''+id+'\')">Delete entry</button>');
 }
 async function deleteEntry(id){
@@ -1800,6 +1878,43 @@ async function checkUpdate(){
     location.reload();
   } catch(e){ toast('Could not reach the server — try again on Wi-Fi'); }
 }
+// ---------- on this day ----------
+function onThisDayEntries(){
+  const t=today(); const md=t.slice(5); const yr=Number(t.slice(0,4));
+  return (DB.journal||[]).filter(j=>j.date && j.date.slice(5)===md && Number(j.date.slice(0,4))<yr)
+    .sort((a,b)=>b.date.localeCompare(a.date));
+}
+function onThisDayHTML(){
+  const es=onThisDayEntries(); if(!es.length) return '';
+  const yr=Number(today().slice(0,4));
+  return '<div class="ck-label" style="margin-top:4px">On this day</div>'+es.slice(0,3).map(j=>{
+    const n=yr-Number(j.date.slice(0,4));
+    return '<div class="tl-doc otd" onclick="openEntry(\''+j.id+'\')"><div class="td-top"><b>'+(n===1?'A year ago today':n+' years ago today')+'</b><span>'+esc(j.date.slice(0,4))+'</span></div><div class="td-prev">'+esc((j.summary||j.transcription||j.note||'').slice(0,150))+'</div></div>';
+  }).join('');
+}
+function renderOnThisDay(){
+  const a=$('onThisDay'); if(a) a.innerHTML=onThisDayHTML();
+  const b=$('jOnThisDay'); if(b) b.innerHTML=onThisDayHTML();
+}
+function editEntryText(id){
+  const j = DB.journal.find(x => x.id === id); if (!j) return;
+  openSheet('<h3>Edit entry · '+esc(fmtDate(j.date))+'</h3>'+
+    '<div class="field"><label>Date</label><input id="etDate" type="date" value="'+esc(j.date)+'"></div>'+
+    '<div class="field"><label>Transcription</label><textarea id="etTrans" style="min-height:160px">'+esc(j.transcription||'')+'</textarea></div>'+
+    '<div class="field"><label>Summary</label><textarea id="etSum">'+esc(j.summary||'')+'</textarea></div>'+
+    '<div class="row2"><div class="field"><label>Mood</label><input id="etMood" value="'+esc(j.mood||'')+'"></div>'+
+    '<div class="field"><label>Themes (comma-separated)</label><input id="etThemes" value="'+esc((j.themes||[]).join(', '))+'"></div></div>'+
+    '<div class="field"><label>Your note</label><textarea id="etNote">'+esc(j.note||'')+'</textarea></div>'+
+    '<button class="btn" onclick="saveEntryText(\''+id+'\')">Save changes</button>');
+}
+async function saveEntryText(id){
+  const j = DB.journal.find(x => x.id === id); if (!j) return;
+  const d=$('etDate').value; if(/^\d{4}-\d{2}-\d{2}$/.test(d) && d!==j.date){ j.date=d; j.ts=parseD(d).getTime(); }
+  j.transcription=$('etTrans').value; j.summary=$('etSum').value.trim();
+  j.mood=$('etMood').value.trim(); j.themes=$('etThemes').value.split(',').map(x=>x.trim()).filter(Boolean);
+  j.note=$('etNote').value.trim(); if(j.status==='error' && j.transcription) j.status='done';
+  await putEntry(j); save(); closeSheet(); renderAll(); toast('Entry updated');
+}
 // ---------- vision + archive + ask + export ----------
 function blobToB64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); }); }
 function blobToDataURL(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); }); }
@@ -1956,7 +2071,7 @@ function renderLife(){
   const placeSum=DB.places?(Object.keys(DB.places.clusters).length+' places mapped'):'Not imported yet';
   const st=DB.stats[t]||{}; const healthSum=st.sleep?('Slept '+st.sleep+'h'+(st.steps?' · '+Number(st.steps).toLocaleString()+' steps':'')):'Sync from Apple Health';
   const gs=DB.goals||[]; const gNeed=gs.filter(g=>goalMomentum(g).cls==='low').length; const gDone=gs.filter(g=>goalPct(g)>=1).length;
-  const rv0=(DB.reviews||[])[0]; const reviewSum=rv0?('Latest: week of '+fmtDate(rv0.weekStart)):'Reflect on your week';
+  const rv0=(DB.reviews||[])[0]; const reviewSum=rv0?('Latest: '+fmtDate(rv0.weekStart)+' – '+fmtDate(rv0.weekEnd)):'Weekly, monthly & yearly reviews';
   const goalSum=gs.length?(gs.length+' active'+(gNeed?' · '+gNeed+' need attention':(gDone?' · '+gDone+' complete':''))):'Set a life goal';
   el.innerHTML=
     areaRow('schedule','sage',IC_SCH,'Schedule',schedSum)+
@@ -2109,10 +2224,12 @@ async function goalCoach(id){
 
 // ---------- Weekly Review ----------
 const IC_REVIEW='<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19.5v-15Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 7.2c.3 1.8 1.5 3 3.3 3.3-1.8.3-3 1.5-3.3 3.3-.3-1.8-1.5-3-3.3-3.3 1.8-.3 3-1.5 3.3-3.3Z"/></svg>';
-function weekData(end){
+const REVIEW_SPANS={ week:7, month:30, year:365 };
+function weekData(end, kind){
+  kind = kind || 'week'; const N = REVIEW_SPANS[kind] || 7;
   end = end || today(); const endD=parseD(end);
-  const days=[]; for(let i=6;i>=0;i--){ const d=new Date(endD); d.setDate(d.getDate()-i); days.push(dstr(d)); }
-  const prior=[]; for(let i=13;i>=7;i--){ const d=new Date(endD); d.setDate(d.getDate()-i); prior.push(dstr(d)); }
+  const days=[]; for(let i=N-1;i>=0;i--){ const d=new Date(endD); d.setDate(d.getDate()-i); days.push(dstr(d)); }
+  const prior=[]; for(let i=2*N-1;i>=N;i--){ const d=new Date(endD); d.setDate(d.getDate()-i); prior.push(dstr(d)); }
   const start=days[0];
   const ck=days.map(d=>DB.checkins[d]).filter(Boolean);
   const ckP=prior.map(d=>DB.checkins[d]).filter(Boolean);
@@ -2125,29 +2242,31 @@ function weekData(end){
     (f.log||[]).forEach(l=>{ if(l.kind!=='journal'&&l.date>=start&&l.date<=end) connected.add(f.name.split(/\s+/)[0]); }); });
   const overdue=(DB.friends||[]).filter(f=>friendStatus(f).overdue).map(f=>f.name.split(/\s+/)[0]);
   const goalProg=(DB.goals||[]).filter(g=>(g.updates||[]).some(u=>u.date>=start&&u.date<=end)).map(g=>g.name);
-  return { start, end, ckN:ck.length,
+  return { kind, N, start, end, ckN:ck.length,
     anx:mean(ck.map(ckAnx)), anxP:mean(ckP.map(ckAnx)), hap:mean(ck.map(ckHap)), hapP:mean(ckP.map(ckHap)),
     sleep:mean(num(days,'sleep')), rhr:mean(num(days,'rhr')), steps:mean(num(days,'steps')),
     journalCount:js.length, themes, connected:[...connected], overdue, goalProg };
 }
 function weekFactsText(w){
   const L=[]; const r1=v=>v==null?null:Math.round(v*10)/10;
-  L.push('Week: '+fmtDate(w.start)+' to '+fmtDate(w.end)+'.');
-  if(w.hap!=null) L.push('Happiness averaged '+r1(w.hap)+(w.hapP!=null?(' (prior week '+r1(w.hapP)+')'):'')+' out of 10.');
-  if(w.anx!=null) L.push('Anxiety averaged '+r1(w.anx)+(w.anxP!=null?(' (prior week '+r1(w.anxP)+')'):'')+' out of 10.');
-  if(w.ckN) L.push('Checked in '+w.ckN+' of 7 days.');
+  const KL={week:'Week',month:'Month',year:'Year'};
+  L.push((KL[w.kind]||'Period')+': '+fmtDate(w.start)+' to '+fmtDate(w.end)+'.');
+  if(w.hap!=null) L.push('Happiness averaged '+r1(w.hap)+(w.hapP!=null?(' (prior period '+r1(w.hapP)+')'):'')+' out of 10.');
+  if(w.anx!=null) L.push('Anxiety averaged '+r1(w.anx)+(w.anxP!=null?(' (prior period '+r1(w.anxP)+')'):'')+' out of 10.');
+  if(w.ckN) L.push('Checked in '+w.ckN+' of '+w.N+' days.');
   if(w.sleep!=null) L.push('Slept '+r1(w.sleep)+'h on average.');
   if(w.rhr!=null) L.push('Resting heart rate averaged '+Math.round(w.rhr)+' bpm.');
   if(w.steps!=null) L.push('Averaged '+Math.round(w.steps).toLocaleString()+' steps.');
   L.push('Journaled '+w.journalCount+' time'+(w.journalCount===1?'':'s')+(w.themes.length?(', themes: '+w.themes.join(', ')):'')+'.');
-  L.push(w.connected.length?('Connected with: '+w.connected.join(', ')+'.'):'No contact logged with friends this week.');
+  L.push(w.connected.length?('Connected with: '+w.connected.slice(0,15).join(', ')+'.'):'No contact logged with friends in this period.');
   if(w.overdue.length) L.push('Overdue to reach out: '+w.overdue.slice(0,5).join(', ')+'.');
   if(w.goalProg.length) L.push('Made progress on goals: '+w.goalProg.join(', ')+'.');
   return L.join('\n');
 }
 function factsSummary(w){
   const s=[]; const r1=v=>v==null?null:Math.round(v*10)/10;
-  if(w.hap!=null&&w.anx!=null) s.push('Your week averaged '+r1(w.hap)+'/10 happiness and '+r1(w.anx)+'/10 anxiety.');
+  const KL2={week:'week',month:'month',year:'year'};
+  if(w.hap!=null&&w.anx!=null) s.push('Your '+(KL2[w.kind]||'period')+' averaged '+r1(w.hap)+'/10 happiness and '+r1(w.anx)+'/10 anxiety.');
   if(w.sleep!=null) s.push('You slept about '+r1(w.sleep)+' hours a night.');
   if(w.connected.length) s.push('You connected with '+w.connected.join(', ')+'.');
   else s.push('No friend contact was logged.');
@@ -2155,18 +2274,23 @@ function factsSummary(w){
   if(w.goalProg.length) s.push('You moved on '+w.goalProg.join(', ')+'.');
   return s.join(' ');
 }
-async function generateReview(){
-  const w=weekData(); let narrative='';
+let rvKind='week';
+function setRvKind(k){ rvKind=k; renderReview(); }
+async function generateReview(kind){
+  kind = kind || rvKind || 'week';
+  const w=weekData(null, kind); let narrative='';
+  const NOUN={week:'week',month:'month',year:'year'};
   if(DB.settings.apiKey){
-    if($('reviewBody')) $('reviewBody').innerHTML='<div class="pagehead2"><div class="a-lead">Writing your review…</div></div><div class="brief" style="margin-top:8px"><p><span class="spinner"></span>Reading your week…</p></div>';
+    if($('reviewBody')) $('reviewBody').innerHTML='<div class="pagehead2"><div class="a-lead">Writing your review…</div></div><div class="brief" style="margin-top:8px"><p><span class="spinner"></span>Reading your '+NOUN[kind]+'…</p></div>';
     try{
-      const sys='You are writing a warm, honest weekly reflection for someone, addressed to "you". From the week’s data, write 2 short paragraphs that notice patterns and connect them across mood, sleep, relationships, goals, and what they journaled — editorial and human, not a data dump; cite a number only where it matters. End with a final line beginning "Into next week:" and ONE gentle, specific suggestion. No lists, no headers.';
-      narrative=await askClaude(sys, weekFactsText(w), 750);
+      const paras = kind==='year' ? '3 short paragraphs' : '2 short paragraphs';
+      const sys='You are writing a warm, honest '+NOUN[kind]+'ly reflection for someone, addressed to "you". From the data, write '+paras+' that notice patterns and connect them across mood, sleep, relationships, goals, and what they journaled — editorial and human, not a data dump; cite a number only where it matters. End with a final line beginning "Into the next '+NOUN[kind]+':" and ONE gentle, specific suggestion. No lists, no headers.';
+      narrative=await askClaude(sys, weekFactsText(w), kind==='year'?950:750);
     }catch(e){ narrative=''; }
   }
-  const rev={ id:uid(), ts:Date.now(), weekStart:w.start, weekEnd:w.end, stats:w, narrative };
-  DB.reviews=(DB.reviews||[]).filter(r=>!(r.weekStart===w.start&&r.weekEnd===w.end));
-  DB.reviews.unshift(rev); save(); renderReview(); renderAll(); toast('Weekly review ready');
+  const rev={ id:uid(), ts:Date.now(), kind, weekStart:w.start, weekEnd:w.end, stats:w, narrative };
+  DB.reviews=(DB.reviews||[]).filter(r=>!((r.kind||'week')===kind && r.weekStart===w.start && r.weekEnd===w.end));
+  DB.reviews.unshift(rev); save(); renderReview(); renderAll(); toast(NOUN[kind][0].toUpperCase()+NOUN[kind].slice(1)+'ly review ready');
 }
 function arrowHTML(cur, prior, goodUp){
   if(cur==null||prior==null) return '';
@@ -2182,30 +2306,32 @@ function reviewNumbersHTML(w){
   if(w.sleep!=null) rows.push(['Sleep, avg', r1(w.sleep)+' h']);
   if(w.rhr!=null) rows.push(['Resting HR', Math.round(w.rhr)+' bpm']);
   rows.push(['Journal entries', String(w.journalCount)]);
-  rows.push(['Check-ins', w.ckN+' / 7']);
+  rows.push(['Check-ins', w.ckN+' / '+(w.N||7)]);
   rows.push(['Connected with', w.connected.length?w.connected.join(', '):'—']);
   if(w.goalProg.length) rows.push(['Goals moved', w.goalProg.join(', ')]);
   return '<div class="card" style="padding:6px 16px">'+rows.map(r=>'<div class="kv"><span class="k">'+esc(r[0])+'</span><span class="v">'+r[1]+'</span></div>').join('')+'</div>';
 }
 function reviewBodyHTML(rev){
-  const w=rev.stats;
-  let h='<div class="overline">Week of '+esc(fmtDate(rev.weekStart))+' – '+esc(fmtDate(rev.weekEnd))+'</div>';
-  h+='<h1 class="editorial" style="margin-top:4px">The week, reviewed</h1>';
+  const w=rev.stats; const k=rev.kind||'week'; const NOUN={week:'week',month:'month',year:'year'}[k];
+  let h='<div class="overline">'+esc(fmtDate(rev.weekStart))+' – '+esc(fmtDate(rev.weekEnd))+'</div>';
+  h+='<h1 class="editorial" style="margin-top:4px">The '+NOUN+', reviewed</h1>';
   const body = rev.narrative || factsSummary(w);
-  h+='<div class="brief" style="margin-top:14px"><div class="tag">'+SPARK+'<span>'+(rev.narrative?'Written for you':'This week')+'</span></div><p style="white-space:pre-wrap">'+esc(body)+'</p></div>';
+  h+='<div class="brief" style="margin-top:14px"><div class="tag">'+SPARK+'<span>'+(rev.narrative?'Written for you':'This '+NOUN)+'</span></div><p style="white-space:pre-wrap">'+esc(body)+'</p></div>';
   h+='<div class="ck-label">By the numbers</div>'+reviewNumbersHTML(w);
   return h;
 }
 function renderReview(){
   const el=$('reviewBody'); if(!el) return;
-  const revs=DB.reviews||[];
-  let h='<div class="section-head" style="margin-top:6px"><h2>Weekly Review</h2><button class="action" onclick="generateReview()">'+(revs.length&&revs[0].weekEnd>=weekData().start?'Regenerate':'Generate')+'</button></div>';
+  const NOUN={week:'Weekly',month:'Monthly',year:'Yearly'};
+  const revs=(DB.reviews||[]).filter(r=>(r.kind||'week')===rvKind);
+  let h='<div class="rv-tabs">'+['week','month','year'].map(k=>'<button class="'+(k===rvKind?'on':'')+'" onclick="setRvKind(\''+k+'\')">'+NOUN[k].replace('ly','')+'</button>').join('')+'</div>';
+  h+='<div class="section-head" style="margin-top:14px"><h2>'+NOUN[rvKind]+' Review</h2><button class="action" onclick="generateReview()">'+(revs.length&&revs[0].weekEnd>=weekData(null,rvKind).start?'Regenerate':'Generate')+'</button></div>';
   if(!revs.length){
-    h+='<div class="card"><b>Reflect on your week.</b><div style="font-size:14px;color:var(--ink-2);margin-top:6px;line-height:1.55">A weekly synthesis across your mood, sleep, the people you saw, your goals, and what you journaled — written for you. Best on a Sunday.</div><button class="btn" style="margin-top:14px" onclick="generateReview()">Generate this week’s review</button>'+(DB.settings.apiKey?'':'<div class="notice">Works without a key (shows the numbers); add one in Settings for the written reflection.</div>')+'</div>';
+    h+='<div class="card"><b>Reflect on your '+NOUN[rvKind].toLowerCase().replace('ly','')+'.</b><div style="font-size:14px;color:var(--ink-2);margin-top:6px;line-height:1.55">A synthesis across your mood, sleep, the people you saw, your goals, and what you journaled — written for you.</div><button class="btn" style="margin-top:14px" onclick="generateReview()">Generate</button>'+(DB.settings.apiKey?'':'<div class="notice">Works without a key (shows the numbers); add one in Settings for the written reflection.</div>')+'</div>';
     el.innerHTML=h; return;
   }
   h+=reviewBodyHTML(revs[0]);
-  if(revs.length>1){ h+='<div class="ck-label">Past reviews</div>'+revs.slice(1,13).map(r=>'<div class="tl-doc" onclick="openReview(\''+r.id+'\')"><div class="td-top"><b>Week of '+esc(fmtDate(r.weekStart))+'</b><span>'+esc(fmtDate(r.weekEnd))+'</span></div><div class="td-prev">'+esc((r.narrative||factsSummary(r.stats)).slice(0,110))+'</div></div>').join(''); }
+  if(revs.length>1){ h+='<div class="ck-label">Past reviews</div>'+revs.slice(1,13).map(r=>'<div class="tl-doc" onclick="openReview(\''+r.id+'\')"><div class="td-top"><b>'+esc(fmtDate(r.weekStart))+'</b><span>'+esc(fmtDate(r.weekEnd))+'</span></div><div class="td-prev">'+esc((r.narrative||factsSummary(r.stats)).slice(0,110))+'</div></div>').join(''); }
   el.innerHTML=h;
 }
 function openReview(id){ const r=(DB.reviews||[]).find(x=>x.id===id); if(!r) return; openSheet(reviewBodyHTML(r)); }
@@ -2215,8 +2341,11 @@ function reviewInsights(){
   if(!hasData) return [];
   const due = !last || daysBetween(last.weekEnd, today())>=7;
   const dow=new Date().getDay(); // 0 Sun
-  if(due && (dow===0 || dow===6 || !last)) return [{ score:58, tone:'info', text:'Your weekly review is ready.', why:'A minute to reflect on the week just lived.', act:{label:'Open', fn:"showView('review')"} }];
-  return [];
+  const out=[];
+  if(due && (dow===0 || dow===6 || !last)) out.push({ score:58, tone:'info', text:'Your weekly review is ready.', why:'A minute to reflect on the week just lived.', act:{label:'Open', fn:"showView('review')"} });
+  const lastM=revs.find(r=>r.kind==='month');
+  if(new Date().getDate()===1 || (lastM && daysBetween(lastM.weekEnd, today())>=32)) if((Object.keys(DB.checkins||{}).length>=10)) out.push({ score:52, tone:'info', text:'A month in review awaits.', why:'Thirty days, one page.', act:{label:'Open', fn:"setRvKind('month');showView('review')"} });
+  return out;
 }
 const TRENDS=[
   {key:'sleep', kind:'stat', label:'Sleep', unit:'h', color:'var(--violet)', goodUp:true, dp:1},
@@ -2487,6 +2616,66 @@ function routeHash(){
   if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }
   return false;
 }
+// ---------- app lock (device-local PIN) ----------
+const LOCK_KEY='lifeos_lock';
+function lockCfg(){ try{ return JSON.parse(store.getItem(LOCK_KEY)||'null'); }catch(e){ return null; } }
+async function pinHash(pin, salt){
+  const data=new TextEncoder().encode(salt+':'+pin);
+  const h=await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+let _lastHidden=0;
+function lockNow(){ if(!lockCfg()) return; const el=$('lockscreen'); if(el){ el.style.display='flex'; const p=$('lockPin'); if(p){ p.value=''; } } }
+function unlockUI(){ const el=$('lockscreen'); if(el) el.style.display='none'; }
+async function tryUnlock(){
+  const cfg=lockCfg(); if(!cfg){ unlockUI(); return; }
+  const pin=($('lockPin').value||'').trim();
+  const h=await pinHash(pin, cfg.salt);
+  if(h===cfg.hash){ unlockUI(); }
+  else { const el=$('lockscreen'); el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'), 350); }
+}
+function lockForgot(){
+  if(confirm('Reset this device? Local data is erased; anything synced to your account returns after you log back in.')){
+    store.removeItem(LOCK_KEY); store.removeItem(KEY);
+    try{ indexedDB.deleteDatabase('lifeos'); }catch(e){}
+    location.reload();
+  }
+}
+async function setLockPin(){
+  const p1=($('lkNew').value||'').trim();
+  if(!/^\d{4,8}$/.test(p1)){ toast('PIN must be 4–8 digits'); return; }
+  const salt=uid();
+  const cfg={ salt, hash: await pinHash(p1, salt), delay: Number($('lkDelay').value)||0 };
+  store.setItem(LOCK_KEY, JSON.stringify(cfg));
+  closeSheet(); renderLockCard(); toast('App lock on');
+}
+function disableLock(){ store.removeItem(LOCK_KEY); renderLockCard(); toast('App lock off'); }
+function openLockSetup(){
+  const cfg=lockCfg();
+  openSheet('<h3>App lock</h3>'+
+    '<div class="field"><label>'+(cfg?'New PIN':'Choose a PIN')+' (4–8 digits)</label><input id="lkNew" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></div>'+
+    '<div class="field"><label>Require PIN after</label><select id="lkDelay">'+
+      [[0,'Immediately'],[60,'1 minute in background'],[300,'5 minutes in background']].map(o=>'<option value="'+o[0]+'"'+(cfg&&cfg.delay===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></div>'+
+    '<button class="btn" onclick="setLockPin()">'+(cfg?'Update lock':'Turn on lock')+'</button>'+
+    '<div class="notice">The PIN lives only on this device (set it on each device you use). Forgetting it means resetting this device — synced data returns when you log back in.</div>');
+  setTimeout(()=>{ const el=$('lkNew'); if(el) el.focus(); }, 60);
+}
+function renderLockCard(){
+  const el=$('lockCard'); if(!el) return;
+  const cfg=lockCfg();
+  el.innerHTML='<div style="font-size:15px;font-weight:650;margin-bottom:6px">App lock</div>'+
+    '<div class="notice" style="margin-top:0">'+(cfg?('On — PIN required '+(cfg.delay?('after '+(cfg.delay===60?'1 minute':'5 minutes')+' in background'):'every time you open')+'.'):'Protect your journals with a PIN on this device.')+'</div>'+
+    '<button class="btn secondary" style="margin-top:12px" onclick="openLockSetup()">'+(cfg?'Change PIN or timing':'Set up app lock')+'</button>'+
+    (cfg?'<button class="btn danger" onclick="disableLock()">Turn off</button>':'');
+}
+document.addEventListener('visibilitychange', () => {
+  const cfg=lockCfg(); if(!cfg) return;
+  if(document.hidden){ _lastHidden=Date.now(); }
+  else if(_lastHidden && Date.now()-_lastHidden > (cfg.delay*1000)){ lockNow(); }
+});
+if($('lockPin')) $('lockPin').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+if(lockCfg()) lockNow();
+
 // ---------- pull to sync ----------
 (function(){
   const mainEl = document.querySelector('main'); const el = $('ptr');
@@ -2529,7 +2718,7 @@ function routeHash(){
     }
   });
 })();
-applyFocus(); applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal().then(initSync); routeHash(); startHealthPolling(); if(FOCUS_APP) showView(FOCUS_APP.tab);
+applyFocus(); applyTheme(); initSettings(); renderLockCard(); ingestHealth(); renderAll(); loadJournal().then(initSync); routeHash(); startHealthPolling(); if(FOCUS_APP) showView(FOCUS_APP.tab);
 window.addEventListener('hashchange', () => { ingestHealth(); renderAll(); routeHash(); });
 </script>
 </body>
