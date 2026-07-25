@@ -409,6 +409,13 @@ body[data-focus] .topgear { display: block; }
 body[data-focus] nav.tabbar { display: none; }
 body[data-focus] main { padding-bottom: calc(env(safe-area-inset-bottom) + 26px); }
 
+/* ---- pull to sync ---- */
+.ptr { flex: 0 0 auto; height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 600; background: var(--page); transition: height .25s var(--ease); }
+.ptr.drag { transition: none; }
+.ptr .ptrspin { display: none; width: 14px; height: 14px; border: 2px solid var(--accent-soft); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+.ptr.busy .ptrspin { display: inline-block; }
+.ptr.ready { color: var(--accent); }
+
 /* ---- tab bar ---- */
 nav.tabbar {
   flex: 0 0 auto; z-index: 30;
@@ -459,6 +466,7 @@ nav.tabbar {
       <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .34 1.87 2 2 0 1 1-2.83 2.83 1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0 1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34 2 2 0 1 1-2.83-2.83A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1H3a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.5-1.11 1.7 1.7 0 0 0-.34-1.87 2 2 0 1 1 2.83-2.83A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0 1.7 1.7 0 0 0 1.11 1.5 1.7 1.7 0 0 0 1.87-.34 2 2 0 1 1 2.83 2.83A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.56 1Z"/></svg>
     </button>
   </header>
+  <div class="ptr" id="ptr"><span class="ptrspin"></span><span id="ptrTxt">Pull to sync</span></div>
   <main>
     <!-- ============ TODAY ============ -->
     <section class="view active" id="view-today">
@@ -578,7 +586,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.9</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v4.10</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2479,6 +2487,48 @@ function routeHash(){
   if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }
   return false;
 }
+// ---------- pull to sync ----------
+(function(){
+  const mainEl = document.querySelector('main'); const el = $('ptr');
+  if (!mainEl || !el) return;
+  const P = { y:0, pull:0, active:false, busy:false };
+  mainEl.addEventListener('touchstart', e => {
+    if (P.busy) return;
+    if (mainEl.scrollTop <= 0){ P.y = e.touches[0].clientY; P.active = true; P.pull = 0; }
+    else P.active = false;
+  }, { passive:true });
+  mainEl.addEventListener('touchmove', e => {
+    if (!P.active || P.busy) return;
+    const dy = e.touches[0].clientY - P.y;
+    if (dy > 0 && mainEl.scrollTop <= 0){
+      e.preventDefault();
+      P.pull = Math.min(88, dy * 0.45);
+      el.classList.add('drag'); el.style.height = P.pull + 'px';
+      const ready = P.pull >= 58;
+      el.classList.toggle('ready', ready);
+      $('ptrTxt').textContent = ready ? 'Release to sync' : 'Pull to sync';
+    }
+  }, { passive:false });
+  mainEl.addEventListener('touchend', async () => {
+    if (!P.active || P.busy) return;
+    P.active = false; el.classList.remove('drag');
+    if (P.pull >= 58){
+      P.busy = true; el.classList.add('busy'); el.classList.remove('ready');
+      el.style.height = '46px'; $('ptrTxt').textContent = 'Syncing…';
+      let did = [];
+      try{
+        if (typeof SUPA !== 'undefined' && SUPA && SUPA.session){ await syncPull(true); did.push('account'); }
+        if ((DB.settings.healthSyncUrl||'').trim()){ await syncHealthNow(true); did.push('health'); }
+        renderAll();
+      }catch(e){}
+      $('ptrTxt').textContent = did.length ? 'Synced' : 'Refreshed';
+      setTimeout(() => { el.style.height = '0px'; el.classList.remove('busy'); P.busy = false;
+        setTimeout(() => { $('ptrTxt').textContent = 'Pull to sync'; }, 300); }, 650);
+    } else {
+      el.style.height = '0px'; el.classList.remove('ready');
+    }
+  });
+})();
 applyFocus(); applyTheme(); initSettings(); ingestHealth(); renderAll(); loadJournal().then(initSync); routeHash(); startHealthPolling(); if(FOCUS_APP) showView(FOCUS_APP.tab);
 window.addEventListener('hashchange', () => { ingestHealth(); renderAll(); routeHash(); });
 </script>
