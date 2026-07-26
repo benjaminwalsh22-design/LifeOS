@@ -614,7 +614,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.1</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.2</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1543,7 +1543,7 @@ function logJournalToPerson(pid, jid){
 async function openEntry(id){
   const j = DB.journal.find(x => x.id === id); if (!j) return;
   const u = await thumbURL(id);
-  openSheet('<h3>'+fmtDate(j.date)+'</h3>' +
+  openSheet('<h3 style="cursor:pointer" onclick="quickFixDate(\''+id+'\')">'+fmtDate(j.date)+' <span style="color:var(--accent);font-size:13px;font-weight:650">change</span></h3>' +
     (u ? '<img src="'+u+'" class="detail-photo">' : '') +
     (j.status === 'analyzing' ? '<div class="detail-block"><p><span class="spinner"></span>Analyzing…</p></div>' : '') +
     (j.summary ? '<div class="detail-block"><h4>Summary</h4><p>'+esc(j.summary)+'</p></div>' : '') +
@@ -1896,6 +1896,19 @@ function onThisDayHTML(){
 function renderOnThisDay(){
   const a=$('onThisDay'); if(a) a.innerHTML=onThisDayHTML();
   const b=$('jOnThisDay'); if(b) b.innerHTML=onThisDayHTML();
+}
+function quickFixDate(id){
+  const j = DB.journal.find(x => x.id === id); if (!j) return;
+  openSheet('<h3>Change date</h3>'+
+    '<div class="field"><label>This entry\u2019s date</label><input id="qfDate" type="date" value="'+esc(j.date)+'"></div>'+
+    '<button class="btn" onclick="saveQuickDate(\''+id+'\')">Save</button>');
+}
+async function saveQuickDate(id){
+  const j = DB.journal.find(x => x.id === id); if (!j) return;
+  const d = $('qfDate').value;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ toast('Pick a date'); return; }
+  j.date = d; j.ts = parseD(d).getTime();
+  await putEntry(j); save(); closeSheet(); renderAll(); toast('Date updated'); openEntry(id);
 }
 function editEntryText(id){
   const j = DB.journal.find(x => x.id === id); if (!j) return;
