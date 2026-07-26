@@ -614,7 +614,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.3</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.4</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1538,7 +1538,8 @@ async function renderJournalList(){
   const cap = list.slice(0, 150);
   const rows = await Promise.all(cap.map(async j => {
     const u = await thumbURL(j.id);
-    const status = j.status === 'analyzing' ? '<span class="spinner"></span>Analyzing…'
+    const status = j.status === 'queued' ? '<span class="spinner"></span>In the cloud queue…'
+      : j.status === 'analyzing' ? '<span class="spinner"></span>Analyzing…'
       : j.status === 'error' ? '<span style="color:var(--serious)">Not transcribed — tap to retry</span>'
       : esc(j.summary || j.transcription || j.note || 'Saved');
     const moodBits = [j.mood, ...(j.themes||[]).slice(0,3)].filter(Boolean);
@@ -1597,7 +1598,7 @@ async function analyzeEntry(id){
   try {
     const blob = await getPhoto(id);
     const j = await callVision(blob, AI_PROMPT);
-    Object.assign(m, { transcription: j.transcription || '', summary: j.summary || '',
+    Object.assign(m, { mt: Date.now(), transcription: j.transcription || '', summary: j.summary || '',
       mood: j.mood || '', themes: Array.isArray(j.themes) ? j.themes : [], insight: j.insight || '', status: 'done' });
     toast('Entry analyzed');
     const mp=mentionedFriends(m); if(mp.length) setTimeout(()=>toast('Mentions '+mp.slice(0,2).map(f=>f.name.split(/\s+/)[0]).join(' & ')+' — open to log'), 1400);
@@ -1627,6 +1628,7 @@ async function openEntry(id){
   openSheet('<h3 style="cursor:pointer" onclick="quickFixDate(\''+id+'\')">'+fmtDate(j.date)+' <span style="color:var(--accent);font-size:13px;font-weight:650">change</span></h3>' +
     (u ? '<img src="'+u+'" class="detail-photo">' : '') +
     (j.status === 'analyzing' ? '<div class="detail-block"><p><span class="spinner"></span>Analyzing…</p></div>' : '') +
+    (j.status === 'queued' ? '<div class="detail-block"><p><span class="spinner"></span>Waiting for cloud transcription… it runs even with the app closed.</p></div>' : '') +
     (j.summary ? '<div class="detail-block"><h4>Summary</h4><p>'+esc(j.summary)+'</p></div>' : '') +
     (j.mood || (j.themes||[]).length ? '<div class="detail-block"><h4>Mood &amp; themes</h4><div class="pill-row">' +
       [j.mood, ...(j.themes||[])].filter(Boolean).map(x => '<span class="pill">'+esc(x)+'</span>').join('') + '</div></div>' : '') +
@@ -1638,7 +1640,7 @@ async function openEntry(id){
         ? '<span class="pill" style="opacity:.6">✓ '+esc(f.name.split(/\s+/)[0])+'</span>'
         : '<span class="pill" style="cursor:pointer;background:var(--accent-soft);color:var(--accent)" onclick="logJournalToPerson(\''+f.id+'\',\''+j.id+'\')">+ Log to '+esc(f.name.split(/\s+/)[0])+'</span>').join('') +
       '</div></div>' : '') +
-    (j.status !== 'done' && j.status !== 'analyzing' ? '<button class="btn" onclick="analyzeEntry(\''+id+'\');closeSheet()">'+(DB.settings.apiKey ? 'Analyze with Claude' : 'Analyze (needs API key in Settings)')+'</button>' : '') +
+    (j.status !== 'done' && j.status !== 'analyzing' && j.status !== 'queued' ? '<button class="btn" onclick="analyzeEntry(\''+id+'\');closeSheet()">'+(DB.settings.apiKey ? 'Analyze with Claude' : 'Analyze (needs API key in Settings)')+'</button>' : '') +
     '<button class="btn secondary" style="margin-top:10px" onclick="editEntryText(\''+id+'\')">Edit text</button>' +
     '<button class="btn danger" onclick="deleteEntry(\''+id+'\')">Delete entry</button>');
 }
@@ -1988,7 +1990,7 @@ async function saveQuickDate(id){
   const j = DB.journal.find(x => x.id === id); if (!j) return;
   const d = $('qfDate').value;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ toast('Pick a date'); return; }
-  j.date = d; j.ts = parseD(d).getTime();
+  j.date = d; j.ts = parseD(d).getTime(); j.mt = Date.now();
   await putEntry(j); save(); closeSheet(); renderAll(); toast('Date updated'); openEntry(id);
 }
 function editEntryText(id){
@@ -2007,7 +2009,7 @@ async function saveEntryText(id){
   const d=$('etDate').value; if(/^\d{4}-\d{2}-\d{2}$/.test(d) && d!==j.date){ j.date=d; j.ts=parseD(d).getTime(); }
   j.transcription=$('etTrans').value; j.summary=$('etSum').value.trim();
   j.mood=$('etMood').value.trim(); j.themes=$('etThemes').value.split(',').map(x=>x.trim()).filter(Boolean);
-  j.note=$('etNote').value.trim(); if(j.status==='error' && j.transcription) j.status='done';
+  j.note=$('etNote').value.trim(); if(j.status==='error' && j.transcription) j.status='done'; j.mt=Date.now();
   await putEntry(j); save(); closeSheet(); renderAll(); toast('Entry updated');
 }
 // ---------- vision + archive + ask + export ----------
@@ -2018,7 +2020,7 @@ async function callVision(blob, prompt){
   const b64=await blobToB64(blob);
   const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
     headers:{ 'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
-    body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:2000, messages:[{ role:'user', content:[
+    body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:3500, messages:[{ role:'user', content:[
       { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } }, { type:'text', text:prompt } ] }] }) });
   if(!res.ok) throw new Error('API '+res.status);
   const data=await res.json(); const txt=(data.content||[]).map(c=>c.text||'').join('');
@@ -2040,12 +2042,47 @@ function openArchiveSheet(files){
     '<div class="field"><label>Date of the first (oldest) page</label><input id="arcStart" type="date" value="'+today()+'"></div>'+
     '<div class="notice" style="margin-top:0">Pages are ordered by filename. A date written on a page always wins; otherwise dates count forward one per day from here.</div>'+
     '<div class="field" style="margin-top:10px"><label>Estimated cost</label><div style="font-size:15px;font-weight:650">~$'+est+' &middot; '+arr.length+' pages</div></div>'+
-    '<button class="btn" onclick="startArchive()">Start transcribing</button>');
+    ((typeof SUPA!=='undefined' && SUPA && SUPA.session)
+      ? '<button class="btn" onclick="startArchive(\'cloud\')">Process in cloud — close the app after upload</button>'+
+        '<button class="btn secondary" style="margin-top:10px" onclick="startArchive()">Process on this phone</button>'+
+        '<div class="notice">Cloud: your phone only uploads the photos (~1–2 min), then a worker in your own Supabase transcribes them and pushes a notification when done.</div>'
+      : '<button class="btn" onclick="startArchive()">Start transcribing</button>'+
+        '<div class="notice">Log in (Settings → Account &amp; Sync) to unlock cloud processing — upload and close the app instead of keeping it open.</div>'));
 }
-function startArchive(){
+function startArchive(mode){
   const files=window._arcFiles||[]; if(!files.length) return;
-  ARCHIVE={ files, i:0, ok:0, fail:0, running:false, startDate:($('arcStart').value||today()) };
-  closeSheet(); showView('journal'); runArchive();
+  ARCHIVE={ files, i:0, ok:0, fail:0, skip:0, running:false, mode:mode||'phone', startDate:($('arcStart').value||today()) };
+  closeSheet(); showView('journal');
+  if(mode==='cloud') runCloudUpload(); else runArchive();
+}
+async function runCloudUpload(){
+  if(!ARCHIVE) return; await wakeOn(); ARCHIVE.running=true; renderArchiveProgress();
+  const hashes=new Set(DB.journal.map(j=>j.imgHash).filter(Boolean));
+  while(ARCHIVE && ARCHIVE.running && ARCHIVE.i<ARCHIVE.files.length){
+    const idx=ARCHIVE.i, file=ARCHIVE.files[idx];
+    try{
+      const blob=await resizeToBlob(file,1000,0.72);
+      const hash=await blobHash(blob);
+      if(hashes.has(hash)){ ARCHIVE.skip++; ARCHIVE.i++; renderArchiveProgress(); continue; }
+      hashes.add(hash);
+      const id=uid();
+      const d=parseD(ARCHIVE.startDate); d.setDate(d.getDate()+idx);
+      const entry={ id, ts:d.getTime(), date:dstr(d), note:'', archived:true, imgHash:hash, mt:Date.now(),
+        transcription:'', summary:'', mood:'', themes:[], insight:'', status:'queued' };
+      await putPhoto(id, blob);
+      const up=await uploadPhoto(id); if(up) entry.psync=true;
+      DB.journal.push(entry); await putEntry(entry);
+      ARCHIVE.ok++;
+    }catch(e){ ARCHIVE.fail++; }
+    ARCHIVE.i++; renderArchiveProgress();
+  }
+  const done=ARCHIVE && ARCHIVE.i>=ARCHIVE.files.length;
+  const ok=ARCHIVE?ARCHIVE.ok:0, skip=ARCHIVE?ARCHIVE.skip:0;
+  if(done) ARCHIVE=null;
+  wakeOff(); save();
+  try{ await syncPush(); }catch(e){}
+  renderArchiveProgress(); renderJournal(); renderToday();
+  if(done) toast(ok+' pages uploaded'+(skip?' · '+skip+' duplicates skipped':'')+' — transcribing in the cloud. You can close the app.');
 }
 async function runArchive(){
   if(!ARCHIVE) return; await wakeOn(); ARCHIVE.running=true; renderArchiveProgress();
@@ -2058,7 +2095,9 @@ async function runArchive(){
       if(ARCHIVE.hashes.has(hash)){ ARCHIVE.skip++; ARCHIVE.i++; renderArchiveProgress(); continue; }
       ARCHIVE.hashes.add(hash);
       const id=uid(); let parsed=null;
-      try{ parsed=await callVision(blob, ARCHIVE_PROMPT); }catch(e){ parsed=null; }
+      try{ parsed=await callVision(blob, ARCHIVE_PROMPT); }
+      catch(e){ await new Promise(r=>setTimeout(r,2500));
+        try{ parsed=await callVision(blob, ARCHIVE_PROMPT); }catch(e2){ parsed=null; } }
       let date;
       if(parsed && parsed.date){ if(/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) date=parsed.date; else { const d=new Date(parsed.date); if(!isNaN(d)) date=dstr(d); } }
       if(!date){ const d=parseD(ARCHIVE.startDate); d.setDate(d.getDate()+idx); date=dstr(d); }
@@ -2082,7 +2121,25 @@ function resumeArchive(){ if(ARCHIVE && !ARCHIVE.running) runArchive(); }
 function cancelArchive(){ ARCHIVE=null; wakeOff(); renderArchiveProgress(); renderJournal(); toast('Stopped'); }
 function renderArchiveProgress(){
   const el=$('archiveProgress'); if(!el) return;
-  if(!ARCHIVE){ el.innerHTML=''; return; }
+  if(!ARCHIVE){
+    const q=DB.journal.filter(j=>j.status==='queued').length;
+    const errs=DB.journal.filter(j=>j.status==='error').length;
+    let h='';
+    if(q>0) h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Transcribing in the cloud</b><span style="font-size:13px;color:var(--muted)">'+q+' remaining</span></div>'+
+      '<div style="font-size:12.5px;color:var(--muted);margin-top:6px">Runs on its own — about '+Math.ceil(q/4)+' min left. Pull down to refresh; we\u2019ll notify you when it\u2019s done.</div></div>';
+    if(errs>0 && typeof SUPA!=='undefined' && SUPA && SUPA.session)
+      h+='<div class="card"><b>'+errs+' page'+(errs===1?'':'s')+' failed</b><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Send them to the cloud queue to retry.</div>'+
+        '<button class="btn secondary" style="margin-top:10px" onclick="retryFailedCloud()">Retry '+errs+' in cloud</button></div>';
+    el.innerHTML=h; return;
+  }
+  if(ARCHIVE.mode==='cloud'){
+    const n=ARCHIVE.files.length, i=ARCHIVE.i, pct=Math.round(i/n*100);
+    el.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Uploading to cloud</b><span style="font-size:13px;color:var(--muted)">'+i+' / '+n+'</span></div>'+
+      '<div class="pbar"><i style="width:'+pct+'%"></i></div>'+
+      '<div style="font-size:12.5px;color:var(--muted);margin-top:8px">'+ARCHIVE.ok+' uploaded'+(ARCHIVE.skip?' · '+ARCHIVE.skip+' duplicates skipped':'')+' · keep the app open just for this part</div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px"><button class="btn danger" style="margin:0;padding:13px" onclick="cancelArchive()">Stop</button></div></div>';
+    return;
+  }
   const n=ARCHIVE.files.length, i=ARCHIVE.i, pct=Math.round(i/n*100), spent=(i*0.02).toFixed(2);
   el.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Transcribing archive</b><span style="font-size:13px;color:var(--muted)">'+i+' / '+n+'</span></div>'+
     '<div class="pbar"><i style="width:'+pct+'%"></i></div>'+
@@ -2090,6 +2147,20 @@ function renderArchiveProgress(){
     '<div style="display:flex;gap:8px;margin-top:12px">'+
     (ARCHIVE.running?'<button class="btn secondary" style="margin:0" onclick="pauseArchive()">Pause</button>':'<button class="btn" style="margin:0" onclick="resumeArchive()">Resume</button>')+
     '<button class="btn danger" style="margin:0;padding:13px" onclick="cancelArchive()">Stop</button></div></div>';
+}
+async function retryFailedCloud(){
+  if(!SUPA||!SUPA.session){ toast('Log in first'); return; }
+  const errs=DB.journal.filter(j=>j.status==='error');
+  if(!errs.length){ toast('Nothing to retry'); return; }
+  toast('Queuing '+errs.length+'…');
+  for(const e of errs){
+    const local=await getPhoto(e.id);
+    if(local && !e.psync){ if(await uploadPhoto(e.id)) e.psync=true; }
+    if(!local && !e.psync) continue; // no photo anywhere — can't retry
+    e.status='queued'; e.mt=Date.now(); await putEntry(e);
+  }
+  save(); try{ await syncPush(); }catch(err){}
+  renderAll(); toast('Queued — the cloud will retry them now');
 }
 function openAsk(){
   if(!DB.settings.apiKey){ toast('Add an API key in Settings to ask your journal'); return; }
@@ -2533,9 +2604,13 @@ function mergeRemote(db){
   if(!db||typeof db!=='object') return;
   const tomb=Object.assign({}, db.tomb||{}, DB.tomb||{});
   ['events','friends','journal','goals','reviews','calEvents'].forEach(k=>{
-    const local=DB[k]||[]; const ids=new Set(local.map(x=>x&&x.id));
-    (db[k]||[]).forEach(x=>{ if(x&&x.id&&!ids.has(x.id)) local.push(x); });
-    DB[k]=local.filter(x=>x&&!tomb[x.id]);
+    const local=DB[k]||[]; const map=new Map(local.map(x=>[x&&x.id, x]));
+    (db[k]||[]).forEach(x=>{ if(!x||!x.id) return;
+      const mine=map.get(x.id);
+      if(!mine) map.set(x.id, x);
+      else if((x.mt||0) > (mine.mt||0)) map.set(x.id, x);   // newer edit wins (e.g. cloud transcription over queued)
+    });
+    DB[k]=[...map.values()].filter(x=>x&&!tomb[x.id]);
   });
   ['stats','checkins','placeNames','placeGeo'].forEach(k=> DB[k]=Object.assign({}, db[k]||{}, DB[k]||{}));
   DB.profile=Object.assign({}, db.profile||{}, DB.profile||{});
