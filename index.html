@@ -614,7 +614,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.2</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.3</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1452,9 +1452,87 @@ function fillYearFilter(){
   sel.innerHTML = '<option value="">All years</option>' + years.map(y => '<option value="'+y+'"'+(y===jState.year?' selected':'')+'>'+y+'</option>').join('');
 }
 function renderJournal(){ renderArchiveProgress(); fillYearFilter(); renderJournalList(); renderOnThisDay(); }
+async function blobHash(blob){
+  const buf=await blob.arrayBuffer();
+  const h=await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function normWords(t){ return new Set(String(t||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>3)); }
+function jaccard(a,b){ if(!a.size||!b.size) return 0; let inter=0; for(const w of a){ if(b.has(w)) inter++; } return inter/(a.size+b.size-inter); }
+let _dupMemo={ key:'', groups:[] };
+function dupGroups(){
+  const list=(DB.journal||[]).filter(j=>((j.transcription||'')+(j.summary||'')).length>20 || j.imgHash);
+  const key=list.length+':'+list.reduce((a,j)=>a+(j.ts||0),0);
+  if(_dupMemo.key===key) return _dupMemo.groups;
+  const words=new Map(); list.forEach(j=>words.set(j.id, normWords((j.transcription||'')+' '+(j.summary||''))));
+  const buckets=new Map();
+  const addB=(k,j)=>{ if(!k) return; if(!buckets.has(k)) buckets.set(k,[]); buckets.get(k).push(j); };
+  list.forEach(j=>{
+    addB('d:'+j.date, j);
+    if(j.imgHash) addB('h:'+j.imgHash, j);
+    const ws=[...words.get(j.id)].sort(); addB('s:'+ws.slice(0,5).join('|'), j);
+  });
+  const linked=new Map(); const find=x=>{ while(linked.get(x)!==x){ linked.set(x, linked.get(linked.get(x))); x=linked.get(x); } return x; };
+  list.forEach(j=>linked.set(j.id, j.id));
+  const union=(a,b)=>{ const ra=find(a), rb=find(b); if(ra!==rb) linked.set(ra, rb); };
+  for(const arr of buckets.values()){
+    if(arr.length<2 || arr.length>40) continue;
+    for(let i=0;i<arr.length;i++) for(let k=i+1;k<arr.length;k++){
+      const a=arr[i], b=arr[k];
+      if(a.imgHash && a.imgHash===b.imgHash){ union(a.id,b.id); continue; }
+      if(jaccard(words.get(a.id), words.get(b.id))>=0.55) union(a.id,b.id);
+    }
+  }
+  const groups=new Map();
+  list.forEach(j=>{ const r=find(j.id); if(!groups.has(r)) groups.set(r,[]); groups.get(r).push(j); });
+  const out=[...groups.values()].filter(g=>g.length>1).map(g=>g.sort((a,b)=>a.date.localeCompare(b.date)));
+  _dupMemo={ key, groups: out };
+  return out;
+}
+async function removeEntries(ids){
+  for(const id of ids){
+    const e=DB.journal.find(x=>x.id===id); if(!e) continue;
+    if(e.psync && typeof SUPA!=='undefined' && SUPA && SUPA.session){ try{ storageReq(photoUrl(id),{method:'DELETE'}); }catch(_){} }
+    DB.tomb=DB.tomb||{}; DB.tomb[id]=Date.now();
+    DB.journal=DB.journal.filter(x=>x.id!==id);
+    try{ await delPhoto(id); await delEntryDB(id); }catch(_){}
+    if(thumbURLs[id]){ URL.revokeObjectURL(thumbURLs[id]); delete thumbURLs[id]; }
+  }
+  save();
+}
+function pickKeeper(g){
+  return g.slice().sort((a,b)=> ((b.transcription||'').length-(a.transcription||'').length) || ((b.psync?1:0)-(a.psync?1:0)) )[0];
+}
+function openDupReview(){
+  const gs=dupGroups();
+  if(!gs.length){ openSheet('<h3>Duplicates</h3><div class="notice" style="margin-top:0">No likely duplicates found. The check compares photos (exact) and transcriptions (fuzzy), even across different dates.</div>'); return; }
+  let h='<h3>'+gs.length+' possible duplicate group'+(gs.length>1?'s':'')+'</h3><div class="notice" style="margin-top:0">Same photo or near-identical text. “Auto-clean” keeps the fullest copy of each group.</div>';
+  gs.slice(0,12).forEach((g,gi)=>{
+    const keep=pickKeeper(g);
+    h+='<div class="ck-label">Group '+(gi+1)+' · '+g.length+' entries</div>';
+    g.forEach(j=>{ h+='<div class="tl-doc" style="'+(j.id===keep.id?'border-color:var(--good);':'')+'" onclick="closeSheet();openEntry(\''+j.id+'\')"><div class="td-top"><b>'+esc(fmtDate(j.date))+(j.id===keep.id?' · keeps':'')+'</b><span>'+esc(j.date.slice(0,4))+'</span></div><div class="td-prev">'+esc((j.transcription||j.summary||'').slice(0,100))+'</div></div>'; });
+    h+='<button class="btn secondary" style="margin-top:4px" onclick="autoCleanGroup('+gi+')">Auto-clean this group</button>';
+  });
+  if(gs.length>1) h+='<button class="btn" style="margin-top:16px" onclick="autoCleanAll()">Auto-clean all groups</button>';
+  openSheet(h);
+}
+async function autoCleanGroup(gi){
+  const gs=dupGroups(); const g=gs[gi]; if(!g) return;
+  const keep=pickKeeper(g);
+  await removeEntries(g.filter(x=>x.id!==keep.id).map(x=>x.id));
+  _dupMemo.key=''; renderAll(); toast('Kept '+fmtDate(keep.date)+', removed '+(g.length-1));
+  openDupReview();
+}
+async function autoCleanAll(){
+  const gs=dupGroups(); let removed=0;
+  for(const g of gs){ const keep=pickKeeper(g); const ids=g.filter(x=>x.id!==keep.id).map(x=>x.id); removed+=ids.length; await removeEntries(ids); }
+  _dupMemo.key=''; closeSheet(); renderAll(); toast('Removed '+removed+' duplicate'+(removed===1?'':'s'));
+}
 async function renderJournalList(){
   const list = journalFiltered(); const total = DB.journal.length;
   if ($('journalCount')) $('journalCount').textContent = (jState.q||jState.year) ? (list.length+' of '+total) : (total+(total===1?' entry':' entries'));
+  const _dg = total>1 ? dupGroups() : [];
+  const _banner = _dg.length ? '<div class="tl-doc" style="border-color:var(--warning)" onclick="openDupReview()"><div class="td-top"><b>'+_dg.length+' possible duplicate group'+(_dg.length>1?'s':'')+'</b><span style="color:var(--accent);font-weight:600">Review</span></div><div class="td-prev">Same page scanned twice, or re-run batches.</div></div>' : '';
   if (!total){ $('journalList').innerHTML = '<div class="empty">No entries yet. Photograph today\u2019s page, or import your old journals in bulk.</div>'; return; }
   if (!list.length){ $('journalList').innerHTML = '<div class="empty">No entries match that search.</div>'; return; }
   const cap = list.slice(0, 150);
@@ -1471,7 +1549,7 @@ async function renderJournalList(){
       (moodBits.length ? '<div class="jmood">'+moodBits.map(esc).join(' · ')+'</div>' : '') +
       '</div></div>';
   }));
-  $('journalList').innerHTML = rows.join('') + (list.length>150 ? '<div class="empty">Showing 150 of '+list.length+' — search to narrow.</div>' : '');
+  $('journalList').innerHTML = _banner + rows.join('') + (list.length>150 ? '<div class="empty">Showing 150 of '+list.length+' — search to narrow.</div>' : '');
 }
 $('jScan').addEventListener('click', () => $('photoInput').click());
 $('photoInput').addEventListener('change', async e => {
@@ -1491,6 +1569,9 @@ async function saveJournalEntry(){
   const entry = { id, ts: Date.now(), date: today(), note: $('jNote').value.trim(),
     transcription:'', summary:'', mood:'', themes:[], insight:'', status: DB.settings.apiKey ? 'analyzing' : 'saved' };
   const blob = await resizeToBlob(file, 1600, 0.85);
+  entry.imgHash = await blobHash(blob);
+  const dupOf = DB.journal.find(j => j.imgHash && j.imgHash === entry.imgHash);
+  if (dupOf && !confirm('This photo looks identical to your '+fmtDate(dupOf.date)+' entry. Save anyway?')){ window._pendingPhoto=null; closeSheet(); return; }
   await putPhoto(id, blob);
   entry.psync = false;
   DB.journal.push(entry); await putEntry(entry); save(); closeSheet();
@@ -1972,13 +2053,17 @@ async function runArchive(){
     const idx=ARCHIVE.i, file=ARCHIVE.files[idx];
     try{
       const blob=await resizeToBlob(file,1000,0.72);
+      const hash=await blobHash(blob);
+      if(!ARCHIVE.hashes){ ARCHIVE.hashes=new Set(DB.journal.map(j=>j.imgHash).filter(Boolean)); ARCHIVE.skip=0; }
+      if(ARCHIVE.hashes.has(hash)){ ARCHIVE.skip++; ARCHIVE.i++; renderArchiveProgress(); continue; }
+      ARCHIVE.hashes.add(hash);
       const id=uid(); let parsed=null;
       try{ parsed=await callVision(blob, ARCHIVE_PROMPT); }catch(e){ parsed=null; }
       let date;
       if(parsed && parsed.date){ if(/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) date=parsed.date; else { const d=new Date(parsed.date); if(!isNaN(d)) date=dstr(d); } }
       if(!date){ const d=parseD(ARCHIVE.startDate); d.setDate(d.getDate()+idx); date=dstr(d); }
       await putPhoto(id, blob);
-      const entry={ id, ts:parseD(date).getTime(), date, note:'', archived:true,
+      const entry={ id, ts:parseD(date).getTime(), date, note:'', archived:true, imgHash:hash,
         transcription:parsed?(parsed.transcription||''):'', summary:parsed?(parsed.summary||''):'',
         mood:parsed?(parsed.mood||''):'', themes:(parsed&&Array.isArray(parsed.themes))?parsed.themes:[],
         insight:parsed?(parsed.insight||''):'', status:parsed?'done':'error' };
@@ -2001,7 +2086,7 @@ function renderArchiveProgress(){
   const n=ARCHIVE.files.length, i=ARCHIVE.i, pct=Math.round(i/n*100), spent=(i*0.02).toFixed(2);
   el.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Transcribing archive</b><span style="font-size:13px;color:var(--muted)">'+i+' / '+n+'</span></div>'+
     '<div class="pbar"><i style="width:'+pct+'%"></i></div>'+
-    '<div style="font-size:12.5px;color:var(--muted);margin-top:8px">'+ARCHIVE.ok+' transcribed'+(ARCHIVE.fail?' · '+ARCHIVE.fail+' failed':'')+' · ~$'+spent+' spent</div>'+
+    '<div style="font-size:12.5px;color:var(--muted);margin-top:8px">'+ARCHIVE.ok+' transcribed'+(ARCHIVE.fail?' · '+ARCHIVE.fail+' failed':'')+(ARCHIVE.skip?' · '+ARCHIVE.skip+' duplicates skipped':'')+' · ~$'+spent+' spent</div>'+
     '<div style="display:flex;gap:8px;margin-top:12px">'+
     (ARCHIVE.running?'<button class="btn secondary" style="margin:0" onclick="pauseArchive()">Pause</button>':'<button class="btn" style="margin:0" onclick="resumeArchive()">Resume</button>')+
     '<button class="btn danger" style="margin:0;padding:13px" onclick="cancelArchive()">Stop</button></div></div>';
@@ -2043,7 +2128,8 @@ function exportJournalMenu(){
   openSheet('<h3>Export journal</h3>'+
     '<div class="notice" style="margin-top:0">Your transcriptions and analysis as a file you can open anywhere or query in a spreadsheet. Photos aren’t included — use Settings &rarr; backup for those.</div>'+
     '<button class="btn" onclick="exportJournalCSV()">Export CSV</button>'+
-    '<button class="btn secondary" style="margin-top:10px" onclick="exportJournalJSON()">Export JSON</button>');
+    '<button class="btn secondary" style="margin-top:10px" onclick="exportJournalJSON()">Export JSON</button>'+
+    '<button class="btn secondary" style="margin-top:10px" onclick="closeSheet();openDupReview()">Find duplicates</button>');
 }
 function exportJournalCSV(){
   const rows=[['date','mood','themes','summary','transcription','insight','note']];
