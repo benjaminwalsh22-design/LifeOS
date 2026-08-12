@@ -6,9 +6,9 @@
 <title>Life OS</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life OS">
-<meta name="theme-color" content="#F4F1EA">
+<meta name="theme-color" id="metaTheme" content="#33527B">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%233987e5'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' font-family='system-ui' fill='white' font-weight='700'%3EL%3C/text%3E%3C/svg%3E">
 <style>
@@ -36,6 +36,9 @@
   --magenta: #A85778;
   --shadow-soft: 0 1px 2px rgba(35,33,28,.03), 0 4px 14px rgba(35,33,28,.05);
   --serif: "New York", ui-serif, Georgia, "Times New Roman", serif;
+  --header: #33527B;
+  --header-ink: #F6F3EB;
+  --header-sub: rgba(246,243,235,0.66);
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -49,6 +52,9 @@
   --border: rgba(244,241,233,0.09);
   --accent: #7BA0D2;
   --accent-soft: rgba(123,160,210,0.16);
+  --header: #22344E;
+  --header-ink: #ECE9E0;
+  --header-sub: rgba(236,233,224,0.6);
   --fill: #3F6096;
   --fill-ink: #FFFFFF;
   --good: #8CA07F;
@@ -74,14 +80,12 @@ body {
 .app { max-width: 520px; margin: 0 auto; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
 header.topbar {
   flex: 0 0 auto; z-index: 20;
-  background: color-mix(in srgb, var(--page) 88%, transparent);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  padding: calc(env(safe-area-inset-top) + 14px) 20px 10px;
-  border-bottom: 1px solid var(--hairline);
+  background: var(--header);
+  padding: calc(env(safe-area-inset-top) + 16px) 20px 13px;
   display: flex; align-items: baseline; justify-content: space-between;
 }
-.topbar h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-.topbar .date { font-size: 13px; color: var(--muted); font-weight: 500; }
+.topbar h1 { font-family: var(--serif); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--header-ink); }
+.topbar .date { font-size: 13px; color: var(--header-sub); font-weight: 500; }
 main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 16px 28px; }
 .view { display: none; animation: fade .18s ease; }
 .view.active { display: block; }
@@ -644,7 +648,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.8</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.9</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1732,7 +1736,8 @@ async function deleteEntry(id){
 }
 
 // ---------- settings ----------
-function applyTheme(){ document.documentElement.setAttribute('data-theme', DB.settings.theme || 'light'); }
+function applyTheme(){ document.documentElement.setAttribute('data-theme', DB.settings.theme || 'light');
+  const m=document.getElementById('metaTheme'); if(m) m.setAttribute('content', (DB.settings.theme==='dark')?'#22344E':'#33527B'); }
 function initSettings(){
   $('setName').value = DB.profile.name || '';
   $('setTheme').value = DB.settings.theme || 'light';
