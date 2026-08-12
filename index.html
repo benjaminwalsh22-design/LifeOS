@@ -644,7 +644,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.6</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.7</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2468,11 +2468,20 @@ function exportJournalJSON(){
   const out=DB.journal.slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).map(j=>({date:j.date,mood:j.mood,themes:j.themes,summary:j.summary,transcription:j.transcription,insight:j.insight,note:j.note}));
   downloadFile('journal-'+today()+'.json', JSON.stringify(out,null,2), 'application/json'); closeSheet(); toast('JSON exported');
 }
+async function purgeTombed(){
+  const tomb=DB.tomb||{}; const ids=Object.keys(tomb); if(!ids.length) return;
+  const before=DB.journal.length;
+  DB.journal=DB.journal.filter(e=>!tomb[e.id]);
+  for(const id of ids){ try{ await delEntryDB(id); await delPhoto(id); }catch(_){}
+    if(thumbURLs[id]){ URL.revokeObjectURL(thumbURLs[id]); delete thumbURLs[id]; } }
+  if(DB.journal.length!==before){ save(); renderJournal(); renderToday(); }
+}
 async function loadJournal(){
   try{
     await idb();
     if(DB.journal && DB.journal.length && !DB._jmig){ for(const e of DB.journal){ try{ await putEntry(e); }catch(_){} } DB._jmig=true; save(); }
-    DB.journal = await getAllEntries();
+    DB.journal = (await getAllEntries()).filter(e=>!(DB.tomb&&DB.tomb[e.id]));
+    purgeTombed();
     renderJournal(); renderToday();
   }catch(e){ console.error('journal load failed', e); }
 }
@@ -2907,6 +2916,7 @@ async function syncPull(force){
     for(const e of DB.journal){ try{ await putEntry(e); }catch(_){} }
     applyTheme(); renderAll(); initSettingsValues(); renderAcct();
     SUPA.dirty=true; scheduleSync(); // push back the union
+    purgeTombed();
     setTimeout(()=>photoSyncRun(), 1500);
   }catch(e){ console.error('sync pull', e); }
 }
