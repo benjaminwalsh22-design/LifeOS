@@ -540,7 +540,7 @@ nav.tabbar {
     <!-- ============ JOURNAL ============ -->
     <section class="view" id="view-journal">
       <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
-      <input type="file" id="archiveInput" accept="image/*" multiple hidden>
+      <input type="file" id="archiveInput" accept="image/*,application/pdf,.pdf" multiple hidden>
       <div class="jgrid">
         <div class="jbtn-big primary" id="jScan">
           <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.8 7h-1A2.8 2.8 0 0 0 3 9.8v7.4A2.8 2.8 0 0 0 5.8 20h12.4a2.8 2.8 0 0 0 2.8-2.8V9.8A2.8 2.8 0 0 0 18.2 7h-1l-1.2-2.1A1.8 1.8 0 0 0 14.4 4H9.6a1.8 1.8 0 0 0-1.6.9L6.8 7Z"/><circle cx="12" cy="13" r="3.4"/></svg>
@@ -614,7 +614,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.4</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.5</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2032,6 +2032,54 @@ let _wake=null;
 async function wakeOn(){ try{ if(navigator.wakeLock) _wake=await navigator.wakeLock.request('screen'); }catch(e){} }
 function wakeOff(){ try{ if(_wake){ _wake.release(); _wake=null; } }catch(e){} }
 
+let _pdfjs=null;
+async function loadPdfJs(){
+  if(_pdfjs) return _pdfjs;
+  await new Promise((res,rej)=>{ const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=res; s.onerror=()=>rej(new Error('Couldn’t load the PDF reader — check your connection'));
+    document.head.appendChild(s); });
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  _pdfjs=window.pdfjsLib; return _pdfjs;
+}
+async function pdfToPageFiles(file, onProg){
+  const pdfjs=await loadPdfJs();
+  const doc=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;
+  const base=file.name.replace(/\.pdf$/i,'');
+  const out=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p);
+    let vp=page.getViewport({scale:1});
+    const scale=Math.max(1, Math.min(2.5, 1400/Math.max(vp.width,vp.height)));
+    vp=page.getViewport({scale});
+    const c=document.createElement('canvas'); c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+    await page.render({canvasContext:c.getContext('2d'), viewport:vp}).promise;
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.85));
+    out.push(new File([blob], base+'_p'+String(p).padStart(4,'0')+'.jpg', {type:'image/jpeg'}));
+    c.width=c.height=0; page.cleanup();
+    if(onProg) onProg(p, doc.numPages);
+  }
+  try{ doc.destroy(); }catch(e){}
+  return out;
+}
+async function handleArchiveFiles(files){
+  const pdfs=files.filter(f=>/pdf/i.test(f.type)||/\.pdf$/i.test(f.name));
+  const imgs=files.filter(f=>!pdfs.includes(f));
+  if(!pdfs.length){ openArchiveSheet(imgs); return; }
+  openSheet('<h3>Reading your PDF…</h3><div class="notice" style="margin-top:0" id="pdfProg"><span class="spinner"></span>Splitting the scan into pages on your phone — nothing is sent anywhere yet.</div>');
+  try{
+    const out=[...imgs];
+    for(const f of pdfs){
+      const pages=await pdfToPageFiles(f,(p,n)=>{ const el=$('pdfProg'); if(el) el.innerHTML='<span class="spinner"></span>Page '+p+' of '+n+'…'; });
+      out.push(...pages);
+    }
+    if(!out.length){ closeSheet(); toast('That PDF has no pages'); return; }
+    closeSheet(); openArchiveSheet(out);
+  }catch(err){
+    closeSheet();
+    openSheet('<h3>Couldn’t read that PDF</h3><div class="notice" style="margin-top:0">'+((err&&err.message)?err.message:'Unknown error')+'. If the file is very large, try exporting the scan at a lower resolution or splitting it in two.</div><button class="btn" onclick="closeSheet()">OK</button>');
+  }
+}
 let ARCHIVE=null;
 function openArchiveSheet(files){
   if(!DB.settings.apiKey){ openSheet('<h3>API key needed</h3><div class="notice" style="margin-top:0">Bulk transcription uses Claude to read your handwriting. Add your Anthropic API key in Settings first, then import.</div><button class="btn" onclick="closeSheet();showView(\'settings\')">Open Settings</button>'); return; }
@@ -2763,7 +2811,7 @@ $('schedAddEvent').addEventListener('click', () => editEvent(''));
 $('friendAdd').addEventListener('click', () => editFriend(''));
 $('goalAdd').addEventListener('click', () => editGoal(''));
 $('jBulk').addEventListener('click', () => $('archiveInput').click());
-$('archiveInput').addEventListener('change', e => { const files = [...e.target.files]; e.target.value=''; if (files.length) openArchiveSheet(files); });
+$('archiveInput').addEventListener('change', e => { const files = [...e.target.files]; e.target.value=''; if (files.length) handleArchiveFiles(files); });
 $('jSearch').addEventListener('input', e => { jState.q = e.target.value; renderJournalList(); });
 $('jYear').addEventListener('change', e => { jState.year = e.target.value; renderJournalList(); });
 $('jChat').addEventListener('click', openAsk);
