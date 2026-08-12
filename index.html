@@ -479,6 +479,30 @@ nav.tabbar {
 .detail-block p { font-size: 14.5px; color: var(--ink-2); white-space: pre-wrap; }
 .notice { font-size: 12.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
 .notice a { color: var(--accent); }
+
+/* ---- 52 memories ---- */
+.mem-chiprow{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.mem-chiprow::-webkit-scrollbar{display:none}
+.mem-chip{flex:0 0 auto;padding:8px 13px;border-radius:999px;border:1px solid var(--hairline);background:var(--surface);font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.mem-chip.on{background:var(--ink);color:var(--page);border-color:var(--ink)}
+.mem-item{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:9px;cursor:pointer;box-shadow:var(--shadow-soft)}
+.mem-item .mi-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.mem-item b{font-size:15px;letter-spacing:-.01em}
+.mem-item .mi-n{font-size:12px;color:var(--muted);white-space:nowrap}
+.mem-item .mi-prev{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.memread{position:fixed;inset:0;z-index:220;background:var(--page);display:none;flex-direction:column}
+.memread.open{display:flex}
+.mr-top{display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top) + 14px) 20px 8px}
+.mr-yr{font-size:12.5px;font-weight:650;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.mr-x{width:34px;height:34px;border-radius:999px;border:1px solid var(--hairline);background:var(--surface);color:var(--ink);font-size:15px;display:flex;align-items:center;justify-content:center}
+.mr-body{flex:1;overflow-y:auto;padding:10px 26px 20px}
+.mr-count{font-family:var(--serif);font-size:15px;color:var(--muted);margin-bottom:16px}
+.mr-title{font-family:var(--serif);font-size:29px;line-height:1.22;letter-spacing:-.01em;font-weight:600;margin:0 0 6px}
+.mr-date{font-size:13.5px;color:var(--muted);margin-bottom:18px}
+.mr-text{font-family:var(--serif);font-size:19px;line-height:1.62;white-space:pre-wrap}
+.mr-nav{display:flex;gap:10px;padding:12px 20px calc(env(safe-area-inset-bottom) + 16px)}
+.mr-nav button{flex:1;padding:15px;border-radius:14px;border:1px solid var(--hairline);background:var(--surface);color:var(--ink);font-size:15px;font-weight:650}
+.mr-nav button.pri{background:var(--fill);color:var(--fill-ink);border-color:var(--fill)}
 </style>
 </head>
 <body>
@@ -560,6 +584,7 @@ nav.tabbar {
         </div>
       </div>
       <div id="archiveProgress" style="margin-top:6px"></div>
+      <div id="memCard"></div>
       <div id="jOnThisDay"></div>
       <div class="jtools">
         <input id="jSearch" placeholder="Search your journal…">
@@ -570,6 +595,11 @@ nav.tabbar {
     </section>
 
     <!-- ============ PLACES ============ -->
+    <section class="view" id="view-memories">
+      <div class="backrow" onclick="showView('journal')">&lsaquo; Journal</div>
+      <div id="memBody"></div>
+    </section>
+
     <section class="view" id="view-places">
       <div class="backrow" onclick="backHome()">&lsaquo; Back</div>
       <input type="file" id="tlInput" accept=".json,application/json" hidden>
@@ -614,7 +644,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.5</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.6</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -661,6 +691,12 @@ nav.tabbar {
   </nav>
 
   <!-- app lock -->
+  <div class="memread" id="memRead">
+    <div class="mr-top"><span class="mr-yr" id="mrYr"></span><button class="mr-x" onclick="memReadClose()">&#10005;</button></div>
+    <div class="mr-body" id="mrBody"></div>
+    <div class="mr-nav"><button onclick="memReadPrev()" id="mrPrev">&lsaquo; Back</button><button class="pri" onclick="memReadNext()" id="mrNext">Next &rsaquo;</button></div>
+  </div>
+
   <div class="lockscreen" id="lockscreen" style="display:none">
     <div class="lock-inner">
       <svg width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path stroke-linecap="round" d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
@@ -698,12 +734,14 @@ const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
 const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light', healthSyncUrl:''}, briefLine:null,
-  events:[], friends:[], stats:{}, journal:[], checkins:{}, places:null, placeNames:{}, placeGeo:{}, goals:[], calEvents:[], reviews:[], tomb:{} };
+  events:[], friends:[], stats:{}, journal:[], memories:[], memCand:[], checkins:{}, places:null, placeNames:{}, placeGeo:{}, goals:[], calEvents:[], reviews:[], tomb:{} };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
 const save = () => { const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); if (window._syncDirty) window._syncDirty(); };
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
+DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[];
+if(!DB.settings.anniv) DB.settings.anniv='08-06';
 
 // IndexedDB for photos
 let _idb = null;
@@ -744,8 +782,8 @@ function closeSheet(){ $('overlay').classList.remove('open'); $('sheet').innerHT
 $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) closeSheet(); });
 
 // ---------- navigation ----------
-const VIEWS = { today:'Today', friends:'Friends', person:'', journal:'Journal', insights:'Insights', schedule:'Schedule', places:'Places', health:'Health', goals:'Goals', review:'Weekly Review', settings:'Settings' };
-const TAB_OF = { today:'today', schedule:'today', places:'today', goals:'today', settings:'today', friends:'friends', person:'friends', journal:'journal', insights:'insights', health:'insights', review:'insights' };
+const VIEWS = { today:'Today', friends:'Friends', person:'', journal:'Journal', memories:'52 Memories', insights:'Insights', schedule:'Schedule', places:'Places', health:'Health', goals:'Goals', review:'Weekly Review', settings:'Settings' };
+const TAB_OF = { today:'today', schedule:'today', places:'today', goals:'today', settings:'today', friends:'friends', person:'friends', journal:'journal', memories:'journal', insights:'insights', health:'insights', review:'insights' };
 let currentView = 'today';
 let currentPersonId = null;
 const FOCUS_APPS = { journal:{title:'Journal', tab:'journal'}, friends:{title:'Friends', tab:'friends'}, insights:{title:'Insights', tab:'insights'} };
@@ -1451,7 +1489,7 @@ function fillYearFilter(){
   const years = [...new Set(DB.journal.map(j => (j.date||'').slice(0,4)).filter(Boolean))].sort().reverse();
   sel.innerHTML = '<option value="">All years</option>' + years.map(y => '<option value="'+y+'"'+(y===jState.year?' selected':'')+'>'+y+'</option>').join('');
 }
-function renderJournal(){ renderArchiveProgress(); fillYearFilter(); renderJournalList(); renderOnThisDay(); }
+function renderJournal(){ renderArchiveProgress(); renderMemHome(); fillYearFilter(); renderJournalList(); renderOnThisDay(); }
 async function blobHash(blob){
   const buf=await blob.arrayBuffer();
   const h=await crypto.subtle.digest('SHA-256', buf);
@@ -1642,6 +1680,7 @@ async function openEntry(id){
       '</div></div>' : '') +
     (j.status !== 'done' && j.status !== 'analyzing' && j.status !== 'queued' ? '<button class="btn" onclick="analyzeEntry(\''+id+'\');closeSheet()">'+(DB.settings.apiKey ? 'Analyze with Claude' : 'Analyze (needs API key in Settings)')+'</button>' : '') +
     '<button class="btn secondary" style="margin-top:10px" onclick="editEntryText(\''+id+'\')">Edit text</button>' +
+    ((j.summary||j.transcription) ? '<button class="btn secondary" style="margin-top:10px" onclick="entryToMemCand(\''+id+'\')">&#9733; Save as 52-Memories candidate</button>' : '') +
     '<button class="btn danger" onclick="deleteEntry(\''+id+'\')">Delete entry</button>');
 }
 async function deleteEntry(id){
@@ -1968,13 +2007,22 @@ function onThisDayEntries(){
   return (DB.journal||[]).filter(j=>j.date && j.date.slice(5)===md && Number(j.date.slice(0,4))<yr)
     .sort((a,b)=>b.date.localeCompare(a.date));
 }
+function memThisMonthHTML(){
+  const ym=today().slice(0,7), mm=ym.slice(5);
+  const ms=(DB.memories||[]).filter(m=>m.date && m.date.slice(5,7)===mm && m.date<ym);
+  if(!ms.length) return '';
+  const day=Number(today().slice(8,10)); const seen=new Set(); const pick=[];
+  for(let k=0;k<ms.length && pick.length<2;k++){ const m=ms[(day*7+k*13)%ms.length]; if(!seen.has(m.id)){ seen.add(m.id); pick.push(m); } }
+  return '<div class="ck-label" style="margin-top:10px">From your 52 Memories</div>'+pick.map(m=>
+    '<div class="tl-doc otd" onclick="openMemory(\''+m.id+'\')"><div class="td-top"><b>'+esc(m.title)+'</b><span>'+esc(fmtMonth(m.date))+'</span></div>'+(m.text?'<div class="td-prev">'+esc(m.text.slice(0,140))+'</div>':'')+'</div>').join('');
+}
 function onThisDayHTML(){
-  const es=onThisDayEntries(); if(!es.length) return '';
+  const es=onThisDayEntries(); if(!es.length) return memThisMonthHTML();
   const yr=Number(today().slice(0,4));
   return '<div class="ck-label" style="margin-top:4px">On this day</div>'+es.slice(0,3).map(j=>{
     const n=yr-Number(j.date.slice(0,4));
     return '<div class="tl-doc otd" onclick="openEntry(\''+j.id+'\')"><div class="td-top"><b>'+(n===1?'A year ago today':n+' years ago today')+'</b><span>'+esc(j.date.slice(0,4))+'</span></div><div class="td-prev">'+esc((j.summary||j.transcription||j.note||'').slice(0,150))+'</div></div>';
-  }).join('');
+  }).join('')+memThisMonthHTML();
 }
 function renderOnThisDay(){
   const a=$('onThisDay'); if(a) a.innerHTML=onThisDayHTML();
@@ -2210,6 +2258,165 @@ async function retryFailedCloud(){
   save(); try{ await syncPush(); }catch(err){}
   renderAll(); toast('Queued — the cloud will retry them now');
 }
+// ---------- 52 memories ----------
+const MEMV={yr:null,q:''};
+const memYearNum=yr=>yr-2016;
+const memYears=()=>[...new Set((DB.memories||[]).map(m=>m.yr))].sort((a,b)=>a-b);
+function fmtMonth(d){ if(!d) return ''; const p=d.split('-').map(Number); return MON[p[1]-1]+' '+p[0]; }
+function annivNextYr(){ const ys=memYears(); return ys.length?Math.max(...ys)+1:(Number(today().slice(0,4))+1); }
+function lastAnniv(){
+  const md=DB.settings.anniv||'08-06'; const t=today(); const y=Number(t.slice(0,4));
+  const thisYr=y+'-'+md; return thisYr<=t?thisYr:(y-1)+'-'+md;
+}
+function openMemories(yr){ if(yr) MEMV.yr=yr; if(!MEMV.yr){ const ys=memYears(); MEMV.yr=ys.length?ys[ys.length-1]:'next'; } showView('memories'); }
+function renderMemHome(){
+  const el=$('memCard'); if(!el) return;
+  const n=(DB.memories||[]).length, cand=(DB.memCand||[]).length;
+  if(!n && !cand){ el.innerHTML=''; return; }
+  const ys=memYears();
+  el.innerHTML='<div class="card" onclick="openMemories()" style="cursor:pointer;margin-top:10px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:17px">52 Memories</b>'+
+    '<span style="font-size:13px;color:var(--muted)">'+ys.length+' years &middot; '+n+'</span></div>'+
+    '<div style="font-size:12.5px;color:var(--muted);margin-top:5px">'+(cand?('Year '+memYearNum(annivNextYr())+' list &mdash; '+cand+' collected so far'):'Browse the years, or open Reading Mode')+'</div></div>';
+}
+function memSearch(v){ MEMV.q=v; renderMemList(); }
+function renderMemories(){
+  const el=$('memBody'); if(!el) return;
+  const ys=memYears();
+  const chips=ys.map(y=>'<span class="mem-chip'+(MEMV.yr===y?' on':'')+'" onclick="MEMV.yr='+y+';MEMV.q=\'\';renderMemories()">Year '+memYearNum(y)+'</span>').join('')+
+    '<span class="mem-chip'+(MEMV.yr==='next'?' on':'')+'" onclick="MEMV.yr=\'next\';renderMemories()">Year '+memYearNum(annivNextYr())+' &middot; collecting</span>';
+  el.innerHTML='<div style="margin:2px 0 10px"><div style="font-family:var(--serif);font-size:24px;font-weight:600;letter-spacing:-.01em">52 Memories</div>'+
+    '<div style="font-size:13px;color:var(--muted);margin-top:2px">'+(DB.memories||[]).length+' memories, read every August since 2017</div></div>'+
+    '<div class="field" style="margin-bottom:8px"><input id="memQ" placeholder="Search every year&hellip;" value="'+esc(MEMV.q)+'" oninput="memSearch(this.value)"></div>'+
+    '<div class="mem-chiprow">'+chips+'</div><div id="memList"></div>';
+  renderMemList();
+}
+function renderMemList(){
+  const el=$('memList'); if(!el) return;
+  const q=(MEMV.q||'').trim().toLowerCase();
+  if(q){
+    const toks=q.split(/\s+/).filter(Boolean);
+    const hits=(DB.memories||[]).filter(m=>{ const t=(m.title+' '+(m.text||'')).toLowerCase(); return toks.every(k=>t.includes(k)); });
+    el.innerHTML=hits.length?hits.map(memItemHTML).join(''):'<div class="empty">No memories match.</div>';
+    return;
+  }
+  if(MEMV.yr==='next'){ el.innerHTML=memCandHTML(); return; }
+  const ms=(DB.memories||[]).filter(m=>m.yr===MEMV.yr).sort((a,b)=>(a.n||0)-(b.n||0));
+  if(!ms.length){ el.innerHTML='<div class="empty">Nothing here yet.</div>'; return; }
+  el.innerHTML='<button class="btn" style="margin:2px 0 12px" onclick="memReadStart('+MEMV.yr+')">&#10022; Reading Mode &mdash; Year '+memYearNum(MEMV.yr)+'</button>'+ms.map(memItemHTML).join('');
+}
+function memItemHTML(m){
+  return '<div class="mem-item" onclick="openMemory(\''+m.id+'\')"><div class="mi-top"><b>'+esc(m.title)+'</b>'+
+    '<span class="mi-n">'+(MEMV.q?('Yr '+memYearNum(m.yr)+(m.date?' &middot; ':'')):'')+esc(m.date?fmtMonth(m.date):'')+(!MEMV.q&&m.n?(m.date?' &middot; ':'')+m.n+'/52':'')+'</span></div>'+
+    (m.text?'<div class="mi-prev">'+esc(m.text.slice(0,160))+'</div>':'')+'</div>';
+}
+function openMemory(id){
+  const m=(DB.memories||[]).find(x=>x.id===id); if(!m) return;
+  openSheet('<h3 style="font-family:var(--serif)">'+esc(m.title)+'</h3>'+
+    '<div style="font-size:13px;color:var(--muted);margin:-6px 0 12px">Year '+memYearNum(m.yr)+(m.n?' &middot; '+m.n+' of 52':'')+(m.date?' &middot; '+fmtMonth(m.date):'')+'</div>'+
+    (m.text?'<div class="detail-block"><p style="font-family:var(--serif);font-size:16.5px;line-height:1.6;white-space:pre-wrap">'+esc(m.text)+'</p></div>':'<div class="notice" style="margin-top:0">No written card for this one yet &mdash; add the story below.</div>')+
+    '<button class="btn secondary" onclick="editMemory(\''+id+'\')">Edit</button>');
+}
+function editMemory(id){
+  const m=(DB.memories||[]).find(x=>x.id===id); if(!m) return;
+  openSheet('<h3>Edit memory</h3>'+
+    '<div class="field"><label>Title</label><input id="emTitle" value="'+esc(m.title)+'"></div>'+
+    '<div class="field"><label>Month</label><input id="emDate" type="month" value="'+esc(m.date||'')+'"></div>'+
+    '<div class="field"><label>The story</label><textarea id="emText" style="min-height:170px">'+esc(m.text||'')+'</textarea></div>'+
+    '<button class="btn" onclick="saveMemory(\''+id+'\')">Save</button>');
+}
+function saveMemory(id){
+  const m=(DB.memories||[]).find(x=>x.id===id); if(!m) return;
+  m.title=$('emTitle').value.trim()||m.title; m.date=$('emDate').value||''; m.text=$('emText').value.trim(); m.mt=Date.now();
+  save(); closeSheet(); renderMemories(); renderMemHome(); toast('Saved');
+}
+// reading mode
+let MEMR=null;
+function memReadStart(yr,i){
+  const ms=(DB.memories||[]).filter(m=>m.yr===yr).sort((a,b)=>(a.n||0)-(b.n||0));
+  if(!ms.length) return;
+  MEMR={ms,i:i||0,yr}; $('memRead').classList.add('open'); memReadRender();
+}
+function memReadRender(){
+  if(!MEMR) return; const m=MEMR.ms[MEMR.i];
+  $('mrYr').textContent='Year '+memYearNum(MEMR.yr)+' \u00b7 52 Memories';
+  $('mrBody').innerHTML='<div class="mr-count">'+(MEMR.i+1)+' of '+MEMR.ms.length+'</div>'+
+    '<h2 class="mr-title">'+esc(m.title)+'</h2>'+
+    (m.date?'<div class="mr-date">'+esc(fmtMonth(m.date))+'</div>':'')+
+    (m.text?'<div class="mr-text">'+esc(m.text)+'</div>':'<div class="mr-text" style="color:var(--muted)">(Just the title for this one &mdash; tell the story out loud.)</div>');
+  $('mrBody').scrollTop=0;
+  $('mrPrev').style.visibility=MEMR.i===0?'hidden':'visible';
+  $('mrNext').innerHTML=MEMR.i===MEMR.ms.length-1?'The end &#10084;':'Next &rsaquo;';
+}
+function memReadNext(){ if(!MEMR) return; if(MEMR.i>=MEMR.ms.length-1){ memReadClose(); return; } MEMR.i++; memReadRender(); }
+function memReadPrev(){ if(!MEMR||MEMR.i===0) return; MEMR.i--; memReadRender(); }
+function memReadClose(){ MEMR=null; $('memRead').classList.remove('open'); }
+// next-year collector
+function memCandHTML(){
+  const cs=(DB.memCand||[]).slice().sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+  const yr=annivNextYr();
+  let h='<div class="notice" style="margin-top:0">Collecting for <b>Year '+memYearNum(yr)+'</b> (read August '+yr+'). Add moments as they happen &mdash; from here, from any journal entry, or let Claude suggest from your journal.</div>';
+  h+='<button class="btn" onclick="addMemCandSheet()">+ Add a memory</button>';
+  h+='<button class="btn secondary" style="margin-top:10px" onclick="memSuggest(this)">'+(DB.settings.apiKey?'Suggest from my journal':'Suggest from journal (needs API key)')+'</button>';
+  if(cs.length) h+='<button class="btn secondary" style="margin-top:10px" onclick="exportMemCand()">Export list ('+cs.length+')</button>';
+  h+='<div class="ck-label" style="margin-top:16px">'+(cs.length? cs.length+' collected'+(cs.length>=52?' &mdash; that\u2019s a full year!':' of 52') : 'Nothing yet &mdash; the year is young')+'</div>';
+  h+=cs.map(c=>'<div class="mem-item"><div class="mi-top"><b>'+esc(c.text)+'</b><span class="mi-n">'+(c.date?esc(fmtMonth(c.date)):'')+'</span></div>'+
+    '<div class="mi-prev">'+(c.src==='ai'?'Suggested by Claude':c.src==='journal'?'From a journal entry':'Added by you')+
+    ' &middot; <span style="color:var(--critical);cursor:pointer" onclick="delMemCand(\''+c.id+'\')">remove</span></div></div>').join('');
+  return h;
+}
+function addMemCandSheet(){
+  openSheet('<h3>Add a memory</h3>'+
+    '<div class="field"><label>What happened?</label><textarea id="mcText" placeholder="Gianna\u2019s first steps on the beach&hellip;"></textarea></div>'+
+    '<div class="field"><label>Month (optional)</label><input id="mcDate" type="month" value="'+today().slice(0,7)+'"></div>'+
+    '<button class="btn" onclick="saveMemCand()">Add to the list</button>');
+  setTimeout(()=>{ const el=$('mcText'); if(el) el.focus(); },60);
+}
+function saveMemCand(){
+  const t=$('mcText').value.trim(); if(!t){ toast('Write the memory first'); return; }
+  DB.memCand.push({id:uid(),ts:Date.now(),date:$('mcDate').value||'',text:t,src:'manual',mt:Date.now()});
+  save(); closeSheet(); MEMV.yr='next'; renderMemories(); renderMemHome(); toast('Added');
+}
+function delMemCand(id){ DB.tomb=DB.tomb||{}; DB.tomb[id]=Date.now(); DB.memCand=DB.memCand.filter(x=>x.id!==id); save(); renderMemories(); renderMemHome(); }
+function entryToMemCand(jid){
+  const j=DB.journal.find(x=>x.id===jid); if(!j) return;
+  const t=(j.summary||j.transcription||'').slice(0,200); if(!t){ toast('Nothing to save yet'); return; }
+  if((DB.memCand||[]).some(c=>c.jid===jid)){ toast('Already on the list'); return; }
+  DB.memCand.push({id:uid(),jid,ts:Date.now(),date:(j.date||'').slice(0,7),text:t,src:'journal',mt:Date.now()});
+  save(); closeSheet(); renderMemHome(); toast('Saved to Year '+memYearNum(annivNextYr())+' list');
+}
+async function memSuggest(btn){
+  if(!DB.settings.apiKey){ toast('Add an API key in Settings first'); return; }
+  const since=lastAnniv();
+  const es=DB.journal.filter(j=>j.date>=since && (j.summary||j.transcription)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if(!es.length){ toast('No journal entries since '+fmtDate(since)+' yet'); return; }
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Reading '+es.length+' entries&hellip;'; }
+  const lines=es.slice(-120).map(j=>'['+j.date+'] '+((j.summary||j.transcription||'').slice(0,220))).join('\n');
+  const have=(DB.memCand||[]).map(c=>c.text).join(' | ');
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
+      headers:{ 'content-type':'application/json','x-api-key':DB.settings.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+      body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:1200,
+        system:'You help a husband collect his yearly "52 memories" list to read to his wife on their anniversary. From his dated journal entries, pick the moments most worth remembering together: shared experiences, family milestones, funny stories, trips, sweet ordinary days. Return ONLY JSON: {"candidates":[{"title":"short memory title, a few words","date":"YYYY-MM"}]} with 8-14 candidates. Skip anything already on his list.',
+        messages:[{ role:'user', content:'Already on the list: '+(have||'(nothing)')+'\n\nJournal entries:\n'+lines }] }) });
+    if(!res.ok) throw new Error('API '+res.status);
+    const data=await res.json(); const txt=(data.content||[]).map(c=>c.text||'').join('');
+    const a=txt.indexOf('{'), b=txt.lastIndexOf('}'); const parsed=JSON.parse(txt.slice(a,b+1));
+    let added=0;
+    (parsed.candidates||[]).forEach(c=>{ if(!c||!c.title) return;
+      if((DB.memCand||[]).some(x=>x.text.toLowerCase()===String(c.title).toLowerCase())) return;
+      DB.memCand.push({id:uid(),ts:Date.now(),date:(/^\d{4}-\d{2}$/.test(c.date||'')?c.date:''),text:String(c.title).slice(0,200),src:'ai',mt:Date.now()}); added++; });
+    save(); MEMV.yr='next'; renderMemories(); renderMemHome(); toast(added?added+' suggestions added \u2014 remove any that miss':'No new suggestions');
+  }catch(e){ toast('Couldn\u2019t reach Claude just now'); if(btn){ btn.disabled=false; btn.textContent='Suggest from my journal'; } }
+}
+function exportMemCand(){
+  const cs=(DB.memCand||[]).slice().sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+  const yr=annivNextYr();
+  downloadFile('52-memories-year-'+memYearNum(yr)+'-draft.txt',
+    '52 Memories \u2014 Year '+memYearNum(yr)+' (draft, '+cs.length+' collected)\n\n'+cs.map((c,i)=>(i+1)+'. '+c.text+(c.date?' ('+fmtMonth(c.date)+')':'')).join('\n'), 'text/plain');
+  toast('Draft exported');
+}
+
 function openAsk(){
   if(!DB.settings.apiKey){ toast('Add an API key in Settings to ask your journal'); return; }
   if(!DB.journal.length){ toast('No entries yet to ask about'); return; }
@@ -2223,8 +2430,10 @@ function scoreEntry(j, toks){ const t=entryText(j); let s=0; toks.forEach(k=>{ l
 async function askJournal(){
   const q=($('askQ')?$('askQ').value:'').trim(); if(!q) return;
   const toks=q.toLowerCase().split(/\s+/).filter(w=>w.length>2);
-  let scored=DB.journal.map(j=>({j,s:scoreEntry(j,toks)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
-  if(!scored.length) scored=DB.journal.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,8).map(j=>({j,s:0}));
+  const memDocs=(DB.memories||[]).map(m=>({id:m.id,date:(m.date?m.date+'-15':m.yr+'-08-01'),ts:Date.parse((m.date?m.date+'-15':m.yr+'-08-01')),transcription:'[52 Memories, Year '+memYearNum(m.yr)+'] '+m.title+'. '+(m.text||''),_mem:true}));
+  const pool=DB.journal.concat(memDocs);
+  let scored=pool.map(j=>({j,s:scoreEntry(j,toks)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
+  if(!scored.length) scored=pool.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,8).map(j=>({j,s:0}));
   const top=scored.slice(0,12).map(x=>x.j);
   $('askOut').innerHTML='<div class="detail-block" style="margin-top:14px"><p><span class="spinner"></span>Reading '+top.length+' entries…</p></div>';
   const ctx=top.map(j=>'['+j.date+'] '+((j.transcription||j.summary||j.note||'').slice(0,1200))).join('\n\n');
@@ -2237,7 +2446,7 @@ async function askJournal(){
     if(!res.ok) throw new Error('API '+res.status);
     const data=await res.json(); const ans=(data.content||[]).map(c=>c.text||'').join('').trim();
     $('askOut').innerHTML='<div class="detail-block" style="margin-top:14px"><h4>Answer</h4><p>'+esc(ans)+'</p></div>'+
-      '<div class="detail-block"><h4>Drawn from</h4><div class="pill-row">'+top.map(j=>'<span class="pill" style="cursor:pointer" onclick="closeSheet();openEntry(\''+j.id+'\')">'+fmtDate(j.date)+'</span>').join('')+'</div></div>';
+      '<div class="detail-block"><h4>Drawn from</h4><div class="pill-row">'+top.map(j=>'<span class="pill" style="cursor:pointer" onclick="closeSheet();'+(j._mem?'openMemory':'openEntry')+'(\''+j.id+'\')">'+(j._mem?'&#10022; ':'')+fmtDate(j.date)+'</span>').join('')+'</div></div>';
   }catch(e){ $('askOut').innerHTML='<div class="notice">Couldn’t reach Claude just now — try again.</div>'; }
 }
 function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
@@ -2651,7 +2860,7 @@ function buildPayload(){ const p=Object.assign({}, DB); return p; }
 function mergeRemote(db){
   if(!db||typeof db!=='object') return;
   const tomb=Object.assign({}, db.tomb||{}, DB.tomb||{});
-  ['events','friends','journal','goals','reviews','calEvents'].forEach(k=>{
+  ['events','friends','journal','memories','memCand','goals','reviews','calEvents'].forEach(k=>{
     const local=DB[k]||[]; const map=new Map(local.map(x=>[x&&x.id, x]));
     (db[k]||[]).forEach(x=>{ if(!x||!x.id) return;
       const mine=map.get(x.id);
@@ -2829,7 +3038,7 @@ $('tlInput').addEventListener('change', async e => {
     setTimeout(()=>lookupPlaceNames(), 1200);
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
-function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
+function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderMemories(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if(SUPA && SUPA.session && SUPA.dirty) syncPush(); return; } if (!document.hidden){ renderAll();
   if(SUPA && SUPA.session) syncPull();
   if((DB.settings.healthSyncUrl||'').trim() && (!DB.settings.healthLastSync || Date.now()-DB.settings.healthLastSync>3e5)) syncHealthNow(true); } });
