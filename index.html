@@ -644,7 +644,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.7</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.8</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1264,7 +1264,7 @@ function openPerson(id){ currentPersonId=id; showView('person'); }
 function docKindLabel(k){ return k==='thread'?'Text thread':k==='transcript'?'Call transcript':k==='call'?'Call':k==='text'?'Text':k==='inperson'?'In person':k==='note'?'Note':k==='journal'?'Journal':'Note'; }
 function contactDates(p){
   const set=new Set();
-  (p.log||[]).forEach(l=>{ if(l.date && l.kind!=='journal') set.add(l.date); });
+  (p.log||[]).forEach(l=>{ if(l.date) set.add(l.date); });
   if(p.lastContact) set.add(p.lastContact);
   return set;
 }
@@ -1330,10 +1330,26 @@ function renderPerson(){
   const items=[].concat((p.log||[]).map(l=>Object.assign({},l,{_t:'log'})), (p.docs||[]).map(d=>Object.assign({},d,{_t:'doc'}))).sort((a,b)=>(b.ts||0)-(a.ts||0));
   h+= items.length? items.map(it=> it._t==='doc'
     ? '<div class="tl-doc" onclick="openDoc(\''+p.id+'\',\''+it.id+'\')"><div class="td-top"><b>'+esc(docKindLabel(it.kind))+'</b><span>'+esc(it.date)+'</span></div><div class="td-prev">'+esc((it.text||'').slice(0,140))+'</div></div>'
-    : '<div class="tl-log"><div class="td-top"><b>'+esc(docKindLabel(it.kind))+'</b><span>'+esc(it.date)+'</span></div>'+(it.text?'<div class="td-prev">'+esc(it.text)+'</div>':'')+'</div>'
+    : '<div class="tl-log" onclick="openLog(\''+p.id+'\',\''+it.id+'\')" style="cursor:pointer"><div class="td-top"><b>'+esc(docKindLabel(it.kind))+(it.auto?' <span style="color:var(--muted);font-weight:500">auto</span>':'')+'</b><span>'+esc(it.date)+'</span></div>'+(it.text?'<div class="td-prev">'+esc(it.text)+'</div>':'')+'</div>'
   ).join('') : '<div class="empty">No history yet. Log a chat, or import a text thread or call transcript.</div>';
   h+='<button class="btn danger" style="margin-top:18px" onclick="deleteFriend(\''+p.id+'\')">Remove person</button>';
   el.innerHTML=h;
+}
+function openLog(pid,lid){
+  const p=DB.friends.find(x=>x.id===pid); if(!p) return;
+  const l=(p.log||[]).find(x=>x.id===lid); if(!l) return;
+  openSheet('<h3>'+esc(docKindLabel(l.kind))+' &middot; '+esc(fmtDate(l.date))+'</h3>'+
+    (l.auto?'<div class="notice" style="margin-top:0">Tagged automatically because your journal mentions '+esc(p.name.split(/\s+/)[0])+'.</div>':'')+
+    (l.text?'<div class="detail-block"><p>'+esc(l.text)+'</p></div>':'')+
+    (l.srcJournal?'<button class="btn" onclick="closeSheet();openEntry(\''+l.srcJournal+'\')">Open the journal entry</button>':'')+
+    '<button class="btn danger" onclick="removeLog(\''+pid+'\',\''+lid+'\')">Remove from '+esc(p.name.split(/\s+/)[0])+'&rsquo;s history</button>');
+}
+function removeLog(pid,lid){
+  const p=DB.friends.find(x=>x.id===pid); if(!p) return;
+  const l=(p.log||[]).find(x=>x.id===lid);
+  p.log=(p.log||[]).filter(x=>x.id!==lid);
+  if(l&&l.srcJournal){ p.noAuto=p.noAuto||{}; p.noAuto[l.srcJournal]=1; }
+  p.mt=Date.now(); save(); closeSheet(); renderPerson(); renderAll(); toast('Removed');
 }
 function logChat(id){
   openSheet('<h3>Log a chat</h3>'+
@@ -1639,12 +1655,35 @@ async function analyzeEntry(id){
     Object.assign(m, { mt: Date.now(), transcription: j.transcription || '', summary: j.summary || '',
       mood: j.mood || '', themes: Array.isArray(j.themes) ? j.themes : [], insight: j.insight || '', status: 'done' });
     toast('Entry analyzed');
-    const mp=mentionedFriends(m); if(mp.length) setTimeout(()=>toast('Mentions '+mp.slice(0,2).map(f=>f.name.split(/\s+/)[0]).join(' & ')+' — open to log'), 1400);
+    delete m.atScan;
+    const tagged=autoTagSweep();
+    if(tagged) setTimeout(()=>toast('Linked to '+mentionedFriends(m).slice(0,2).map(f=>f.name.split(/\s+/)[0]).join(' & ')), 1400);
   } catch (err) {
     m.status = 'error'; console.error(err);
     toast('Analysis failed — open the entry to retry');
   }
   await putEntry(m); renderJournal(); renderToday();
+}
+function autoTagSweep(){
+  if(!(DB.friends||[]).length || !(DB.journal||[]).length) return 0;
+  const key=(DB.friends||[]).map(f=>(f.name||'').trim().toLowerCase()).sort().join('|');
+  if(DB._atKey!==key){ DB._atKey=key; (DB.journal||[]).forEach(j=>{ delete j.atScan; }); }
+  let added=0; const now=Date.now();
+  for(const j of DB.journal){
+    if(!j || j.atScan) continue;
+    if(j.status!=='done'){ continue; }
+    for(const f of mentionedFriends(j)){
+      if(loggedFromJournal(f,j.id)) continue;
+      if(f.noAuto && f.noAuto[j.id]) continue;
+      f.log=f.log||[];
+      f.log.push({ id:uid(), ts:(parseD(j.date).getTime()||now), date:j.date, kind:'journal', text:(j.summary||mentionSnippet(j,f.name)), srcJournal:j.id, auto:true });
+      if(j.date && (!f.lastContact || j.date>f.lastContact)) f.lastContact=j.date;
+      f.mt=now; added++;
+    }
+    j.atScan=1;
+  }
+  if(added){ save(); }
+  return added;
 }
 function mentionedFriends(j){
   const text=((j.transcription||'')+' '+(j.summary||'')+' '+(j.note||''));
@@ -2055,7 +2094,7 @@ function editEntryText(id){
 async function saveEntryText(id){
   const j = DB.journal.find(x => x.id === id); if (!j) return;
   const d=$('etDate').value; if(/^\d{4}-\d{2}-\d{2}$/.test(d) && d!==j.date){ j.date=d; j.ts=parseD(d).getTime(); }
-  j.transcription=$('etTrans').value; j.summary=$('etSum').value.trim();
+  j.transcription=$('etTrans').value; j.summary=$('etSum').value.trim(); delete j.atScan;
   j.mood=$('etMood').value.trim(); j.themes=$('etThemes').value.split(',').map(x=>x.trim()).filter(Boolean);
   j.note=$('etNote').value.trim(); if(j.status==='error' && j.transcription) j.status='done'; j.mt=Date.now();
   await putEntry(j); save(); closeSheet(); renderAll(); toast('Entry updated');
@@ -2209,7 +2248,7 @@ async function runArchive(){
     await new Promise(r=>setTimeout(r,120));
   }
   if(ARCHIVE) ARCHIVE.running=false; wakeOff();
-  if(ARCHIVE && ARCHIVE.i>=ARCHIVE.files.length){ const ok=ARCHIVE.ok, fail=ARCHIVE.fail; ARCHIVE=null; toast('Batch done · '+ok+' transcribed'+(fail?' · '+fail+' need retry':'')); if(typeof SUPA!=='undefined' && SUPA && SUPA.session) setTimeout(()=>photoSyncRun(), 1500); }
+  if(ARCHIVE && ARCHIVE.i>=ARCHIVE.files.length){ autoTagSweep(); const ok=ARCHIVE.ok, fail=ARCHIVE.fail; ARCHIVE=null; toast('Batch done · '+ok+' transcribed'+(fail?' · '+fail+' need retry':'')); if(typeof SUPA!=='undefined' && SUPA && SUPA.session) setTimeout(()=>photoSyncRun(), 1500); }
   renderArchiveProgress(); renderJournal(); renderToday();
 }
 function pauseArchive(){ if(ARCHIVE){ ARCHIVE.running=false; wakeOff(); renderArchiveProgress(); toast('Paused'); } }
@@ -2482,6 +2521,8 @@ async function loadJournal(){
     if(DB.journal && DB.journal.length && !DB._jmig){ for(const e of DB.journal){ try{ await putEntry(e); }catch(_){} } DB._jmig=true; save(); }
     DB.journal = (await getAllEntries()).filter(e=>!(DB.tomb&&DB.tomb[e.id]));
     purgeTombed();
+    const linked=autoTagSweep();
+    if(linked>3) setTimeout(()=>toast(linked+' journal moments linked to your people'), 900);
     renderJournal(); renderToday();
   }catch(e){ console.error('journal load failed', e); }
 }
@@ -2916,7 +2957,7 @@ async function syncPull(force){
     for(const e of DB.journal){ try{ await putEntry(e); }catch(_){} }
     applyTheme(); renderAll(); initSettingsValues(); renderAcct();
     SUPA.dirty=true; scheduleSync(); // push back the union
-    purgeTombed();
+    purgeTombed(); autoTagSweep();
     setTimeout(()=>photoSyncRun(), 1500);
   }catch(e){ console.error('sync pull', e); }
 }
