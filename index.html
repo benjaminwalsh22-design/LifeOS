@@ -648,7 +648,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v5.9</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.0</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -728,6 +728,7 @@ const parseD = s => { const [y,m,d] = s.split('-').map(Number); return new Date(
 const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmtDate = s => { const d = parseD(s); return DOW[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate(); };
+const fmtDateY = s => { const d = parseD(s); const y=d.getFullYear(); return fmtDate(s)+(y!==new Date().getFullYear()?', '+y:''); };
 const daysBetween = (a,b) => Math.round((parseD(b)-parseD(a))/86400000);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtTime = t => { if(!t) return ''; let [h,m] = t.split(':').map(Number);
@@ -1502,7 +1503,7 @@ function journalFiltered(){
   if (jState.year) list = list.filter(j => (j.date||'').slice(0,4) === jState.year);
   if (jState.q){ const toks = jState.q.toLowerCase().split(/\s+/).filter(Boolean);
     list = list.filter(j => { const t = entryText(j); return toks.every(k => t.includes(k)); }); }
-  return list.sort((a,b) => (b.ts||0) - (a.ts||0));
+  return list.sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
 }
 function fillYearFilter(){
   const sel = $('jYear'); if (!sel) return;
@@ -1594,6 +1595,7 @@ async function renderJournalList(){
   if (!total){ $('journalList').innerHTML = '<div class="empty">No entries yet. Photograph today\u2019s page, or import your old journals in bulk.</div>'; return; }
   if (!list.length){ $('journalList').innerHTML = '<div class="empty">No entries match that search.</div>'; return; }
   const cap = list.slice(0, 150);
+  let _lastYr='';
   const rows = await Promise.all(cap.map(async j => {
     const u = await thumbURL(j.id);
     const status = j.status === 'queued' ? '<span class="spinner"></span>In the cloud queue…'
@@ -1601,9 +1603,11 @@ async function renderJournalList(){
       : j.status === 'error' ? '<span style="color:var(--serious)">Not transcribed — tap to retry</span>'
       : esc(j.summary || j.transcription || j.note || 'Saved');
     const moodBits = [j.mood, ...(j.themes||[]).slice(0,3)].filter(Boolean);
-    return '<div class="jentry" onclick="openEntry(\''+j.id+'\')">' +
+    const yr=(j.date||'').slice(0,4); let div='';
+    if(yr && yr!==_lastYr){ if(_lastYr) div='<div class="ck-label" style="margin:14px 2px 8px">'+yr+'</div>'; _lastYr=yr; }
+    return div+'<div class="jentry" onclick="openEntry(\''+j.id+'\')">' +
       (u ? '<img class="thumb" src="'+u+'" alt="">' : '<div class="thumb">—</div>') +
-      '<div class="body"><div class="jdate">'+fmtDate(j.date)+'</div>' +
+      '<div class="body"><div class="jdate">'+fmtDateY(j.date)+'</div>' +
       '<div class="jsum">'+status+'</div>' +
       (moodBits.length ? '<div class="jmood">'+moodBits.map(esc).join(' · ')+'</div>' : '') +
       '</div></div>';
