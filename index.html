@@ -648,7 +648,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.0</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.1</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2122,7 +2122,7 @@ async function callVision(blob, prompt){
   const data=await res.json(); const txt=(data.content||[]).map(c=>c.text||'').join('');
   const a=txt.indexOf('{'), b=txt.lastIndexOf('}'); if(a<0) throw new Error('no json'); return JSON.parse(txt.slice(a,b+1));
 }
-const ARCHIVE_PROMPT='This is a photo of one handwritten personal journal page. Return ONLY a JSON object with these keys: {"date":"the date written on the page as YYYY-MM-DD, or empty string if none","transcription":"a faithful transcription of the handwriting, using [illegible] where unreadable","summary":"1-2 sentence summary","mood":"1-3 words","themes":["up to 4 short topic tags"],"insight":"one brief, kind, useful observation"}';
+const ARCHIVE_PROMPT='This is a photo of one handwritten personal journal page. Return ONLY a JSON object with these keys: {"date_written":"the date exactly as it appears written on the page, VERBATIM (e.g. \'July 16\' or \'3/2\' or \'Dec 1, 2019\'). Do NOT add a year that is not written. Empty string if no date appears.","transcription":"a faithful transcription of the handwriting, using [illegible] where unreadable","summary":"1-2 sentence summary","mood":"1-3 words","themes":["up to 4 short topic tags"],"insight":"one brief, kind, useful observation"}';
 
 let _wake=null;
 async function wakeOn(){ try{ if(navigator.wakeLock) _wake=await navigator.wakeLock.request('screen'); }catch(e){} }
@@ -2176,6 +2176,25 @@ async function handleArchiveFiles(files){
     openSheet('<h3>Couldn’t read that PDF</h3><div class="notice" style="margin-top:0">'+((err&&err.message)?err.message:'Unknown error')+'. If the file is very large, try exporting the scan at a lower resolution or splitting it in two.</div><button class="btn" onclick="closeSheet()">OK</button>');
   }
 }
+const MONNUM={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function parseWrittenDate(dw, expStr){
+  if(!dw) return null;
+  const t=String(dw).toLowerCase();
+  let m=0,d=0,y=0,mm;
+  if((mm=t.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?/))){ m=MONNUM[mm[1]]; d=+mm[2]; y=mm[3]?+mm[3]:0; }
+  else if((mm=t.match(/(\d{4})-(\d{1,2})-(\d{1,2})/))){ y=+mm[1]; m=+mm[2]; d=+mm[3]; }
+  else if((mm=t.match(/(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?/))){ m=+mm[1]; d=+mm[2]; y=mm[3]?(+mm[3]<100?2000+ +mm[3]:+mm[3]):0; }
+  if(!m||!d||m>12||d>31) return null;
+  if(y>=1990&&y<=2100){ const c=Date.UTC(y,m-1,d); return isNaN(c)?null:new Date(c).toISOString().slice(0,10); }
+  const exp=Date.parse(expStr+'T12:00:00Z'); if(isNaN(exp)) return null;
+  let best=0,bd=Infinity;
+  [new Date(exp).getUTCFullYear()-1,new Date(exp).getUTCFullYear(),new Date(exp).getUTCFullYear()+1].forEach(yy=>{
+    const c=Date.UTC(yy,m-1,d); const delta=Math.abs(c-exp)/86400000;
+    if(delta<bd){ bd=delta; best=c; }
+  });
+  if(!best||bd>60) return null;
+  return new Date(best).toISOString().slice(0,10);
+}
 let ARCHIVE=null;
 function openArchiveSheet(files){
   if(!DB.settings.apiKey){ openSheet('<h3>API key needed</h3><div class="notice" style="margin-top:0">Bulk transcription uses Claude to read your handwriting. Add your Anthropic API key in Settings first, then import.</div><button class="btn" onclick="closeSheet();showView(\'settings\')">Open Settings</button>'); return; }
@@ -2184,7 +2203,7 @@ function openArchiveSheet(files){
   openSheet('<h3>Import '+arr.length+' journal pages</h3>'+
     '<div class="notice" style="margin-top:0">Each page is transcribed and analyzed by Claude, then saved on your phone. Keep the app open with the screen on while it runs — you can pause and resume anytime.</div>'+
     '<div class="field"><label>Date of the first (oldest) page</label><input id="arcStart" type="date" value="'+today()+'"></div>'+
-    '<div class="notice" style="margin-top:0">Pages are ordered by filename. A date written on a page always wins; otherwise dates count forward one per day from here.</div>'+
+    '<div class="notice" style="margin-top:0">Set this to the date on the first page &mdash; the year comes from here. Written dates on pages set the month and day; pages without dates count forward one per day.</div>'+
     '<div class="field" style="margin-top:10px"><label>Estimated cost</label><div style="font-size:15px;font-weight:650">~$'+est+' &middot; '+arr.length+' pages</div></div>'+
     ((typeof SUPA!=='undefined' && SUPA && SUPA.session)
       ? '<button class="btn" onclick="startArchive(\'cloud\')">Process in cloud — close the app after upload</button>'+
@@ -2242,9 +2261,9 @@ async function runArchive(){
       try{ parsed=await callVision(blob, ARCHIVE_PROMPT); }
       catch(e){ await new Promise(r=>setTimeout(r,2500));
         try{ parsed=await callVision(blob, ARCHIVE_PROMPT); }catch(e2){ parsed=null; } }
-      let date;
-      if(parsed && parsed.date){ if(/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) date=parsed.date; else { const d=new Date(parsed.date); if(!isNaN(d)) date=dstr(d); } }
-      if(!date){ const d=parseD(ARCHIVE.startDate); d.setDate(d.getDate()+idx); date=dstr(d); }
+      const _exp=(()=>{ const d=parseD(ARCHIVE.startDate); d.setDate(d.getDate()+idx); return dstr(d); })();
+      let date=parsed?parseWrittenDate(parsed.date_written||parsed.date,_exp):null;
+      if(!date) date=_exp;
       await putPhoto(id, blob);
       const entry={ id, ts:parseD(date).getTime(), date, note:'', archived:true, imgHash:hash,
         transcription:parsed?(parsed.transcription||''):'', summary:parsed?(parsed.summary||''):'',
