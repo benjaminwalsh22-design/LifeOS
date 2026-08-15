@@ -648,7 +648,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.1</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.2</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1714,6 +1714,7 @@ async function openEntry(id){
     (u ? '<img src="'+u+'" class="detail-photo">' : '') +
     (j.status === 'analyzing' ? '<div class="detail-block"><p><span class="spinner"></span>Analyzing…</p></div>' : '') +
     (j.status === 'queued' ? '<div class="detail-block"><p><span class="spinner"></span>Waiting for cloud transcription… it runs even with the app closed.</p></div>' : '') +
+    (j.status === 'error' && j.refused ? '<div class="notice" style="margin-top:0">Claude declined to transcribe this page — retrying won\u2019t help. Tap Edit text to type it in yourself.</div>' : '') +
     (j.summary ? '<div class="detail-block"><h4>Summary</h4><p>'+esc(j.summary)+'</p></div>' : '') +
     (j.mood || (j.themes||[]).length ? '<div class="detail-block"><h4>Mood &amp; themes</h4><div class="pill-row">' +
       [j.mood, ...(j.themes||[])].filter(Boolean).map(x => '<span class="pill">'+esc(x)+'</span>').join('') + '</div></div>' : '') +
@@ -2103,7 +2104,7 @@ function editEntryText(id){
 async function saveEntryText(id){
   const j = DB.journal.find(x => x.id === id); if (!j) return;
   const d=$('etDate').value; if(/^\d{4}-\d{2}-\d{2}$/.test(d) && d!==j.date){ j.date=d; j.ts=parseD(d).getTime(); }
-  j.transcription=$('etTrans').value; j.summary=$('etSum').value.trim(); delete j.atScan;
+  j.transcription=$('etTrans').value; j.summary=$('etSum').value.trim(); delete j.atScan; if(j.refused && j.transcription.trim()){ delete j.refused; j.status='done'; }
   j.mood=$('etMood').value.trim(); j.themes=$('etThemes').value.split(',').map(x=>x.trim()).filter(Boolean);
   j.note=$('etNote').value.trim(); if(j.status==='error' && j.transcription) j.status='done'; j.mt=Date.now();
   await putEntry(j); save(); closeSheet(); renderAll(); toast('Entry updated');
@@ -2286,10 +2287,13 @@ function renderArchiveProgress(){
   const el=$('archiveProgress'); if(!el) return;
   if(!ARCHIVE){
     const q=DB.journal.filter(j=>j.status==='queued').length;
-    const errs=DB.journal.filter(j=>j.status==='error').length;
+    const errs=DB.journal.filter(j=>j.status==='error' && !j.refused).length;
+    const refused=DB.journal.filter(j=>j.status==='error' && j.refused).length;
     let h='';
     if(q>0) h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Transcribing in the cloud</b><span style="font-size:13px;color:var(--muted)">'+q+' remaining</span></div>'+
       '<div style="font-size:12.5px;color:var(--muted);margin-top:6px">Runs on its own — about '+Math.ceil(q/4)+' min left. Pull down to refresh; we\u2019ll notify you when it\u2019s done.</div></div>';
+    if(refused>0)
+      h+='<div class="card"><b>'+refused+' page'+(refused===1?'':'s')+' need'+(refused===1?'s':'')+' a human</b><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Claude declined to transcribe '+(refused===1?'this page':'these pages')+' (it occasionally does this with certain content). Open the entry and use Edit text to type it in \u2014 or ask me in a Claude chat to transcribe it for you.</div></div>';
     if(errs>0 && typeof SUPA!=='undefined' && SUPA && SUPA.session)
       h+='<div class="card"><b>'+errs+' page'+(errs===1?'':'s')+' failed</b><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Send them to the cloud queue to retry.</div>'+
         '<button class="btn secondary" style="margin-top:10px" onclick="retryFailedCloud()">Retry '+errs+' in cloud</button></div>';
@@ -2313,7 +2317,7 @@ function renderArchiveProgress(){
 }
 async function retryFailedCloud(){
   if(!SUPA||!SUPA.session){ toast('Log in first'); return; }
-  const errs=DB.journal.filter(j=>j.status==='error');
+  const errs=DB.journal.filter(j=>j.status==='error' && !j.refused);
   if(!errs.length){ toast('Nothing to retry'); return; }
   toast('Queuing '+errs.length+'…');
   for(const e of errs){
