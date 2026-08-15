@@ -648,7 +648,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.2</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.3</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2293,7 +2293,7 @@ function renderArchiveProgress(){
     if(q>0) h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Transcribing in the cloud</b><span style="font-size:13px;color:var(--muted)">'+q+' remaining</span></div>'+
       '<div style="font-size:12.5px;color:var(--muted);margin-top:6px">Runs on its own — about '+Math.ceil(q/4)+' min left. Pull down to refresh; we\u2019ll notify you when it\u2019s done.</div></div>';
     if(refused>0)
-      h+='<div class="card"><b>'+refused+' page'+(refused===1?'':'s')+' need'+(refused===1?'s':'')+' a human</b><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Claude declined to transcribe '+(refused===1?'this page':'these pages')+' (it occasionally does this with certain content). Open the entry and use Edit text to type it in \u2014 or ask me in a Claude chat to transcribe it for you.</div></div>';
+      h+='<div class="card" onclick="openFirstRefused()" style="cursor:pointer"><b>'+refused+' page'+(refused===1?'':'s')+' need'+(refused===1?'s':'')+' a human</b><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Claude declined to transcribe '+(refused===1?'this page':'these pages')+' (it occasionally does this with certain content). Open the entry and use Edit text to type it in \u2014 or ask me in a Claude chat to transcribe it for you.</div></div>';
     if(errs>0 && typeof SUPA!=='undefined' && SUPA && SUPA.session)
       h+='<div class="card"><b>'+errs+' page'+(errs===1?'':'s')+' failed</b><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Send them to the cloud queue to retry.</div>'+
         '<button class="btn secondary" style="margin-top:10px" onclick="retryFailedCloud()">Retry '+errs+' in cloud</button></div>';
@@ -2315,6 +2315,7 @@ function renderArchiveProgress(){
     (ARCHIVE.running?'<button class="btn secondary" style="margin:0" onclick="pauseArchive()">Pause</button>':'<button class="btn" style="margin:0" onclick="resumeArchive()">Resume</button>')+
     '<button class="btn danger" style="margin:0;padding:13px" onclick="cancelArchive()">Stop</button></div></div>';
 }
+function openFirstRefused(){ const j=DB.journal.find(x=>x.status==='error'&&x.refused); if(j) openEntry(j.id); }
 async function retryFailedCloud(){
   if(!SUPA||!SUPA.session){ toast('Log in first'); return; }
   const errs=DB.journal.filter(j=>j.status==='error' && !j.refused);
