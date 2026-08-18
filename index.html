@@ -648,7 +648,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.3</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.4</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2972,8 +2972,11 @@ async function syncPush(){
   }catch(e){ console.error('sync push', e); }
   _syncing=false;
 }
+let _lastPull=0;
 async function syncPull(force){
   if(!SUPA||!SUPA.session) return;
+  if(!force && Date.now()-_lastPull < 900000) return;   // background pulls at most every 15 min
+  _lastPull=Date.now();
   try{
     const head=await supaRest('lifeos_data?select=updated_at',{});
     if(!head.ok) return;
@@ -3078,18 +3081,16 @@ async function photoSyncRun(){
   _photoSyncing=true; renderAcct();
   try{
     const local=await localPhotoIds();
-    let up=0, down=0, upFail=0;
+    let up=0, upFail=0;
     for(const e of DB.journal.slice()){
       if(!SUPA || !SUPA.session) break;
       if(local.has(e.id) && !e.psync){
         if(await uploadPhoto(e.id)){ e.psync=true; up++; await putEntry(e); if(up%20===0){ save(); renderAcct(); } }
         else { upFail++; if(upFail>=3) break; }
-      } else if(!local.has(e.id) && e.psync){
-        if(await downloadPhoto(e.id)) down++;
       }
     }
     if(up){ save(); }
-    if(down){ renderJournal(); renderToday(); }
+
   }catch(err){ console.error('photo sync', err); }
   _photoSyncing=false; renderAcct();
 }
