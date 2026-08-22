@@ -484,6 +484,24 @@ nav.tabbar {
 .notice { font-size: 12.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
 .notice a { color: var(--accent); }
 
+/* ---- 12 week year ---- */
+.twy-strip{display:flex;gap:5px;margin:12px 0 4px}
+.twy-wk{flex:1;height:26px;border-radius:7px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:650;color:var(--muted)}
+.twy-wk.hit{background:var(--good);border-color:var(--good);color:#fff}
+.twy-wk.miss{background:var(--warning);border-color:var(--warning);color:#fff}
+.twy-wk.low{background:var(--serious);border-color:var(--serious);color:#fff}
+.twy-wk.cur{outline:2px solid var(--accent);outline-offset:1px}
+.tac{display:flex;align-items:center;gap:11px;padding:11px 2px;border-bottom:1px solid var(--hairline);cursor:pointer;-webkit-user-select:none;user-select:none}
+.tac:last-child{border-bottom:0}
+.tac .tk{width:24px;height:24px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto}
+.tac.hit .tk{background:var(--good);color:#fff}
+.tac .tl{flex:1;min-width:0}
+.tac .tl b{font-size:14.5px;display:block}
+.tac .tl span{font-size:12px;color:var(--muted)}
+.tac .tc{font-size:14px;font-weight:700;color:var(--muted);background:var(--surface-2);border-radius:999px;padding:5px 11px;flex:0 0 auto}
+.tac.hit .tc{background:var(--good);color:#fff}
+.twy-score{display:flex;align-items:baseline;justify-content:space-between;margin-top:6px}
+.twy-score b{font-family:var(--serif);font-size:26px}
 /* ---- 52 memories ---- */
 .mem-chiprow{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .mem-chiprow::-webkit-scrollbar{display:none}
@@ -648,7 +666,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.4</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.5</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -667,8 +685,8 @@ nav.tabbar {
 
     <!-- ============ GOALS (under Life) ============ -->
     <section class="view" id="view-goals">
-      <div class="backrow" onclick="backHome()">&lsaquo; Back</div>
-      <div class="section-head"><h2>Life goals</h2><button class="action" id="goalAdd">+ Add</button></div>
+      <div id="twyBody"></div>
+      <div class="section-head" style="margin-top:22px"><h2>Life goals</h2><button class="action" id="goalAdd">+ Add</button></div>
       <div id="goalList"></div>
     </section>
 
@@ -689,6 +707,9 @@ nav.tabbar {
     <button class="tab" data-view="journal">
       <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4.5A1.5 1.5 0 0 1 6.5 3h11A1.5 1.5 0 0 1 19 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-15Z"/><path stroke-linecap="round" d="M9 7.5h6M9 11h6M9 14.5h3.5"/></svg>
       <span>Journal</span></button>
+    <button class="tab" data-view="goals">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 21V4m0 0c4.5-2.6 7.5 2.6 12 0v9c-4.5 2.6-7.5-2.6-12 0"/></svg>
+      <span>Goals</span></button>
     <button class="tab" data-view="insights">
       <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.5 13.5h3l2.2-6.5 3.6 11 2.4-7 1.6 2.5h4.2"/></svg>
       <span>Insights</span></button>
@@ -746,6 +767,21 @@ catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
 const save = () => { const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); if (window._syncDirty) window._syncDirty(); };
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[];
+if(!DB.twy || DB.twy.id!=='fall2026'){
+  DB.twy={ id:'fall2026', name:'Fall 2026', start:'2026-09-07', mt:Date.now(), weeks:(DB.twy&&DB.twy.weeks)||{},
+    tactics:[
+      {k:'A',label:'Annalise gym',sub:'Mon/Wed/Fri 5am',t:3},
+      {k:'B',label:'Ben gym',sub:'Tue/Thu 5am',t:2},
+      {k:'C',label:'Dinner cooked at home',sub:'5 nights',t:5},
+      {k:'D',label:'Meal prep session',sub:'Sunday',t:1},
+      {k:'E',label:'Date night',sub:'',t:1},
+      {k:'F',label:'Sunday sync + weekly review',sub:'15 min',t:1},
+      {k:'G',label:'Appreciation, spoken',sub:'daily',t:7},
+      {k:'H',label:'Friend call or hangout',sub:'logged in Friends',t:1},
+      {k:'I',label:'Meditate',sub:'daily',t:7},
+      {k:'J',label:'No alcohol',sub:'zero, all twelve weeks',t:1}
+    ] };
+}
 if(!DB.settings.anniv) DB.settings.anniv='08-06';
 
 // IndexedDB for photos
@@ -788,7 +824,7 @@ $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) clo
 
 // ---------- navigation ----------
 const VIEWS = { today:'Today', friends:'Friends', person:'', journal:'Journal', memories:'52 Memories', insights:'Insights', schedule:'Schedule', places:'Places', health:'Health', goals:'Goals', review:'Weekly Review', settings:'Settings' };
-const TAB_OF = { today:'today', schedule:'today', places:'today', goals:'today', settings:'today', friends:'friends', person:'friends', journal:'journal', memories:'journal', insights:'insights', health:'insights', review:'insights' };
+const TAB_OF = { today:'today', schedule:'today', places:'today', goals:'goals', settings:'today', friends:'friends', person:'friends', journal:'journal', memories:'journal', insights:'insights', health:'insights', review:'insights' };
 let currentView = 'today';
 let currentPersonId = null;
 const FOCUS_APPS = { journal:{title:'Journal', tab:'journal'}, friends:{title:'Friends', tab:'friends'}, insights:{title:'Insights', tab:'insights'} };
@@ -2651,7 +2687,74 @@ function goalInsights(){ const out=[]; (DB.goals||[]).forEach(g=>{ const p=goalP
   else if(m.cls==='low') out.push({score:54,tone:'watch',text:'“'+g.name+'” has gone quiet.',why:'No progress logged in a few weeks.'});
   else if(p>=0.85) out.push({score:50,tone:'info',text:'Almost there on “'+g.name+'.”',why:goalNext(g)});
 }); return out.slice(0,3); }
-function renderGoals(){
+function twyWeekOf(dstr){
+  const start=parseD(DB.twy.start), d=parseD(dstr);
+  return Math.floor((d-start)/(7*86400000))+1;
+}
+function twyPhase(n){ return n<=9?'Build':n<=11?'Kauai':'Hold the line'; }
+function twyWeekDates(n){
+  const s=parseD(DB.twy.start); s.setDate(s.getDate()+(n-1)*7);
+  const e=new Date(s); e.setDate(e.getDate()+6);
+  return [dstr(s), dstr(e)];
+}
+function twyWk(n){ DB.twy.weeks=DB.twy.weeks||{}; return DB.twy.weeks['w'+n]=DB.twy.weeks['w'+n]||{c:{},note:'',mt:0}; }
+function twyHits(n){
+  const w=(DB.twy.weeks||{})['w'+n]; if(!w) return 0;
+  return DB.twy.tactics.filter(t=>(w.c[t.k]||0)>=t.t).length;
+}
+function twyFriendTouches(n){
+  const [s,e]=twyWeekDates(n);
+  let c=0; (DB.friends||[]).forEach(f=>(f.log||[]).forEach(l=>{ if(l.date>=s&&l.date<=e&&(l.kind==='call'||l.kind==='inperson')) c++; }));
+  return c;
+}
+let TWYV={wk:null};
+function twyTap(k,dir){
+  const n=TWYV.wk; if(!n) return;
+  const w=twyWk(n); const t=DB.twy.tactics.find(x=>x.k===k);
+  w.c[k]=Math.max(0, Math.min(t.t===1?1:99, (w.c[k]||0)+dir));
+  w.mt=Date.now(); save(); renderTWY();
+  if((w.c[k]||0)===t.t) toast(t.k+' \u2014 hit \u2713');
+}
+function twySetNote(v){ const n=TWYV.wk; if(!n) return; const w=twyWk(n); w.note=v; w.mt=Date.now(); save(); }
+function renderTWY(){
+  const el=$('twyBody'); if(!el) return;
+  if(!DB.twy){ el.innerHTML=''; return; }
+  const T=DB.twy, today_=today();
+  const curW=twyWeekOf(today_);
+  if(TWYV.wk===null) TWYV.wk=Math.min(12, Math.max(1, curW));
+  const n=TWYV.wk, [ws,we]=twyWeekDates(n);
+  const w=(T.weeks||{})['w'+n]||{c:{},note:''};
+  const hits=twyHits(n), score=Math.round(hits/T.tactics.length*100);
+  const notStarted=curW<1, over=curW>12;
+  let strip='';
+  for(let i=1;i<=12;i++){
+    const h=twyHits(i), scored=Object.keys((T.weeks||{})['w'+i]?.c||{}).length>0;
+    let cls=''; if(i<curW || (scored&&i!==curW)) cls=h>=9?' hit':h>=7?' miss':scored||i<curW?' low':'';
+    if(i===n) cls+=' cur';
+    strip+='<span class="twy-wk'+cls+'" onclick="TWYV.wk='+i+';renderTWY()">'+i+'</span>';
+  }
+  const fr=twyFriendTouches(n);
+  let h='<div class="section-head"><h2>12 Week Year \u00b7 '+esc(T.name)+'</h2>'+
+    '<span style="font-size:12px;color:var(--muted)">'+(notStarted?('starts '+fmtDate(T.start)):over?'complete':twyPhase(curW))+'</span></div>';
+  h+='<div class="card">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:18px">Week '+n+' of 12</b>'+
+     '<span style="font-size:12.5px;color:var(--muted)">'+fmtDate(ws)+' \u2013 '+fmtDate(we)+' \u00b7 '+twyPhase(n)+'</span></div>';
+  h+='<div class="twy-strip">'+strip+'</div>';
+  if(n>=10&&n<=11) h+='<div class="notice" style="margin:10px 0 2px">Kauai week \u2014 protect G and H; 50% here is a success.</div>';
+  h+=T.tactics.map(t=>{
+    const c=w.c[t.k]||0, hit=c>=t.t;
+    const sub=t.k==='H'&&fr>c ? (fr+' logged in Friends this week \u2014 tap to count') : t.sub;
+    return '<div class="tac'+(hit?' hit':'')+'" onclick="twyTap(\''+t.k+'\',1)" oncontextmenu="event.preventDefault();twyTap(\''+t.k+'\',-1)">'+
+      '<span class="tk">'+(hit?'\u2713':t.k)+'</span>'+
+      '<span class="tl"><b>'+esc(t.label)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</span>'+
+      '<span class="tc" onclick="event.stopPropagation();twyTap(\''+t.k+'\',-1)">'+c+'/'+t.t+'</span></div>';
+  }).join('');
+  h+='<div class="twy-score"><span style="font-size:12.5px;color:var(--muted)">'+hits+' of '+T.tactics.length+' tactics hit \u00b7 target 85%</span><b style="color:'+(score>=85?'var(--good)':score>=70?'var(--warning)':'var(--ink)')+'">'+score+'%</b></div>';
+  h+='<div class="field" style="margin-top:10px"><input placeholder="What happened this week\u2026" value="'+esc(w.note||'')+'" onchange="twySetNote(this.value)"></div>';
+  h+='</div>';
+  el.innerHTML=h;
+}
+function renderGoals(){ renderTWY();
   const el=$('goalList'); if(!el) return; const gs=DB.goals||[];
   if(!gs.length){ el.innerHTML='<div class="card"><b>No goals yet.</b><div style="font-size:14px;color:var(--ink-2);margin-top:4px;line-height:1.55">Set a life goal — a number to move (books read, pounds, dollars saved, hours practiced) or a project with milestones. LifeOS tracks momentum and nudges you toward the next step.</div><button class="btn" style="margin-top:14px" onclick="editGoal(\'\')">Add your first goal</button></div>'; return; }
   el.innerHTML=gs.map(g=>{ const p=goalPct(g), m=goalMomentum(g);
@@ -2957,6 +3060,10 @@ function mergeRemote(db){
   DB.settings=Object.assign({}, db.settings||{}, DB.settings||{});
   if(db.places && !DB.places) DB.places=db.places;
   if(db.briefLine && (!DB.briefLine || (db.briefLine.date||'')>(DB.briefLine.date||''))) DB.briefLine=db.briefLine;
+  if(db.twy && DB.twy && db.twy.id===DB.twy.id){
+    const rw=db.twy.weeks||{}; DB.twy.weeks=DB.twy.weeks||{};
+    for(const k in rw){ if(!DB.twy.weeks[k] || (rw[k].mt||0)>(DB.twy.weeks[k].mt||0)) DB.twy.weeks[k]=rw[k]; }
+  } else if(db.twy && !DB.twy) DB.twy=db.twy;
   DB.tomb=tomb;
 }
 let _syncTimer=null, _syncing=false;
