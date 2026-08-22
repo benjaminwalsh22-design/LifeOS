@@ -666,7 +666,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.5</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.6</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -768,7 +768,7 @@ const save = () => { const o = Object.assign({}, DB); delete o.journal; store.se
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[];
 if(!DB.twy || DB.twy.id!=='fall2026'){
-  DB.twy={ id:'fall2026', name:'Fall 2026', start:'2026-09-07', mt:Date.now(), weeks:(DB.twy&&DB.twy.weeks)||{},
+  DB.twy={ id:'fall2026', name:'Fall 2026', start:'2026-08-24', mt:Date.now(), weeks:(DB.twy&&DB.twy.weeks)||{},
     tactics:[
       {k:'A',label:'Annalise gym',sub:'Mon/Wed/Fri 5am',t:3},
       {k:'B',label:'Ben gym',sub:'Tue/Thu 5am',t:2},
@@ -778,9 +778,14 @@ if(!DB.twy || DB.twy.id!=='fall2026'){
       {k:'F',label:'Sunday sync + weekly review',sub:'15 min',t:1},
       {k:'G',label:'Appreciation, spoken',sub:'daily',t:7},
       {k:'H',label:'Friend call or hangout',sub:'logged in Friends',t:1},
-      {k:'I',label:'Meditate',sub:'daily',t:7},
+      {k:'I',label:'Meditate',sub:'daily \u00b7 8:30\u20138:45am',t:7},
       {k:'J',label:'No alcohol',sub:'zero, all twelve weeks',t:1}
     ] };
+}
+if(DB.twy && DB.twy.id==='fall2026' && DB.twy.start!=='2026-08-24'){
+  DB.twy.start='2026-08-24'; DB.twy.mt=Date.now();
+  const ti=DB.twy.tactics.find(t=>t.k==='I'); if(ti) ti.sub='daily \u00b7 8:30\u20138:45am';
+  try{ save(); }catch(e){}
 }
 if(!DB.settings.anniv) DB.settings.anniv='08-06';
 
@@ -2691,7 +2696,7 @@ function twyWeekOf(dstr){
   const start=parseD(DB.twy.start), d=parseD(dstr);
   return Math.floor((d-start)/(7*86400000))+1;
 }
-function twyPhase(n){ return n<=9?'Build':n<=11?'Kauai':'Hold the line'; }
+function twyPhase(n){ return n<=11?'Build':'Sprint finish'; }
 function twyWeekDates(n){
   const s=parseD(DB.twy.start); s.setDate(s.getDate()+(n-1)*7);
   const e=new Date(s); e.setDate(e.getDate()+6);
@@ -2740,7 +2745,7 @@ function renderTWY(){
   h+='<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:18px">Week '+n+' of 12</b>'+
      '<span style="font-size:12.5px;color:var(--muted)">'+fmtDate(ws)+' \u2013 '+fmtDate(we)+' \u00b7 '+twyPhase(n)+'</span></div>';
   h+='<div class="twy-strip">'+strip+'</div>';
-  if(n>=10&&n<=11) h+='<div class="notice" style="margin:10px 0 2px">Kauai week \u2014 protect G and H; 50% here is a success.</div>';
+  if(n===12) h+='<div class="notice" style="margin:10px 0 2px">Sprint finish \u2014 work ends Thu Nov 12, Kauai on the 13th. The trip is the reward.</div>';
   h+=T.tactics.map(t=>{
     const c=w.c[t.k]||0, hit=c>=t.t;
     const sub=t.k==='H'&&fr>c ? (fr+' logged in Friends this week \u2014 tap to count') : t.sub;
