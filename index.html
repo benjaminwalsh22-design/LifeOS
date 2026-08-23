@@ -666,7 +666,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.6</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.7</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -768,23 +768,27 @@ const save = () => { const o = Object.assign({}, DB); delete o.journal; store.se
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[];
 if(!DB.twy || DB.twy.id!=='fall2026'){
-  DB.twy={ id:'fall2026', name:'Fall 2026', start:'2026-08-24', mt:Date.now(), weeks:(DB.twy&&DB.twy.weeks)||{},
+  DB.twy={ id:'fall2026', name:'Fall 2026', rev:3, start:'2026-08-24', mt:Date.now(), weeks:(DB.twy&&DB.twy.weeks)||{},
     tactics:[
       {k:'A',label:'Annalise gym',sub:'Mon/Wed/Fri 5am',t:3},
       {k:'B',label:'Ben gym',sub:'Tue/Thu 5am',t:2},
-      {k:'C',label:'Dinner cooked at home',sub:'5 nights',t:5},
-      {k:'D',label:'Meal prep session',sub:'Sunday',t:1},
-      {k:'E',label:'Date night',sub:'',t:1},
-      {k:'F',label:'Sunday sync + weekly review',sub:'15 min',t:1},
+      {k:'C',label:'Protein + fiber target hit',sub:'150g / 30g \u00b7 5 days',t:5},
+      {k:'D',label:'Added sugar under cap',sub:'under 25g \u00b7 5 days',t:5},
+      {k:'E',label:'Date night',sub:'Friday or Saturday',t:1},
+      {k:'F',label:'Sunday sync + weekly review',sub:'15 min \u00b7 before 90DF',t:1},
       {k:'G',label:'Appreciation, spoken',sub:'daily',t:7},
       {k:'H',label:'Friend call or hangout',sub:'logged in Friends',t:1},
       {k:'I',label:'Meditate',sub:'daily \u00b7 8:30\u20138:45am',t:7},
       {k:'J',label:'No alcohol',sub:'zero, all twelve weeks',t:1}
     ] };
 }
-if(DB.twy && DB.twy.id==='fall2026' && DB.twy.start!=='2026-08-24'){
-  DB.twy.start='2026-08-24'; DB.twy.mt=Date.now();
-  const ti=DB.twy.tactics.find(t=>t.k==='I'); if(ti) ti.sub='daily \u00b7 8:30\u20138:45am';
+if(DB.twy && DB.twy.id==='fall2026' && (DB.twy.rev||1)<3){
+  DB.twy.start='2026-08-24'; DB.twy.rev=3; DB.twy.mt=Date.now();
+  const T={ I:{sub:'daily \u00b7 8:30\u20138:45am'},
+    C:{label:'Protein + fiber target hit',sub:'150g / 30g \u00b7 5 days',t:5},
+    D:{label:'Added sugar under cap',sub:'under 25g \u00b7 5 days',t:5},
+    E:{sub:'Friday or Saturday'}, F:{sub:'15 min \u00b7 before 90DF'} };
+  DB.twy.tactics.forEach(t=>{ if(T[t.k]) Object.assign(t, T[t.k]); });
   try{ save(); }catch(e){}
 }
 if(!DB.settings.anniv) DB.settings.anniv='08-06';
