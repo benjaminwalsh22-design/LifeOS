@@ -666,7 +666,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.7</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.8</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1361,7 +1361,7 @@ function renderPerson(){
     '<div class="pd-name">'+esc(p.name)+'</div>'+(p.relationship?'<div class="pd-rel">'+esc(p.relationship)+'</div>':'')+
     '<div class="pd-status">'+esc(sl.join(' · '))+'</div></div>';
   h+='<div class="pd-actions"><button onclick="logChat(\''+p.id+'\')">Log a chat</button><button onclick="markContacted(\''+p.id+'\')">Contacted today</button></div>';
-  h+='<div class="ck-label">Agent</div><div class="pd-ai"><button onclick="draftMessage(\''+p.id+'\')">Draft a message</button><button onclick="whatToTalk(\''+p.id+'\')">What to talk about</button><button onclick="giftIdeas(\''+p.id+'\')">Gift ideas</button></div>';
+  h+='<div class="ck-label">Agent</div><div class="pd-ai"><button onclick="draftMessage(\''+p.id+'\')">Draft a message</button><button onclick="whatToTalk(\''+p.id+'\')">What to talk about</button><button onclick="textThem(\''+p.id+'\')">Text them something</button><button onclick="giftIdeas(\''+p.id+'\')">Gift ideas</button></div>';
   if(!K) h+='<div class="notice">Add an Anthropic API key in Settings to switch the agent on.</div>';
   h+='<div id="agentOut"></div>';
   h+='<div class="section-head" style="margin-top:20px"><h2>Upcoming</h2><button class="action" onclick="addPersonEvent(\''+p.id+'\')">+ Date</button></div>';
@@ -1370,7 +1370,7 @@ function renderPerson(){
   up.sort((a,b)=>a.days-b.days);
   h+= up.length? '<div class="card" style="padding:6px 16px">'+up.map(u=>'<div class="kv"><span class="k">'+esc(u.title)+(u.eid?' <span style="color:var(--faint);cursor:pointer" onclick="delPersonEvent(\''+p.id+'\',\''+u.eid+'\')">✕</span>':'')+'</span><span class="v">'+esc(u.label)+'</span></div>').join('')+'</div>' : '<div class="empty">No dates yet — add anniversaries, kids’ birthdays, work milestones.</div>';
   h+='<div class="section-head" style="margin-top:20px"><h2>About</h2><button class="action" onclick="editFriend(\''+p.id+'\')">Edit</button></div>';
-  const ab=[['Family',p.family],['Favorites & interests',p.favorites],['Sports team',p.team],['How we met',p.how],['Gift ideas',p.giftIdeas],['Notes',p.notes],['Stay in touch',p.cadence?('every '+p.cadence+' days'):'']].filter(a=>a[1]);
+  const ab=[['Family',p.family],['Favorites & interests',p.favorites],['Sports team',p.team],['How we met',p.how],['Gift ideas',p.giftIdeas],['Notes',p.notes],['Stay in touch',p.stay||(p.cadence?('every '+p.cadence+' days'):'')]].filter(a=>a[1]);
   h+= ab.length? '<div class="card" style="padding:6px 16px">'+ab.map(a=>'<div class="kv"><span class="k">'+esc(a[0])+'</span><span class="v">'+esc(a[1])+'</span></div>').join('')+'</div>' : '<div class="empty">Tap Edit to add family, interests, notes.</div>';
   h+=rhythmHTML(p);
   const jm=journalMentions(p.name,5);
@@ -1450,14 +1450,18 @@ async function askClaude(system, user, max){
   const d=await res.json(); return (d.content||[]).map(c=>c.text||'').join('').trim();
 }
 function journalMentions(name, limit){
-  const first=(name||'').trim().split(/\s+/)[0]; if(!first || first.length<3) return [];
-  let re; try{ re=new RegExp('\\b'+first.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i'); }catch(e){ return []; }
+  const f=(DB.friends||[]).find(x=>(x.name||'').toLowerCase()===String(name||'').toLowerCase());
+  const re=f?mentionRe(f):(function(){ const first=(name||'').trim().split(/\s+/)[0]; if(!first||first.length<3) return null;
+    try{ return new RegExp('\\b'+first.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i'); }catch(e){ return null; } })();
+  if(!re) return [];
   return (DB.journal||[]).filter(j=> re.test((j.transcription||'')+' '+(j.summary||'')+' '+(j.note||'')))
     .sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0, limit||3);
 }
 function mentionSnippet(j, name){
-  const first=(name||'').trim().split(/\s+/)[0]; const text=(j.transcription||j.summary||j.note||'');
-  const idx=text.toLowerCase().indexOf(first.toLowerCase());
+  const f=(DB.friends||[]).find(x=>(x.name||'').toLowerCase()===String(name||'').toLowerCase());
+  const toks=f?mentionTokens(f):[(name||'').trim().split(/\s+/)[0]];
+  const text=(j.transcription||j.summary||j.note||'');
+  let idx=-1; for(const tk of toks){ const i=text.toLowerCase().indexOf(String(tk).toLowerCase()); if(i>=0 && (idx<0||i<idx)) idx=i; }
   if(idx<0) return (j.summary||text).slice(0,120);
   const start=Math.max(0, idx-40); return (start>0?'…':'')+text.slice(start, idx+90).replace(/\s+/g,' ').trim()+'…';
 }
@@ -1519,6 +1523,24 @@ async function whatToTalk(id){
   const sys='You help someone reconnect with a friend. From the context, suggest 3-4 specific, natural things to ask about or bring up next time they talk. Reference their real life. Warm, brief. Each on its own line starting with "– ".';
   try{ const r=await askClaude(sys, 'Friend context:\n'+personContext(p), 450); agentResult('What to talk about', '<p style="white-space:pre-wrap">'+esc(r)+'</p>'); }
   catch(e){ agentResult('What to talk about', '<div class="notice">Couldn’t reach Claude just now.</div>'); }
+}
+async function textThem(id){
+  const p=DB.friends.find(x=>x.id===id); if(!p) return;
+  if(!DB.settings.apiKey){ toast('Add an API key in Settings'); return; }
+  agentBusy('Checking the news for '+p.name.split(/\s+/)[0]+'\u2026');
+  const sys='You find timely reasons to text a friend TODAY. Search the web for current news about their sports team(s), interests, or hobbies from the context. Then give 2-3 openers, each: the hook in one short sentence, then a ready-to-send casual text in quotes. Only use genuinely current items you found; if nothing timely, say so and give one evergreen opener from their life instead. Each starts with "\u2013 ".';
+  try{
+    const key=DB.settings.apiKey;
+    const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
+      headers:{ 'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+      body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:900, system:sys,
+        tools:[{ type:'web_search_20250305', name:'web_search', max_uses:3 }],
+        messages:[{ role:'user', content:'Today is '+today()+'. Friend context:\n'+personContext(p) }] }) });
+    if(!res.ok) throw new Error('API '+res.status);
+    const d=await res.json();
+    const r=(d.content||[]).filter(c=>c.type==='text').map(c=>c.text||'').join('').trim();
+    agentResult('Reasons to text '+esc(p.name.split(/\s+/)[0]), '<p style="white-space:pre-wrap">'+esc(r)+'</p>');
+  }catch(e){ agentResult('Reasons to text', '<div class="notice">Couldn\u2019t reach Claude just now.</div>'); }
 }
 async function giftIdeas(id){
   const p=DB.friends.find(x=>x.id===id); if(!p) return;
@@ -1738,11 +1760,17 @@ function autoTagSweep(){
   if(added){ save(); }
   return added;
 }
+function mentionTokens(f){
+  const a=(Array.isArray(f.aka)&&f.aka.length)?f.aka:[(f.name||'').trim().split(/\s+/)[0]];
+  return a.filter(t=>t&&t.length>=3);
+}
+function mentionRe(f){
+  const toks=mentionTokens(f); if(!toks.length) return null;
+  try{ return new RegExp('\\b('+toks.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')\\b','i'); }catch(e){ return null; }
+}
 function mentionedFriends(j){
   const text=((j.transcription||'')+' '+(j.summary||'')+' '+(j.note||''));
-  return (DB.friends||[]).filter(f=>{ const first=(f.name||'').trim().split(/\s+/)[0]; if(!first || first.length<3) return false;
-    let re; try{ re=new RegExp('\\b'+first.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i'); }catch(e){ return false; }
-    return re.test(text); });
+  return (DB.friends||[]).filter(f=>{ const re=mentionRe(f); return re && re.test(text); });
 }
 function loggedFromJournal(p, jid){ return (p.log||[]).some(l=>l.srcJournal===jid); }
 function logJournalToPerson(pid, jid){
