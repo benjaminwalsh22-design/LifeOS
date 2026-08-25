@@ -666,7 +666,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v6.9</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.0</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -768,9 +768,9 @@ const save = () => { const o = Object.assign({}, DB); delete o.journal; store.se
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[];
 if(!DB.twy || DB.twy.id!=='fall2026'){
-  DB.twy={ id:'fall2026', name:'Fall 2026', rev:4, start:'2026-08-24', mt:Date.now(), weeks:(DB.twy&&DB.twy.weeks)||{},
+  DB.twy={ id:'fall2026', name:'Fall 2026', rev:5, start:'2026-08-24', mt:Date.now(), weeks:(DB.twy&&DB.twy.weeks)||{},
     tactics:[
-      {k:'A',label:'Lights out by 10pm',sub:'phone out of the room \u00b7 5 nights',t:5},
+      {k:'A',label:'Sleep 7h+',sub:'Fitbit time asleep \u00b7 5 of 7 \u00b7 auto from Health',t:5},
       {k:'B',label:'Ben gym',sub:'Tue/Thu 5am',t:2},
       {k:'C',label:'Protein + fiber target hit',sub:'Ben 150g \u00b7 Annalise 110g / 30g \u00b7 5 days',t:5},
       {k:'D',label:'Added sugar under cap',sub:'under 25g \u00b7 5 days',t:5},
@@ -782,9 +782,9 @@ if(!DB.twy || DB.twy.id!=='fall2026'){
       {k:'J',label:'No alcohol',sub:'zero, all twelve weeks',t:1}
     ] };
 }
-if(DB.twy && DB.twy.id==='fall2026' && (DB.twy.rev||1)<4){
-  DB.twy.start='2026-08-24'; DB.twy.rev=4; DB.twy.mt=Date.now();
-  const T={ A:{label:'Lights out by 10pm',sub:'phone out of the room \u00b7 5 nights',t:5},
+if(DB.twy && DB.twy.id==='fall2026' && (DB.twy.rev||1)<5){
+  DB.twy.start='2026-08-24'; DB.twy.rev=5; DB.twy.mt=Date.now();
+  const T={ A:{label:'Sleep 7h+',sub:'Fitbit time asleep \u00b7 5 of 7 \u00b7 auto from Health',t:5},
     C:{label:'Protein + fiber target hit',sub:'Ben 150g \u00b7 Annalise 110g / 30g \u00b7 5 days',t:5},
     D:{label:'Added sugar under cap',sub:'under 25g \u00b7 5 days',t:5},
     E:{sub:'Friday or Saturday'}, F:{sub:'15 min \u00b7 before 90DF'},
@@ -2770,6 +2770,19 @@ function renderTWY(){
     let cls=''; if(i<curW || (scored&&i!==curW)) cls=h>=8?' hit':h>=7?' miss':scored||i<curW?' low':'';
     if(i===n) cls+=' cur';
     strip+='<span class="twy-wk'+cls+'" onclick="TWYV.wk='+i+';renderTWY()">'+i+'</span>';
+  }
+  if(!notStarted && n<=Math.max(1,curW)){
+    const wk=twyWk(n); const wd=twyWeekDates(n);
+    let cnt=0,sum=0,days=0;
+    for(let d=parseD(wd[0]); dstr(d)<=wd[1]; d.setDate(d.getDate()+1)){
+      const s=(DB.stats||{})[dstr(d)]; const v=s&&Number(s.sleep);
+      if(v){ days++; sum+=v; if(v>=7) cnt++; }
+    }
+    let dirty=false;
+    if(cnt>(wk.c.A||0)){ wk.c.A=cnt; dirty=true; }
+    const avg=days?Math.round(sum/days*10)/10:null;
+    if(avg!=null && wk.slp!==avg){ wk.slp=avg; dirty=true; }
+    if(dirty){ wk.mt=Date.now(); save(); }
   }
   const fr=twyFriendTouches(n);
   let h='<div class="section-head"><h2>12 Week Year \u00b7 '+esc(T.name)+'</h2>'+
