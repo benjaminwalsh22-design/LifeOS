@@ -484,6 +484,17 @@ nav.tabbar {
 .notice { font-size: 12.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
 .notice a { color: var(--accent); }
 
+/* ---- macros ---- */
+.mac-row{display:flex;align-items:center;gap:10px;margin-top:9px}
+.mac-row .ml{width:64px;font-size:12.5px;font-weight:650;color:var(--muted)}
+.mac-row .mb{flex:1;height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.mac-row .mb i{display:block;height:100%;border-radius:999px;background:var(--accent)}
+.mac-row .mb i.ok{background:var(--good)}
+.mac-row .mb i.bad{background:var(--serious)}
+.mac-row .mv{width:84px;text-align:right;font-size:12.5px;font-weight:650}
+.meal-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border-radius:999px;padding:5px 10px;font-size:12px;margin:6px 6px 0 0}
+.meal-chip b{font-weight:650}
+.meal-chip span{color:var(--serious);cursor:pointer;font-weight:700}
 /* ---- 12 week year ---- */
 .twy-strip{display:flex;gap:5px;margin:12px 0 4px}
 .twy-wk{flex:1;height:26px;border-radius:7px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:650;color:var(--muted)}
@@ -545,6 +556,8 @@ nav.tabbar {
         <div class="sub" id="greetSub"></div>
       </div>
       <div id="briefCard"></div>
+      <div id="macroCard"></div>
+      <input type="file" id="mealInput" accept="image/*" capture="environment" hidden>
       <div id="todayDigest"></div>
       <div id="onThisDay"></div>
       <div class="section-head"><h2>Noticed</h2></div>
@@ -666,7 +679,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.0</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.1</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -767,6 +780,8 @@ catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
 const save = () => { const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); if (window._syncDirty) window._syncDirty(); };
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[];
+DB.mealLog=DB.mealLog||{};
+if(!DB.settings.macros) DB.settings.macros={p:150,f:30,s:25};
 if(!DB.twy || DB.twy.id!=='fall2026'){
   DB.twy={ id:'fall2026', name:'Fall 2026', rev:5, start:'2026-08-24', mt:Date.now(), weeks:(DB.twy&&DB.twy.weeks)||{},
     tactics:[
@@ -986,11 +1001,11 @@ function healthInsights(){
 }
 function ingestHealth(){
   const hash=(location.hash||'').replace(/^#/,'');
-  if(!/(?:^|&)(?:h|sleep|steps|energy|rhr|hrv)=/.test(hash)) return;
+  if(!/(?:^|&)(?:h|sleep|steps|energy|rhr|hrv|protein|fiber|sugar|kcal)=/.test(hash)) return;
   const q=new URLSearchParams(hash);
   const date=(q.get('date')&&/^\d{4}-\d{2}-\d{2}$/.test(q.get('date')))?q.get('date'):today();
   const st=DB.stats[date]||(DB.stats[date]={}); const got=[];
-  ['sleep','steps','energy','rhr','hrv'].forEach(k => { const v=q.get(k);
+  ['sleep','steps','energy','rhr','hrv','protein','fiber','sugar','kcal'].forEach(k => { const v=q.get(k);
     if(v!=null && v!=='' && !isNaN(v)){ st[k]=Number(v); got.push(k); } });
   if(got.length){ save();
     try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; }
@@ -1034,7 +1049,7 @@ async function syncHealthNow(silent){
     days.forEach(d=>{ if(!d||typeof d!=='object') return;
       const date=(d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date)) ? d.date : today();
       const st=DB.stats[date]||(DB.stats[date]={});
-      ['sleep','steps','energy','rhr','hrv'].forEach(k=>{ if(d[k]!=null && !isNaN(d[k])){ st[k]=Number(d[k]); n++; } });
+      ['sleep','steps','energy','rhr','hrv','protein','fiber','sugar','kcal'].forEach(k=>{ if(d[k]!=null && !isNaN(d[k])){ st[k]=Number(d[k]); n++; } });
     });
     DB.settings.healthLastSync=Date.now(); save(); renderAll(); updateSyncStatus();
     if(!silent) toast(n?('Synced '+n+' metric'+(n===1?'':'s')):'Connected — no new numbers');
@@ -1862,7 +1877,7 @@ async function importData(e){
       const ids = new Set(merged[k].map(x => x.id));
       (db[k] || []).forEach(x => { if (!ids.has(x.id)) merged[k].push(x); });
     });
-    ['stats','checkins','placeNames','placeGeo'].forEach(k =>
+    ['stats','checkins','placeNames','placeGeo','mealLog'].forEach(k =>
       merged[k] = Object.assign({}, db[k] || {}, merged[k] || {}));
     merged.profile  = Object.assign({}, db.profile  || {}, merged.profile  || {});
     merged.settings = Object.assign({}, db.settings || {}, merged.settings || {});
@@ -2725,6 +2740,88 @@ function goalInsights(){ const out=[]; (DB.goals||[]).forEach(g=>{ const p=goalP
   else if(m.cls==='low') out.push({score:54,tone:'watch',text:'“'+g.name+'” has gone quiet.',why:'No progress logged in a few weeks.'});
   else if(p>=0.85) out.push({score:50,tone:'info',text:'Almost there on “'+g.name+'.”',why:goalNext(g)});
 }); return out.slice(0,3); }
+const MEAL_PROMPT='This is a photo of one meal (or a nutrition label / menu item). Estimate nutrition for the full visible portion. Return ONLY JSON: {"desc":"3-6 word name of the meal","calories":number,"protein_g":number,"fiber_g":number,"added_sugar_g":number}. added_sugar_g counts ADDED sugars only (not natural sugar in fruit, dairy, plain vegetables). Round to whole numbers. Estimate honestly; do not lowball.';
+function mealsToday(){ return (DB.mealLog||{})[today()]||[]; }
+function macroTotals(date){
+  const ms=(DB.mealLog||{})[date]||[];
+  const t={kcal:0,protein:0,fiber:0,sugar:0};
+  ms.forEach(m=>{ t.kcal+=m.kcal||0; t.protein+=m.p||0; t.fiber+=m.f||0; t.sugar+=m.s||0; });
+  return t;
+}
+function macroApply(date){
+  const t=macroTotals(date);
+  const st=DB.stats[date]||(DB.stats[date]={});
+  if(((DB.mealLog||{})[date]||[]).length){ st.kcal=t.kcal; st.protein=t.protein; st.fiber=t.fiber; st.sugar=t.sugar; }
+  save();
+}
+async function mealPicked(file){
+  toast('Reading your plate\u2026');
+  try{
+    const blob=await resizeToBlob(file,800,0.7);
+    const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
+    const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
+      headers:{ 'content-type':'application/json','x-api-key':DB.settings.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+      body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:300,
+        messages:[{ role:'user', content:[ { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } }, { type:'text', text:MEAL_PROMPT } ] }] }) });
+    if(!res.ok) throw new Error('API '+res.status);
+    const d=await res.json(); const txt=(d.content||[]).map(c=>c.text||'').join('');
+    const j=JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}')+1));
+    addMeal(j);
+  }catch(e){ console.error(e); toast('Couldn\u2019t read that one \u2014 try again or type it'); }
+}
+async function mealFromText(){
+  const t=$('mtText').value.trim(); if(!t){ toast('Describe the meal first'); return; }
+  closeSheet(); toast('Estimating\u2026');
+  try{
+    const r=await askClaude('Estimate nutrition for the described meal. Return ONLY JSON {"desc":"3-6 words","calories":n,"protein_g":n,"fiber_g":n,"added_sugar_g":n}. added_sugar_g = ADDED sugars only. Whole numbers. Honest, no lowballing.', t, 250);
+    const j=JSON.parse(r.slice(r.indexOf('{'), r.lastIndexOf('}')+1));
+    addMeal(j);
+  }catch(e){ toast('Couldn\u2019t estimate \u2014 try again'); }
+}
+function addMeal(j){
+  const d=today();
+  DB.mealLog[d]=DB.mealLog[d]||[];
+  DB.mealLog[d].push({ id:uid(), ts:Date.now(), desc:String(j.desc||'Meal').slice(0,60),
+    kcal:Math.max(0,Number(j.calories)||0), p:Math.max(0,Number(j.protein_g)||0),
+    f:Math.max(0,Number(j.fiber_g)||0), s:Math.max(0,Number(j.added_sugar_g)||0) });
+  macroApply(d); renderMacros(); renderTWY();
+  const t=macroTotals(d), M=DB.settings.macros;
+  toast('+'+(Number(j.protein_g)||0)+'g protein \u00b7 '+t.protein+'/'+M.p+'g today');
+}
+function delMeal(id){
+  const d=today();
+  DB.mealLog[d]=(DB.mealLog[d]||[]).filter(m=>m.id!==id);
+  macroApply(d); renderMacros(); renderTWY();
+}
+function logMealSheet(){
+  if(!DB.settings.apiKey){ toast('Add an API key in Settings first'); return; }
+  openSheet('<h3>Log a meal</h3>'+
+    '<button class="btn" onclick="closeSheet();$(\'mealInput\').click()">\ud83d\udcf7 Photo of the plate</button>'+
+    '<div class="field" style="margin-top:12px"><label>Or just describe it</label><textarea id="mtText" placeholder="Chipotle bowl, double chicken, no rice\u2026"></textarea></div>'+
+    '<button class="btn secondary" onclick="mealFromText()">Estimate from description</button>');
+}
+function renderMacros(){
+  const el=$('macroCard'); if(!el) return;
+  const M=DB.settings.macros||{p:150,f:30,s:25};
+  const t=macroTotals(today());
+  const ms=mealsToday();
+  const st=DB.stats[today()]||{};
+  const hasExt=!ms.length && (st.protein!=null);
+  const P=hasExt?st.protein:t.protein, F=hasExt?st.fiber||0:t.fiber, S=hasExt?st.sugar||0:t.sugar;
+  const bar=(v,tg,invert)=>{ const pct=Math.min(100,Math.round(v/tg*100));
+    const cls=invert ? (v<tg?'ok':'bad') : (v>=tg?'ok':'');
+    return '<span class="mb"><i class="'+cls+'" style="width:'+pct+'%"></i></span>'; };
+  let h='<div class="card">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:17px">Food today</b>'+
+     '<span style="font-size:12.5px;color:var(--muted)">'+((hasExt?st.kcal:t.kcal)||0)+' cal</span></div>';
+  h+='<div class="mac-row"><span class="ml">Protein</span>'+bar(P,M.p)+'<span class="mv">'+P+' / '+M.p+'g</span></div>';
+  h+='<div class="mac-row"><span class="ml">Fiber</span>'+bar(F,M.f)+'<span class="mv">'+F+' / '+M.f+'g</span></div>';
+  h+='<div class="mac-row"><span class="ml">Sugar</span>'+bar(S,M.s,true)+'<span class="mv">'+S+' / '+M.s+'g cap</span></div>';
+  if(ms.length) h+='<div style="margin-top:4px">'+ms.map(m=>'<span class="meal-chip"><b>'+esc(m.desc)+'</b> '+m.kcal+' cal <span onclick="delMeal(\''+m.id+'\')">\u00d7</span></span>').join('')+'</div>';
+  h+='<button class="btn" style="margin-top:14px" onclick="logMealSheet()">+ Log a meal</button>';
+  h+='</div>';
+  el.innerHTML=h;
+}
 function twyWeekOf(dstr){
   const start=parseD(DB.twy.start), d=parseD(dstr);
   return Math.floor((d-start)/(7*86400000))+1;
@@ -2773,13 +2870,21 @@ function renderTWY(){
   }
   if(!notStarted && n<=Math.max(1,curW)){
     const wk=twyWk(n); const wd=twyWeekDates(n);
-    let cnt=0,sum=0,days=0;
+    const M=DB.settings.macros||{p:150,f:30,s:25};
+    let cnt=0,sum=0,days=0,cC=0,cD=0;
     for(let d=parseD(wd[0]); dstr(d)<=wd[1]; d.setDate(d.getDate()+1)){
-      const s=(DB.stats||{})[dstr(d)]; const v=s&&Number(s.sleep);
+      const ds=dstr(d);
+      const s=(DB.stats||{})[ds]; const v=s&&Number(s.sleep);
       if(v){ days++; sum+=v; if(v>=7) cnt++; }
+      if(s && s.protein!=null){
+        if(Number(s.protein)>=M.p && Number(s.fiber||0)>=M.f) cC++;
+        if(Number(s.kcal||0)>0 && Number(s.sugar||0)<M.s) cD++;
+      }
     }
     let dirty=false;
     if(cnt>(wk.c.A||0)){ wk.c.A=cnt; dirty=true; }
+    if(cC>(wk.c.C||0)){ wk.c.C=cC; dirty=true; }
+    if(cD>(wk.c.D||0)){ wk.c.D=cD; dirty=true; }
     const avg=days?Math.round(sum/days*10)/10:null;
     if(avg!=null && wk.slp!==avg){ wk.slp=avg; dirty=true; }
     if(dirty){ wk.mt=Date.now(); save(); }
@@ -3262,6 +3367,7 @@ async function initSync(){
 $('schedAddEvent').addEventListener('click', () => editEvent(''));
 $('friendAdd').addEventListener('click', () => editFriend(''));
 $('goalAdd').addEventListener('click', () => editGoal(''));
+$('mealInput').addEventListener('change', e=>{ const f=e.target.files[0]; e.target.value=''; if(f) mealPicked(f); });
 $('jBulk').addEventListener('click', () => $('archiveInput').click());
 $('archiveInput').addEventListener('change', e => { const files = [...e.target.files]; e.target.value=''; if (files.length) handleArchiveFiles(files); });
 $('jSearch').addEventListener('input', e => { jState.q = e.target.value; renderJournalList(); });
@@ -3281,7 +3387,7 @@ $('tlInput').addEventListener('change', async e => {
     setTimeout(()=>lookupPlaceNames(), 1200);
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
-function renderAll(){ renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderMemories(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
+function renderAll(){ renderMacros(); renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderMemories(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if(SUPA && SUPA.session && SUPA.dirty) syncPush(); return; } if (!document.hidden){ renderAll();
   if(SUPA && SUPA.session) syncPull();
   if((DB.settings.healthSyncUrl||'').trim() && (!DB.settings.healthLastSync || Date.now()-DB.settings.healthLastSync>3e5)) syncHealthNow(true); } });
