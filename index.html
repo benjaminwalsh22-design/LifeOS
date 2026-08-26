@@ -679,7 +679,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.2</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.3</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2810,29 +2810,51 @@ function macroApply(date){
   if(((DB.mealLog||{})[date]||[]).length){ st.kcal=t.kcal; st.protein=t.protein; st.fiber=t.fiber; st.sugar=t.sugar; }
   save();
 }
+let _pendingMeal=null;
 async function mealPicked(file){
-  toast('Reading your plate\u2026');
-  try{
-    const blob=await resizeToBlob(file,800,0.7);
-    const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
-    const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
-      headers:{ 'content-type':'application/json','x-api-key':DB.settings.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
-      body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:300,
-        messages:[{ role:'user', content:[ { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } }, { type:'text', text:MEAL_PROMPT } ] }] }) });
-    if(!res.ok) throw new Error('API '+res.status);
-    const d=await res.json(); const txt=(d.content||[]).map(c=>c.text||'').join('');
-    const j=JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}')+1));
-    addMeal(j);
-  }catch(e){ console.error(e); toast('Couldn\u2019t read that one \u2014 try again or type it'); }
+  const keep=$('mtText')?$('mtText').value:'';
+  try{ _pendingMeal=await resizeToBlob(file,800,0.7); }
+  catch(e){ toast('Couldn\u2019t read that photo'); return; }
+  mealSheet(keep);
 }
-async function mealFromText(){
-  const t=$('mtText').value.trim(); if(!t){ toast('Describe the meal first'); return; }
-  closeSheet(); toast('Estimating\u2026');
+function mealSheet(text){
+  let h='<h3>Log a meal</h3>';
+  if(_pendingMeal){
+    h+='<img src="'+URL.createObjectURL(_pendingMeal)+'" class="detail-photo" style="max-height:30vh;object-fit:contain;background:var(--surface)">';
+    h+='<div class="field"><label>Anything the photo doesn\u2019t show? (optional)</label><textarea id="mtText" placeholder="Oat-milk latte, no syrup \u00b7 the bowl has quinoa under it\u2026">'+esc(text||'')+'</textarea></div>';
+    h+='<button class="btn" onclick="submitMeal()">Estimate &amp; log</button>';
+    h+='<button class="btn secondary" style="margin-top:10px" onclick="$(\'mealInput\').click()">Retake photo</button>';
+  } else {
+    h+='<button class="btn" onclick="$(\'mealInput\').click()">\ud83d\udcf7 Photo of the plate</button>';
+    h+='<div class="field" style="margin-top:12px"><label>Or just describe it</label><textarea id="mtText" placeholder="Chipotle bowl, double chicken, no rice\u2026">'+esc(text||'')+'</textarea></div>';
+    h+='<button class="btn secondary" onclick="submitMeal()">Estimate from description</button>';
+  }
+  openSheet(h);
+}
+async function submitMeal(){
+  const text=$('mtText')?$('mtText').value.trim():'';
+  const blob=_pendingMeal;
+  if(!blob && !text){ toast('Add a photo or describe the meal'); return; }
+  closeSheet(); _pendingMeal=null;
+  toast(blob?'Reading your plate\u2026':'Estimating\u2026');
   try{
-    const r=await askClaude('Estimate nutrition for the described meal. Return ONLY JSON {"desc":"3-6 words","calories":n,"protein_g":n,"fiber_g":n,"added_sugar_g":n}. added_sugar_g = ADDED sugars only. Whole numbers. Honest, no lowballing.', t, 250);
-    const j=JSON.parse(r.slice(r.indexOf('{'), r.lastIndexOf('}')+1));
+    let j;
+    if(blob){
+      const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
+      const prompt=MEAL_PROMPT+(text?('\n\nContext from the user (trust this over guesses from the image): '+text):'');
+      const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
+        headers:{ 'content-type':'application/json','x-api-key':DB.settings.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
+        body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:300,
+          messages:[{ role:'user', content:[ { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:b64 } }, { type:'text', text:prompt } ] }] }) });
+      if(!res.ok) throw new Error('API '+res.status);
+      const d=await res.json(); const txt=(d.content||[]).map(c=>c.text||'').join('');
+      j=JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}')+1));
+    } else {
+      const r=await askClaude('Estimate nutrition for the described meal. Return ONLY JSON {"desc":"3-6 words","calories":n,"protein_g":n,"fiber_g":n,"added_sugar_g":n}. added_sugar_g = ADDED sugars only. Whole numbers. Honest, no lowballing.', text, 250);
+      j=JSON.parse(r.slice(r.indexOf('{'), r.lastIndexOf('}')+1));
+    }
     addMeal(j);
-  }catch(e){ toast('Couldn\u2019t estimate \u2014 try again'); }
+  }catch(e){ console.error(e); toast('Couldn\u2019t estimate \u2014 try again'); }
 }
 function addMeal(j){
   const d=today();
@@ -2851,10 +2873,7 @@ function delMeal(id){
 }
 function logMealSheet(){
   if(!DB.settings.apiKey){ toast('Add an API key in Settings first'); return; }
-  openSheet('<h3>Log a meal</h3>'+
-    '<button class="btn" onclick="closeSheet();$(\'mealInput\').click()">\ud83d\udcf7 Photo of the plate</button>'+
-    '<div class="field" style="margin-top:12px"><label>Or just describe it</label><textarea id="mtText" placeholder="Chipotle bowl, double chicken, no rice\u2026"></textarea></div>'+
-    '<button class="btn secondary" onclick="mealFromText()">Estimate from description</button>');
+  _pendingMeal=null; mealSheet('');
 }
 function renderMacros(){
   const el=$('macroCard'); if(!el) return;
