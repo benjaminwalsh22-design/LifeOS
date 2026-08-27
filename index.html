@@ -679,7 +679,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.3</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.4</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2644,26 +2644,42 @@ function openAsk(){
   setTimeout(()=>{ const el=$('askQ'); if(el) el.focus(); },60);
 }
 function scoreEntry(j, toks){ const t=entryText(j); let s=0; toks.forEach(k=>{ let idx=t.indexOf(k); while(idx>=0){ s++; idx=t.indexOf(k, idx+k.length); } }); return s; }
+function journalStatsBlock(){
+  const done=(DB.journal||[]).filter(j=>j&&j.date);
+  const byYear={}, daysByYear={};
+  done.forEach(j=>{ const y=j.date.slice(0,4); byYear[y]=(byYear[y]||0)+1;
+    (daysByYear[y]=daysByYear[y]||new Set()).add(j.date); });
+  const yrs=Object.keys(byYear).sort();
+  if(!yrs.length) return 'Journal database: empty.';
+  const lines=yrs.map(y=>y+': '+byYear[y]+' entries on '+daysByYear[y].size+' distinct days');
+  return 'AUTHORITATIVE DATABASE STATISTICS (computed over the full journal, trust these over anything inferred from excerpts):\n'
+    +'Total: '+done.length+' entries, spanning '+done.reduce((a,j)=>j.date<a?j.date:a,'9999')+' to '+done.reduce((a,j)=>j.date>a?j.date:a,'0000')+'.\n'
+    +'Per year \u2014 '+lines.join(' \u00b7 ')+'.\n'
+    +'Also: '+(DB.memories||[]).length+' anniversary memories (\u201c52 Memories\u201d) across '+[...new Set((DB.memories||[]).map(m=>m.yr))].length+' years.';
+}
 async function askJournal(){
   const q=($('askQ')?$('askQ').value:'').trim(); if(!q) return;
   const toks=q.toLowerCase().split(/\s+/).filter(w=>w.length>2);
   const memDocs=(DB.memories||[]).map(m=>({id:m.id,date:(m.date?m.date+'-15':m.yr+'-08-01'),ts:Date.parse((m.date?m.date+'-15':m.yr+'-08-01')),transcription:'[52 Memories, Year '+memYearNum(m.yr)+'] '+m.title+'. '+(m.text||''),_mem:true}));
-  const pool=DB.journal.concat(memDocs);
+  let pool=DB.journal.concat(memDocs);
+  const ym=q.match(/\b(19|20)\d{2}\b/);
+  if(ym){ const sub=pool.filter(j=>(j.date||'').startsWith(ym[0])); if(sub.length>=3) pool=sub; }
   let scored=pool.map(j=>({j,s:scoreEntry(j,toks)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s);
-  if(!scored.length) scored=pool.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,8).map(j=>({j,s:0}));
-  const top=scored.slice(0,12).map(x=>x.j);
-  $('askOut').innerHTML='<div class="detail-block" style="margin-top:14px"><p><span class="spinner"></span>Reading '+top.length+' entries…</p></div>';
-  const ctx=top.map(j=>'['+j.date+'] '+((j.transcription||j.summary||j.note||'').slice(0,1200))).join('\n\n');
+  if(!scored.length) scored=pool.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,12).map(j=>({j,s:0}));
+  const top=scored.slice(0,30).map(x=>x.j);
+  $('askOut').innerHTML='<div class="detail-block" style="margin-top:14px"><p><span class="spinner"></span>Reading '+top.length+' of '+(DB.journal||[]).length+' entries…</p></div>';
+  const ctx=journalStatsBlock()+'\n\nMOST RELEVANT ENTRIES (the '+top.length+' best keyword matches out of '+pool.length+' \u2014 an excerpt sample, NOT the whole journal):\n\n'
+    +top.map(j=>'['+j.date+'] '+((j.transcription||j.summary||j.note||'').slice(0,800))).join('\n\n');
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST',
       headers:{ 'content-type':'application/json','x-api-key':DB.settings.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true' },
       body:JSON.stringify({ model:'claude-sonnet-4-5', max_tokens:1024,
-        system:'You help someone explore their personal journal. Answer using ONLY the provided dated entries, and cite the dates you draw from in parentheses. If the entries do not answer the question, say so plainly. Be warm and concise.',
+        system:'You help someone explore their personal journal. You get (1) authoritative statistics computed over the FULL database \u2014 use these for any question about counts, coverage, totals, or date ranges \u2014 and (2) a sample of the most relevant entry excerpts \u2014 use these for questions about content, citing dates in parentheses. Never present the excerpt sample as if it were the whole journal. If neither answers the question, say so plainly. Be warm and concise.',
         messages:[{ role:'user', content:'Entries:\n\n'+ctx+'\n\nQuestion: '+q }] }) });
     if(!res.ok) throw new Error('API '+res.status);
     const data=await res.json(); const ans=(data.content||[]).map(c=>c.text||'').join('').trim();
     $('askOut').innerHTML='<div class="detail-block" style="margin-top:14px"><h4>Answer</h4><p>'+esc(ans)+'</p></div>'+
-      '<div class="detail-block"><h4>Drawn from</h4><div class="pill-row">'+top.map(j=>'<span class="pill" style="cursor:pointer" onclick="closeSheet();'+(j._mem?'openMemory':'openEntry')+'(\''+j.id+'\')">'+(j._mem?'&#10022; ':'')+fmtDate(j.date)+'</span>').join('')+'</div></div>';
+      '<div class="detail-block"><h4>Drawn from</h4><div class="pill-row">'+top.slice(0,14).map(j=>'<span class="pill" style="cursor:pointer" onclick="closeSheet();'+(j._mem?'openMemory':'openEntry')+'(\''+j.id+'\')">'+(j._mem?'&#10022; ':'')+fmtDate(j.date)+'</span>').join('')+(top.length>14?'<span class="pill" style="opacity:.6">+'+(top.length-14)+' more</span>':'')+'</div></div>';
   }catch(e){ $('askOut').innerHTML='<div class="notice">Couldn’t reach Claude just now — try again.</div>'; }
 }
 function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
