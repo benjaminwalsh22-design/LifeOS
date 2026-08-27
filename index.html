@@ -679,7 +679,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.4</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.5</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1873,8 +1873,15 @@ async function openEntry(id){
       '</div></div>' : '') +
     (j.status !== 'done' && j.status !== 'analyzing' && j.status !== 'queued' ? '<button class="btn" onclick="analyzeEntry(\''+id+'\');closeSheet()">'+(DB.settings.apiKey ? 'Analyze with Claude' : 'Analyze (needs API key in Settings)')+'</button>' : '') +
     '<button class="btn secondary" style="margin-top:10px" onclick="editEntryText(\''+id+'\')">Edit text</button>' +
+    (j.status==='done' && j.psync && typeof SUPA!=='undefined' && SUPA && SUPA.session ? '<button class="btn secondary" style="margin-top:10px" onclick="requeueEntry(\''+id+'\')">Re-transcribe in cloud</button>' : '') +
     ((j.summary||j.transcription) ? '<button class="btn secondary" style="margin-top:10px" onclick="entryToMemCand(\''+id+'\')">&#9733; Save as 52-Memories candidate</button>' : '') +
     '<button class="btn danger" onclick="deleteEntry(\''+id+'\')">Delete entry</button>');
+}
+async function requeueEntry(id){
+  const j=DB.journal.find(x=>x.id===id); if(!j) return;
+  j.status='queued'; j.mt=Date.now(); await putEntry(j); save();
+  try{ await syncPush(); }catch(e){}
+  closeSheet(); renderJournal(); toast('Queued \u2014 the cloud will re-read this page');
 }
 async function deleteEntry(id){
   const _e = DB.journal.find(x => x.id === id);
