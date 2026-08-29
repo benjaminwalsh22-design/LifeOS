@@ -518,6 +518,11 @@ nav.tabbar {
 .mem-chiprow::-webkit-scrollbar{display:none}
 .mem-chip{flex:0 0 auto;padding:8px 13px;border-radius:999px;border:1px solid var(--hairline);background:var(--surface);font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer}
 .mem-chip.on{background:var(--ink);color:var(--page);border-color:var(--ink)}
+.lp-strip{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 4px;margin:10px 0 2px}
+.lp-strip::-webkit-scrollbar{display:none}
+.lp{height:104px;width:104px;flex:0 0 auto;border-radius:11px;object-fit:cover;cursor:pointer;background:var(--surface);border:1px solid var(--border)}
+.lp-wait{font-size:12.5px;color:var(--muted);margin:10px 0 2px}
+.mr-photos .lp{height:120px;width:120px}
 .mem-item{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:9px;cursor:pointer;box-shadow:var(--shadow-soft)}
 .mem-item .mi-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .mem-item b{font-size:15px;letter-spacing:-.01em}
@@ -679,7 +684,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.6</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.7</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1635,6 +1640,61 @@ async function thumbURL(id){
   if (!b) return null;
   return (thumbURLs[id] = URL.createObjectURL(b));
 }
+// ---------- life photos (from OneDrive, matched by the date they were taken) ----------
+const lifePhotoURLs = {};
+let LPSTATE = { connected:false };
+const _lpBusy = {};
+function lifePhotoPath(item){ return SUPA.url+'/storage/v1/object/life-photos/'+SUPA.session.user.id+'/'+encodeURIComponent(item)+'.jpg'; }
+async function photosRpc(fn, args){
+  if(!SUPA || !SUPA.session) return null;
+  try{ const r = await supaRest('rpc/'+fn, { method:'POST', body:args||{} });
+    if(!r.ok) return null; return await r.json(); }catch(e){ return null; }
+}
+async function lifePhotoURL(item){
+  if(lifePhotoURLs[item]) return lifePhotoURLs[item];
+  if(!SUPA || !SUPA.session) return null;
+  try{ const r = await storageReq(lifePhotoPath(item)); if(!r.ok) return null;
+    const b = await r.blob(); if(!b || !b.size) return null;
+    return (lifePhotoURLs[item] = URL.createObjectURL(b)); }catch(e){ return null; }
+}
+async function photoStatusLoad(){
+  const d = await photosRpc('photo_status');
+  LPSTATE = (d && !Array.isArray(d)) ? d : { connected:false };
+  return LPSTATE;
+}
+async function photoIdsFor(what){
+  const rows = what.day ? await photosRpc('photos_for', { days:[what.day] })
+                        : await photosRpc('photos_in_month', { ym:what.month, lim:12 });
+  return Array.isArray(rows) ? rows.map(r=>r.item_id) : [];
+}
+async function photoFetchNow(what){         // ask the worker to cache this day/month right now
+  if(!SUPA || !SUPA.session) return false;
+  const k = JSON.stringify(what); if(_lpBusy[k]) return false; _lpBusy[k]=1;
+  try{
+    const r = await fetch(SUPA.url+'/functions/v1/photo-tick', { method:'POST',
+      headers:{ 'Authorization':'Bearer '+SUPA.session.access_token, 'Content-Type':'application/json' },
+      body: JSON.stringify(what) });
+    const d = await r.json().catch(()=>({}));
+    return !!(d && d.copied);
+  }catch(e){ return false; } finally { delete _lpBusy[k]; }
+}
+async function loadPhotoStrip(elId, what){
+  const el = $(elId); if(!el || !SUPA || !SUPA.session) return;
+  let ids = await photoIdsFor(what);
+  if(!ids.length){
+    if(!LPSTATE.connected) { el.innerHTML=''; return; }
+    el.innerHTML = '<div class="lp-wait"><span class="spinner"></span>Looking for photos from then…</div>';
+    if(await photoFetchNow(what)) ids = await photoIdsFor(what);
+  }
+  if(!ids.length){ el.innerHTML=''; return; }
+  const urls = await Promise.all(ids.slice(0,12).map(lifePhotoURL));
+  const shots = urls.map((u,i)=> u ? '<img src="'+u+'" class="lp" loading="lazy" onclick="openPhoto(\''+ids[i]+'\')">' : '').join('');
+  el.innerHTML = shots ? '<div class="lp-strip">'+shots+'</div>' : '';
+}
+function openPhoto(item){
+  const u = lifePhotoURLs[item]; if(!u) return;
+  openSheet('<img src="'+u+'" style="width:100%;border-radius:12px;display:block">');
+}
 let jState = { q:'', year:'', review:false };
 function entryText(j){ return ((j.date||'')+' '+(j.transcription||'')+' '+(j.summary||'')+' '+(j.note||'')+' '+(j.mood||'')+' '+((j.themes||[]).join(' '))).toLowerCase(); }
 // ---------- transcription confidence & review queue ----------
@@ -1911,6 +1971,7 @@ function logJournalToPerson(pid, jid){
 }
 async function openEntry(id){
   const j = DB.journal.find(x => x.id === id); if (!j) return;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(j.date||'')) setTimeout(()=>loadPhotoStrip('entryPhotos', { day:j.date }), 30);
   const u = await thumbURL(id);
   openSheet('<h3 style="cursor:pointer" onclick="quickFixDate(\''+id+'\')">'+fmtDate(j.date)+' <span style="color:var(--accent);font-size:13px;font-weight:650">change</span></h3>' +
     (u ? '<img src="'+u+'" class="detail-photo">' : '') +
@@ -1929,6 +1990,7 @@ async function openEntry(id){
       (String(j.dw||'').trim() ? 'Date written on the page: “'+esc(String(j.dw).trim())+'”' : 'No date written on this page — the date came from its place in the batch.') +
       '</span></p></div>' : '') +
     (j.note ? '<div class="detail-block"><h4>Your note</h4><p>'+esc(j.note)+'</p></div>' : '') +
+    '<div id="entryPhotos"></div>' +
     (mentionedFriends(j).length ? '<div class="detail-block"><h4>People mentioned</h4><div class="pill-row">' +
       mentionedFriends(j).map(f => loggedFromJournal(f, j.id)
         ? '<span class="pill" style="opacity:.6">✓ '+esc(f.name.split(/\s+/)[0])+'</span>'
@@ -2605,7 +2667,9 @@ function openMemory(id){
   openSheet('<h3 style="font-family:var(--serif)">'+esc(m.title)+'</h3>'+
     '<div style="font-size:13px;color:var(--muted);margin:-6px 0 12px">Year '+memYearNum(m.yr)+(m.n?' &middot; '+m.n+' of 52':'')+(m.date?' &middot; '+fmtMonth(m.date):'')+'</div>'+
     (m.text?'<div class="detail-block"><p style="font-family:var(--serif);font-size:16.5px;line-height:1.6;white-space:pre-wrap">'+esc(m.text)+'</p></div>':'<div class="notice" style="margin-top:0">No written card for this one yet &mdash; add the story below.</div>')+
+    '<div id="memPhotos"></div>'+
     '<button class="btn secondary" onclick="editMemory(\''+id+'\')">Edit</button>');
+  if(m.date) loadPhotoStrip('memPhotos', { month:m.date });
 }
 function editMemory(id){
   const m=(DB.memories||[]).find(x=>x.id===id); if(!m) return;
@@ -2633,7 +2697,9 @@ function memReadRender(){
   $('mrBody').innerHTML='<div class="mr-count">'+(MEMR.i+1)+' of '+MEMR.ms.length+'</div>'+
     '<h2 class="mr-title">'+esc(m.title)+'</h2>'+
     (m.date?'<div class="mr-date">'+esc(fmtMonth(m.date))+'</div>':'')+
-    (m.text?'<div class="mr-text">'+esc(m.text)+'</div>':'<div class="mr-text" style="color:var(--muted)">(Just the title for this one &mdash; tell the story out loud.)</div>');
+    (m.text?'<div class="mr-text">'+esc(m.text)+'</div>':'<div class="mr-text" style="color:var(--muted)">(Just the title for this one &mdash; tell the story out loud.)</div>')+
+    '<div id="mrPhotos" style="margin-top:18px"></div>';
+  if(m.date) loadPhotoStrip('mrPhotos', { month:m.date });
   $('mrBody').scrollTop=0;
   $('mrPrev').style.visibility=MEMR.i===0?'hidden':'visible';
   $('mrNext').innerHTML=MEMR.i===MEMR.ms.length-1?'The end &#10084;':'Next &rsaquo;';
@@ -3404,6 +3470,7 @@ async function syncPull(force){
   if(!SUPA||!SUPA.session) return;
   if(!force && Date.now()-_lastPull < 900000) return;   // background pulls at most every 15 min
   _lastPull=Date.now();
+  photoStatusLoad();          // so entries and memories know whether photos are worth asking for
   try{
     const head=await supaRest('lifeos_data?select=updated_at',{});
     if(!head.ok) return;
@@ -3460,8 +3527,10 @@ function renderAcct(){
       (function(){ const ps=photoStats(); return '<div class="kv"><span class="k">Photos</span><span class="v">'+(_photoSyncing?'syncing…':(ps.synced+' of '+ps.total+' synced'))+'</span></div>'; })()+
       '<button class="btn secondary" style="margin-top:10px" onclick="syncPull(true)">Sync now</button>'+
       '<button class="btn secondary" style="margin-top:10px" onclick="photoSyncRun()">Sync photos now</button>'+
+      '<div id="lpBox" style="margin-top:16px"></div>'+
       '<button class="btn danger" onclick="acctLogout()">Log out</button>'+
       '<div class="notice">Entries, check-ins, friends, goals and reviews sync to your Supabase project and follow your login to any device. Journal <b>photos</b> sync too — uploaded in the background to your private storage and fetched on any device you sign into.</div>';
+    renderLifePhotos();
   } else {
     el.innerHTML='<div class="notice" style="margin-top:0">Log in and everything (except photos) saves to your own private cloud database — open LifeOS on any device, sign in, and it’s all there.</div>'+
       '<div class="field" style="margin-top:10px"><label>Supabase project URL</label><input id="acctUrl" type="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://xxxx.supabase.co" value="'+esc(SUPA?SUPA.url||'':'')+'"></div>'+
@@ -3472,6 +3541,42 @@ function renderAcct(){
       '<button class="btn secondary" style="margin-top:10px" onclick="acctSubmit(\'signup\')">Create account</button>'+
       '<div class="notice">One-time setup: ask Claude for the 5-minute Supabase recipe (free).</div>';
   }
+}
+// ---------- OneDrive: your own photos, matched by date ----------
+async function renderLifePhotos(){
+  const el=$('lpBox'); if(!el) return;
+  el.innerHTML='<div class="ck-label">Your photos</div><div class="kv"><span class="k">OneDrive</span><span class="v"><span class="spinner"></span></span></div>';
+  const s=await photoStatusLoad();
+  if(!s || !s.connected){
+    el.innerHTML='<div class="ck-label">Your photos</div>'+
+      '<div class="notice" style="margin-top:0">Connect OneDrive and LifeOS reads the date each photo was taken, then puts them beside the journal entry from that day and the 52 Memories from that month. Your originals stay in OneDrive — only small display copies come across.</div>'+
+      '<button class="btn secondary" style="margin-top:10px" onclick="lifePhotoConnect()">Connect OneDrive</button>';
+    return;
+  }
+  el.innerHTML='<div class="ck-label">Your photos</div>'+
+    '<div class="kv"><span class="k">OneDrive</span><span class="v">'+esc(s.account||'connected')+'</span></div>'+
+    '<div class="kv"><span class="k">Photos found</span><span class="v">'+(s.indexed||0).toLocaleString()+'</span></div>'+
+    '<div class="kv"><span class="k">Ready to show</span><span class="v">'+(s.copied||0).toLocaleString()+'</span></div>'+
+    '<div class="kv"><span class="k">On a journal day</span><span class="v">'+(s.matched||0).toLocaleString()+'</span></div>'+
+    '<div class="kv"><span class="k">Last checked</span><span class="v">'+(s.last_sync?esc(new Date(s.last_sync).toLocaleString()):'—')+'</span></div>'+
+    (s.error?'<div class="notice" style="color:var(--serious)">'+esc(s.error)+'</div>':'')+
+    '<button class="btn secondary" style="margin-top:10px" onclick="lifePhotoDisconnect()">Disconnect OneDrive</button>';
+}
+async function lifePhotoConnect(){
+  if(!SUPA||!SUPA.session){ toast('Log in first'); return; }
+  toast('Opening Microsoft…');
+  try{
+    const r=await fetch(SUPA.url+'/functions/v1/ms-oauth/start',{ method:'POST',
+      headers:{ 'Authorization':'Bearer '+SUPA.session.access_token, 'Content-Type':'application/json' } });
+    const d=await r.json().catch(()=>({}));
+    if(d.url) location.href=d.url; else toast('Couldn’t start the connection');
+  }catch(e){ toast('Couldn’t reach the server'); }
+}
+async function lifePhotoDisconnect(){
+  if(!confirm('Disconnect OneDrive? Photos already copied into LifeOS stay put.')) return;
+  try{ await fetch(SUPA.url+'/functions/v1/ms-oauth/disconnect',{ method:'POST',
+      headers:{ 'Authorization':'Bearer '+SUPA.session.access_token, 'Content-Type':'application/json' } }); }catch(e){}
+  toast('Disconnected'); renderLifePhotos();
 }
 // ---------- photo sync (Supabase Storage) ----------
 let _photoSyncing=false, _dlActive=0; const _dlWait=[];
