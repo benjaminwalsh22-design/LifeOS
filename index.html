@@ -679,7 +679,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.5</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.6</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1635,10 +1635,62 @@ async function thumbURL(id){
   if (!b) return null;
   return (thumbURLs[id] = URL.createObjectURL(b));
 }
-let jState = { q:'', year:'' };
+let jState = { q:'', year:'', review:false };
 function entryText(j){ return ((j.date||'')+' '+(j.transcription||'')+' '+(j.summary||'')+' '+(j.note||'')+' '+(j.mood||'')+' '+((j.themes||[]).join(' '))).toLowerCase(); }
+// ---------- transcription confidence & review queue ----------
+const MARKRE = /\[\?\]|\[illegible\]|\[unclear\]|\[unreadable\]/gi;
+const DWMON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function dwParts(dw){
+  const t = String(dw||'').toLowerCase(); if(!t.trim()) return null; let m;
+  if(m = t.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})/)) return [DWMON[m[1]], +m[2]];
+  if(m = t.match(/(\d{1,2})[\/\-.](\d{1,2})/)) return [+m[1], +m[2]];
+  return null;
+}
+function confOf(j){
+  const t = String(j.transcription||'').trim(); const w = (t.match(/\S+/g)||[]).length;
+  if(!w) return 0;
+  return Math.max(0, 1 - (t.match(MARKRE)||[]).length / w);
+}
+function reviewFlags(j){
+  if(!j || j.status !== 'done') return [];
+  const t = String(j.transcription||'').trim();
+  const w = (t.match(/\S+/g)||[]).length, m = (t.match(MARKRE)||[]).length;
+  const out = [];
+  if(!t) out.push('No transcription');
+  else {
+    if(w >= 15 && m/w > 0.01) out.push(m+' word'+(m===1?'':'s')+' Claude couldn’t read');
+    if(w < 120) out.push('Unusually short — the page may be only partly read');
+  }
+  const p = dwParts(j.dw);
+  if(p && p[0]>=1 && p[0]<=12 && p[1]>=1 && p[1]<=31 && /^\d{4}-\d{2}-\d{2}$/.test(j.date||'')){
+    const d = j.date.split('-').map(Number);
+    if(p[0]!==d[1] || p[1]!==d[2]) out.push('Page reads “'+String(j.dw).trim()+'” but it’s filed under '+fmtDate(j.date));
+  }
+  return out;
+}
+function reviewList(){ return DB.journal.filter(j => reviewFlags(j).length)
+  .sort((a,b) => confOf(a)-confOf(b) || String(a.date||'').localeCompare(String(b.date||''))); }
+function noDateList(){ return DB.journal.filter(j => j.status==='done' && !String(j.dw||'').trim()); }
+function transHTML(j){ return esc(j.transcription||'')
+  .replace(/\[\?\]/g, '<span style="background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 3px;font-weight:700">[?]</span>'); }
+function openReviewQueue(){
+  const list = reviewList(), nd = noDateList().length;
+  let h = '<h3>Second look</h3>';
+  if(!list.length) h += '<div class="notice" style="margin-top:0">Nothing flagged — every page transcribed cleanly.</div>';
+  else {
+    h += '<div class="notice" style="margin-top:0">'+list.length+' of '+DB.journal.length+' pages. Confidence is the share of words Claude read without hesitating — tap any page to see the scan beside the text.</div>';
+    list.slice(0,60).forEach(j => {
+      h += '<div class="tl-doc" onclick="closeSheet();openEntry(\''+j.id+'\')"><div class="td-top"><b>'+esc(fmtDate(j.date))+'</b><span>'+Math.round(confOf(j)*100)+'%</span></div><div class="td-prev">'+esc(reviewFlags(j).join(' · '))+'</div></div>';
+    });
+    if(list.length > 60) h += '<div class="empty">Showing 60 of '+list.length+'.</div>';
+  }
+  if(nd) h += '<div class="ck-label" style="margin-top:18px">Dates inferred</div><div class="notice" style="margin-top:0">'+nd+' page'+(nd===1?'':'s')+' had no date written on '+(nd===1?'it':'them')+', so the date came from where the page sat in its batch. Usually right — worth a spot check if a year ever looks off.</div>';
+  if(list.length) h += '<button class="btn secondary" style="margin-top:16px" onclick="closeSheet();jState.review=true;renderJournalList();">Show these in the list</button>';
+  openSheet(h);
+}
 function journalFiltered(){
   let list = DB.journal.slice();
+  if (jState.review) list = list.filter(j => reviewFlags(j).length);
   if (jState.year) list = list.filter(j => (j.date||'').slice(0,4) === jState.year);
   if (jState.q){ const toks = jState.q.toLowerCase().split(/\s+/).filter(Boolean);
     list = list.filter(j => { const t = entryText(j); return toks.every(k => t.includes(k)); }); }
@@ -1730,7 +1782,10 @@ async function renderJournalList(){
   const list = journalFiltered(); const total = DB.journal.length;
   if ($('journalCount')) $('journalCount').textContent = (jState.q||jState.year) ? (list.length+' of '+total) : (total+(total===1?' entry':' entries'));
   const _dg = total>1 ? dupGroups() : [];
-  const _banner = _dg.length ? '<div class="tl-doc" style="border-color:var(--warning)" onclick="openDupReview()"><div class="td-top"><b>'+_dg.length+' possible duplicate group'+(_dg.length>1?'s':'')+'</b><span style="color:var(--accent);font-weight:600">Review</span></div><div class="td-prev">Same page scanned twice, or re-run batches.</div></div>' : '';
+  const _banner = (jState.review
+      ? '<div class="tl-doc" style="border-color:var(--warning)" onclick="jState.review=false;renderJournalList()"><div class="td-top"><b>Flagged pages only</b><span style="color:var(--accent);font-weight:600">Clear</span></div><div class="td-prev">Pages with reading gaps or a date that doesn’t match.</div></div>'
+      : '')
+    + (_dg.length && !jState.review ? '<div class="tl-doc" style="border-color:var(--warning)" onclick="openDupReview()"><div class="td-top"><b>'+_dg.length+' possible duplicate group'+(_dg.length>1?'s':'')+'</b><span style="color:var(--accent);font-weight:600">Review</span></div><div class="td-prev">Same page scanned twice, or re-run batches.</div></div>' : '');
   if (!total){ $('journalList').innerHTML = '<div class="empty">No entries yet. Photograph today\u2019s page, or import your old journals in bulk.</div>'; return; }
   if (!list.length){ $('journalList').innerHTML = '<div class="empty">No entries match that search.</div>'; return; }
   const cap = list.slice(0, 150);
@@ -1742,12 +1797,14 @@ async function renderJournalList(){
       : j.status === 'error' ? '<span style="color:var(--serious)">Not transcribed — tap to retry</span>'
       : esc(j.summary || j.transcription || j.note || 'Saved');
     const moodBits = [j.mood, ...(j.themes||[]).slice(0,3)].filter(Boolean);
+    const flags = reviewFlags(j);
     const yr=(j.date||'').slice(0,4); let div='';
     if(yr && yr!==_lastYr){ if(_lastYr) div='<div class="ck-label" style="margin:14px 2px 8px">'+yr+'</div>'; _lastYr=yr; }
     return div+'<div class="jentry" onclick="openEntry(\''+j.id+'\')">' +
       (u ? '<img class="thumb" src="'+u+'" alt="">' : '<div class="thumb">—</div>') +
       '<div class="body"><div class="jdate">'+fmtDateY(j.date)+'</div>' +
       '<div class="jsum">'+status+'</div>' +
+      (flags.length ? '<div class="jmood" style="color:var(--warning)">⚑ '+esc(flags[0])+'</div>' : '') +
       (moodBits.length ? '<div class="jmood">'+moodBits.map(esc).join(' · ')+'</div>' : '') +
       '</div></div>';
   }));
@@ -1864,7 +1921,13 @@ async function openEntry(id){
     (j.mood || (j.themes||[]).length ? '<div class="detail-block"><h4>Mood &amp; themes</h4><div class="pill-row">' +
       [j.mood, ...(j.themes||[])].filter(Boolean).map(x => '<span class="pill">'+esc(x)+'</span>').join('') + '</div></div>' : '') +
     (j.insight ? '<div class="detail-block"><h4>Reflection</h4><p>'+esc(j.insight)+'</p></div>' : '') +
-    (j.transcription ? '<div class="detail-block"><h4>Transcription</h4><p>'+esc(j.transcription)+'</p></div>' : '') +
+    (j.transcription ? '<div class="detail-block"><h4>Transcription</h4><p>'+transHTML(j)+'</p></div>' : '') +
+    (j.status === 'done' && j.transcription ? '<div class="detail-block"><h4>Confidence</h4><p>' +
+      '<b>'+Math.round(confOf(j)*100)+'%</b> of the words were read without hesitation.' +
+      (reviewFlags(j).length ? '<br><span style="color:var(--warning)">⚑ '+esc(reviewFlags(j).join('; '))+'</span>' : '') +
+      '<br><span style="color:var(--muted);font-size:13px">' +
+      (String(j.dw||'').trim() ? 'Date written on the page: “'+esc(String(j.dw).trim())+'”' : 'No date written on this page — the date came from its place in the batch.') +
+      '</span></p></div>' : '') +
     (j.note ? '<div class="detail-block"><h4>Your note</h4><p>'+esc(j.note)+'</p></div>' : '') +
     (mentionedFriends(j).length ? '<div class="detail-block"><h4>People mentioned</h4><div class="pill-row">' +
       mentionedFriends(j).map(f => loggedFromJournal(f, j.id)
@@ -2446,6 +2509,9 @@ function renderArchiveProgress(){
       '<div style="font-size:12.5px;color:var(--muted);margin-top:6px">Runs on its own — about '+Math.ceil(q/4)+' min left. Pull down to refresh; we\u2019ll notify you when it\u2019s done.</div></div>';
     if(refused>0)
       h+='<div class="card" onclick="openFirstRefused()" style="cursor:pointer"><b>'+refused+' page'+(refused===1?'':'s')+' need'+(refused===1?'s':'')+' a human</b><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Claude declined to transcribe '+(refused===1?'this page':'these pages')+' (it occasionally does this with certain content). Open the entry and use Edit text to type it in \u2014 or ask me in a Claude chat to transcribe it for you.</div></div>';
+    const rev=reviewList().length;
+    if(rev>0 && q<10)
+      h+='<div class="card" onclick="openReviewQueue()" style="cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>'+rev+' page'+(rev===1?'':'s')+' worth a second look</b><span style="font-size:13px;color:var(--accent);font-weight:600">Review</span></div><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Words Claude flagged as unreadable, or a date on the page that doesn’t match where it’s filed.</div></div>';
     if(errs>0 && typeof SUPA!=='undefined' && SUPA && SUPA.session)
       h+='<div class="card"><b>'+errs+' page'+(errs===1?'':'s')+' failed</b><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Send them to the cloud queue to retry.</div>'+
         '<button class="btn secondary" style="margin-top:10px" onclick="retryFailedCloud()">Retry '+errs+' in cloud</button></div>';
