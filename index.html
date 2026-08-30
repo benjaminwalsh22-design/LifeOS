@@ -518,6 +518,10 @@ nav.tabbar {
 .mem-chiprow::-webkit-scrollbar{display:none}
 .mem-chip{flex:0 0 auto;padding:8px 13px;border-radius:999px;border:1px solid var(--hairline);background:var(--surface);font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer}
 .mem-chip.on{background:var(--ink);color:var(--page);border-color:var(--ink)}
+.otd-look{font-family:var(--serif);font-size:15.5px;line-height:1.58;color:var(--text);background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:13px 15px;margin:2px 0 9px;cursor:pointer}
+.otd-look.pending{font-family:inherit;font-size:13px;color:var(--muted);border-left-color:var(--border);cursor:default}
+.otd-why{font-size:12.5px;color:var(--accent);font-weight:600;margin:3px 0 1px}
+.otd-all{font-size:13px;color:var(--accent);font-weight:600;padding:9px 2px 2px;cursor:pointer}
 .lp-strip{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 4px;margin:10px 0 2px}
 .lp-strip::-webkit-scrollbar{display:none}
 .lp{height:104px;width:104px;flex:0 0 auto;border-radius:11px;object-fit:cover;cursor:pointer;background:var(--surface);border:1px solid var(--border)}
@@ -684,7 +688,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.7</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.8</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -777,7 +781,7 @@ const fmtTime = t => { if(!t) return ''; let [h,m] = t.split(':').map(Number);
 const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
-const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light', healthSyncUrl:''}, briefLine:null,
+const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light', healthSyncUrl:''}, briefLine:null, otd:null,
   events:[], friends:[], stats:{}, journal:[], memories:[], memCand:[], checkins:{}, places:null, placeNames:{}, placeGeo:{}, goals:[], calEvents:[], reviews:[], tomb:{} };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
@@ -2342,17 +2346,79 @@ function memThisMonthHTML(){
   return '<div class="ck-label" style="margin-top:10px">From your 52 Memories</div>'+pick.map(m=>
     '<div class="tl-doc otd" onclick="openMemory(\''+m.id+'\')"><div class="td-top"><b>'+esc(m.title)+'</b><span>'+esc(fmtMonth(m.date))+'</span></div>'+(m.text?'<div class="td-prev">'+esc(m.text.slice(0,140))+'</div>':'')+'</div>').join('');
 }
+// when Claude hasn't weighed in yet: spread the picks across the decade instead of taking the newest three
+function otdFallback(es){
+  if(es.length<=3) return es;
+  const pool=es.map(j=>({ j, s:(j.summary||'').length + ((j.themes||[]).length*20) + ((j.transcription||'').length>900?40:0) }))
+    .sort((a,b)=>b.s-a.s);
+  const out=[];
+  for(const c of pool){
+    if(out.length>=3) break;
+    const y=Number(c.j.date.slice(0,4));
+    if(out.every(o=>Math.abs(Number(o.date.slice(0,4))-y)>=3)) out.push(c.j);
+  }
+  for(const c of pool){ if(out.length>=3) break; if(out.indexOf(c.j)<0) out.push(c.j); }
+  return out.sort((a,b)=>b.date.localeCompare(a.date));
+}
+function otdCard(j, yr, why){
+  const n=yr-Number(j.date.slice(0,4));
+  return '<div class="tl-doc otd" onclick="openEntry(\''+j.id+'\')"><div class="td-top"><b>'+(n===1?'A year ago today':n+' years ago today')+'</b><span>'+esc(j.date.slice(0,4))+'</span></div>'+
+    (why?'<div class="otd-why">'+esc(why)+'</div>':'')+
+    '<div class="td-prev">'+esc((j.summary||j.transcription||j.note||'').slice(0,150))+'</div></div>';
+}
 function onThisDayHTML(){
   const es=onThisDayEntries(); if(!es.length) return memThisMonthHTML();
   const yr=Number(today().slice(0,4));
-  return '<div class="ck-label" style="margin-top:4px">On this day</div>'+es.slice(0,3).map(j=>{
-    const n=yr-Number(j.date.slice(0,4));
-    return '<div class="tl-doc otd" onclick="openEntry(\''+j.id+'\')"><div class="td-top"><b>'+(n===1?'A year ago today':n+' years ago today')+'</b><span>'+esc(j.date.slice(0,4))+'</span></div><div class="td-prev">'+esc((j.summary||j.transcription||j.note||'').slice(0,150))+'</div></div>';
-  }).join('')+memThisMonthHTML();
+  const lb=(DB.otd && DB.otd.date===today()) ? DB.otd : null;
+  const why={}; if(lb) (lb.picks||[]).forEach(p=>{ why[p.id]=p.why; });
+  let show = lb && (lb.picks||[]).length ? lb.picks.map(p=>es.find(e=>e.id===p.id)).filter(Boolean) : [];
+  if(!show.length) show=otdFallback(es);
+  const head='<div class="ck-label" style="margin-top:4px">On this day'+(es.length>1?' <span style="opacity:.65;font-weight:500">· '+es.length+' years</span>':'')+'</div>';
+  const look = lb ? '<div class="otd-look" onclick="regenLookBack()">'+esc(lb.text)+'</div>'
+    : (DB.settings.apiKey && es.length>=3 ? '<div class="otd-look pending"><span class="spinner"></span>Reading back through '+es.length+' years&hellip;</div>' : '');
+  return head + look + show.map(j=>otdCard(j, yr, why[j.id])).join('') +
+    (es.length>show.length ? '<div class="otd-all" onclick="openAllOnThisDay()">See all '+es.length+' years &rsaquo;</div>' : '') +
+    memThisMonthHTML();
 }
+function openAllOnThisDay(){
+  const es=onThisDayEntries(); if(!es.length) return;
+  const yr=Number(today().slice(0,4));
+  const lb=(DB.otd && DB.otd.date===today()) ? DB.otd : null;
+  const why={}; if(lb) (lb.picks||[]).forEach(p=>{ why[p.id]=p.why; });
+  openSheet('<h3>'+esc(fmtDate(today()).replace(/,\s*\d{4}$/,''))+' &middot; every year</h3>'+
+    (lb?'<div class="otd-look" style="margin-top:0">'+esc(lb.text)+'</div>':'')+
+    es.map(j=>otdCard(j, yr, why[j.id])).join(''));
+}
+// ---- the look-back: one pass over every year of this date, cached for the day ----
+let _otdGen=false;
+async function ensureLookBack(){
+  if(_otdGen || !DB.settings.apiKey) return;
+  const es=onThisDayEntries();
+  if(es.length<3) return;
+  if(DB.otd && DB.otd.date===today() && DB.otd.n===es.length) return;
+  _otdGen=true;
+  try{
+    const list=es.map(j=>'['+j.id+'] '+j.date+' — '+((j.summary||'')||(j.transcription||'').slice(0,220))+(j.mood?' (mood: '+j.mood+')':'')).join('\n');
+    const sys='You are looking back through someone’s handwritten journal at every entry they wrote on this same calendar date across many years. Address them as "you".\n\n'+
+      'Return ONLY a JSON object: {"look_back":"…","picks":[{"id":"…","why":"…"}]}\n\n'+
+      '"look_back": 2–4 sentences on what this date has actually held across the years. Name real specifics — people, places, what changed. If a genuine thread, contrast or shift runs through the years, say it; if the years have nothing in common, say that plainly instead of inventing a theme. No platitudes, no therapy-speak, no "it\'s clear that".\n'+
+      '"picks": the 2 or 3 entries most worth reopening today — the vivid, the surprising, the ones that turned out to matter. Recency is not a reason. Use the exact id in brackets. "why" is one short clause, max 12 words, on what makes that one worth a minute.';
+    const raw=await askClaude(sys, 'Today is '+fmtDate(today())+'.\n\nEntries written on this date in past years:\n'+list, 700);
+    const j=JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}')+1));
+    const ids=new Set(es.map(e=>e.id));
+    const picks=(j.picks||[]).filter(p=>p&&ids.has(p.id)).slice(0,3).map(p=>({ id:p.id, why:String(p.why||'').replace(/^["“']+|["”']+$/g,'').slice(0,90) }));
+    if(j.look_back){
+      DB.otd={ date:today(), n:es.length, text:String(j.look_back).replace(/^["“']+|["”']+$/g,'').trim(), picks };
+      save(); renderOnThisDay();
+    }
+  }catch(e){}
+  _otdGen=false;
+}
+function regenLookBack(){ DB.otd=null; save(); renderOnThisDay(); ensureLookBack(); toast('Reading it again…'); }
 function renderOnThisDay(){
   const a=$('onThisDay'); if(a) a.innerHTML=onThisDayHTML();
   const b=$('jOnThisDay'); if(b) b.innerHTML=onThisDayHTML();
+  if(a||b) setTimeout(ensureLookBack, 400);
 }
 function quickFixDate(id){
   const j = DB.journal.find(x => x.id === id); if (!j) return;
@@ -3446,6 +3512,7 @@ function mergeRemote(db){
   DB.settings=Object.assign({}, db.settings||{}, DB.settings||{});
   if(db.places && !DB.places) DB.places=db.places;
   if(db.briefLine && (!DB.briefLine || (db.briefLine.date||'')>(DB.briefLine.date||''))) DB.briefLine=db.briefLine;
+  if(db.otd && (!DB.otd || (db.otd.date||'')>(DB.otd.date||'') || ((db.otd.date||'')===(DB.otd.date||'') && (db.otd.n||0)>(DB.otd.n||0)))) DB.otd=db.otd;
   if(db.twy && DB.twy && db.twy.id===DB.twy.id){
     const rw=db.twy.weeks||{}; DB.twy.weeks=DB.twy.weeks||{};
     for(const k in rw){ if(!DB.twy.weeks[k] || (rw[k].mt||0)>(DB.twy.weeks[k].mt||0)) DB.twy.weeks[k]=rw[k]; }
