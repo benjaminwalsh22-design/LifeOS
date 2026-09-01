@@ -336,6 +336,16 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .mood-yr .yb i{position:absolute;top:0;bottom:0;left:0;border-radius:4px}
 .mood-empty{font-size:13px;color:var(--muted);padding:4px 0 6px}
 
+
+.bc-row{margin-top:10px}
+.bc-hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px}
+.bc-l{font-size:12.5px;color:var(--ink-2);font-weight:600}
+.bc-v{font-family:var(--serif);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.bc-u{font-size:12px;color:var(--muted);font-family:var(--sans);margin-left:1px}
+.bc-d{font-size:12px;font-family:var(--sans);margin-left:8px;font-weight:600}
+.bc-row svg{display:block;width:100%;height:auto}
+.bc-note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.45}
+
 /* ---- this week's people ---- */
 .pw-card { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-soft); border-radius: 14px; padding: 11px 13px; margin-bottom: 8px; }
 .pw-card .avatar { flex: 0 0 38px; width: 38px; height: 38px; font-size: 15px; }
@@ -611,6 +621,7 @@ nav.tabbar {
     <section class="view" id="view-insights">
       <div class="pagehead2"><div class="a-lead">Insights</div><div class="a-sub">Your life, measured — and what it means.</div></div>
       <div id="moodCard"></div>
+      <div id="bodyCard"></div>
       <div class="section-head"><h2>Daily check-in</h2><button class="action" id="ckOpen">Check in</button></div>
       <div id="ckCard"></div>
       <div class="section-head"><h2>Daily numbers</h2><span class="action" style="cursor:default">tap to log</span></div>
@@ -721,7 +732,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v7.9</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.0</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -814,7 +825,7 @@ const fmtTime = t => { if(!t) return ''; let [h,m] = t.split(':').map(Number);
 const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
-const DEFAULTS = { profile:{name:'Benjamin'}, settings:{apiKey:'', theme:'light', healthSyncUrl:''}, briefLine:null, otd:null,
+const DEFAULTS = { profile:{name:'Benjamin', heightIn:72}, settings:{apiKey:'', theme:'light', healthSyncUrl:''}, briefLine:null, otd:null,
   events:[], friends:[], stats:{}, journal:[], memories:[], memCand:[], checkins:{}, places:null, placeNames:{}, placeGeo:{}, goals:[], calEvents:[], reviews:[], tomb:{} };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
@@ -1057,7 +1068,7 @@ function ingestHealth(){
   const q=new URLSearchParams(hash);
   const date=(q.get('date')&&/^\d{4}-\d{2}-\d{2}$/.test(q.get('date')))?q.get('date'):today();
   const st=DB.stats[date]||(DB.stats[date]={}); const got=[];
-  ['sleep','steps','energy','rhr','hrv','protein','fiber','sugar','kcal'].forEach(k => { const v=q.get(k);
+  ['sleep','steps','energy','rhr','hrv','protein','fiber','sugar','kcal','weight','bodyfat','bmi'].forEach(k => { const v=q.get(k);
     if(v!=null && v!=='' && !isNaN(v)){ st[k]=Number(v); got.push(k); } });
   if(got.length){ save();
     try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; }
@@ -1237,8 +1248,68 @@ function moodHover(ms){
   wrap.addEventListener('pointercancel', off);
 }
 
+
+// ---------- body composition ----------
+// A bioimpedance scale measures two things: weight, and electrical resistance.
+// Weight is real; body fat is an estimate; BMI is arithmetic on weight and height.
+function bodyDays(){
+  const out=[];
+  for(const d of Object.keys(DB.stats||{}).sort()){
+    const s=DB.stats[d]||{};
+    if(s.weight==null && s.bodyfat==null) continue;
+    const h=Number(DB.profile.heightIn)||72;
+    out.push({ d, w:s.weight!=null?Number(s.weight):null,
+      f:s.bodyfat!=null?Number(s.bodyfat):null,
+      b:s.bmi!=null?Number(s.bmi):(s.weight!=null?Math.round(703*Number(s.weight)/(h*h)*10)/10:null) });
+  }
+  return out;
+}
+function roll(arr, key, n){                 // trailing mean — daily readings are mostly hydration
+  return arr.map((_,i)=>{ const w=arr.slice(Math.max(0,i-n+1),i+1).map(x=>x[key]).filter(v=>v!=null);
+    return w.length?w.reduce((a,b)=>a+b,0)/w.length:null; });
+}
+const BODY_W=340, BODY_H=88, BODY_L=30, BODY_R=8, BODY_T=7, BODY_B=13;
+function bodyChart(rows, key, col, unit, dec){
+  const vals=roll(rows,key,7);
+  const pts=rows.map((r,i)=>({x:r.d,v:vals[i],raw:r[key]})).filter(p=>p.v!=null);
+  if(pts.length<2) return '';
+  const lo=Math.min(...pts.map(p=>p.v)), hi=Math.max(...pts.map(p=>p.v));
+  const pad=(hi-lo)*0.25||1, min=lo-pad, max=hi+pad;
+  const X=i=>BODY_L+i*(BODY_W-BODY_L-BODY_R)/(pts.length-1);
+  const Y=v=>BODY_T+(max-v)/(max-min)*(BODY_H-BODY_T-BODY_B);
+  const path=pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ');
+  const first=pts[0], last=pts[pts.length-1], delta=last.v-first.v;
+  return '<div class="bc-row"><div class="bc-hd"><span class="bc-l">'+key.replace('w','Weight').replace('f','Body fat').replace('b','BMI')+'</span>'+
+    '<span class="bc-v">'+last.v.toFixed(dec)+'<span class="bc-u">'+unit+'</span>'+
+    '<span class="bc-d" style="color:'+(delta<0?'var(--good)':'var(--muted)')+'">'+(delta>=0?'+':'')+delta.toFixed(dec)+'</span></span></div>'+
+    '<svg viewBox="0 0 '+BODY_W+' '+BODY_H+'" role="img" aria-label="'+unit+' trend, 7-day average">'+
+      '<text x="'+(BODY_L-4)+'" y="'+(Y(max-pad*0.6)+3).toFixed(1)+'" text-anchor="end" font-size="8" fill="var(--muted)">'+(max-pad*0.6).toFixed(dec)+'</text>'+
+      '<text x="'+(BODY_L-4)+'" y="'+(Y(min+pad*0.6)+3).toFixed(1)+'" text-anchor="end" font-size="8" fill="var(--muted)">'+(min+pad*0.6).toFixed(dec)+'</text>'+
+      '<path d="'+path+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+
+      '<circle cx="'+X(pts.length-1).toFixed(1)+'" cy="'+Y(last.v).toFixed(1)+'" r="3" fill="'+col+'" stroke="var(--surface)" stroke-width="2"/>'+
+      '<text x="'+BODY_L+'" y="'+(BODY_H-3)+'" font-size="8" fill="var(--muted)">'+esc(fmtDateY(first.x))+'</text>'+
+      '<text x="'+(BODY_W-BODY_R)+'" y="'+(BODY_H-3)+'" text-anchor="end" font-size="8" fill="var(--muted)">'+esc(fmtDateY(last.x))+'</text>'+
+    '</svg></div>';
+}
+function renderBody(){
+  const el=$('bodyCard'); if(!el) return;
+  const rows=bodyDays(), c=moodPal();
+  if(rows.length<2){
+    el.innerHTML='<div class="mood"><div class="mood-hd"><span class="mood-t">Body composition</span></div>'+
+      '<div class="mood-empty">'+(rows.length?'One weigh-in so far. A trend needs a few more.':'Weigh-ins appear here once Apple Health is connected — Settings has the link.')+'</div></div>';
+    return;
+  }
+  const last=rows[rows.length-1];
+  el.innerHTML='<div class="mood"><div class="mood-hd"><span class="mood-t">Body composition</span>'+
+      '<span class="mood-n">'+rows.length+' weigh-in'+(rows.length===1?'':'s')+'</span></div>'+
+    bodyChart(rows,'w',c.hap,' lb',1)+
+    bodyChart(rows,'f',c.anx,' %',1)+
+    '<div class="bc-note">7-day average. Weight is measured; body fat is the scale’s estimate and moves ± a point or two on hydration alone.'+
+      (last.b!=null?' BMI today <b>'+last.b.toFixed(1)+'</b>.':'')+'</div></div>';
+}
+
 function renderInsights(){
-  renderMood();
+  renderMood(); renderBody();
   const full=computeInsights(50); const el=$('attnList'); if(!el) return;
   if(!full.length){ el.innerHTML='<div class="insight-card"><span class="idot"></span><div class="ibody"><div class="itext">All calm — nothing needs you right now.</div><div class="iwhy">Log a check-in and this begins learning your patterns.</div></div></div>'; return; }
   el.innerHTML=full.map(insightCardHTML).join('');
@@ -1366,6 +1437,8 @@ const TILES = [
   { key:'rhr',    label:'Resting HR',    unit:'bpm',  dot:'var(--magenta)', src:'health', hint:'Resting heart rate (bpm)', ph:'e.g. 54' },
   { key:'hrv',    label:'HRV',           unit:'ms',   dot:'var(--gold)',    src:'health', hint:'HRV (ms)', ph:'e.g. 48' },
   { key:'energy', label:'Active energy', unit:'kcal', dot:'var(--serious)', src:'health', hint:'Active energy (kcal)', ph:'e.g. 540', fmt:'int' },
+  { key:'weight', label:'Weight',        unit:'lb',   dot:'var(--accent)',  src:'health', hint:'Weight (lb)', ph:'e.g. 186.0' },
+  { key:'bodyfat',label:'Body fat',      unit:'%',    dot:'var(--serious)', src:'health', hint:'Body fat (%)', ph:'e.g. 23.0' },
   { key:'budget', label:'Budget',        unit:'',     dot:'var(--good)',    src:'manual', hint:'YNAB — manual for now', ph:'e.g. $430 left' },
 ];
 function tilesHTML(st){ return TILES.map(tl => {
