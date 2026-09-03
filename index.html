@@ -732,7 +732,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.3</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.4</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -834,7 +834,7 @@ const save = () => { _statIdx = null; const o = Object.assign({}, DB); delete o.
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 // numbers the watch, ring or scale supplies — the cloud is the source of truth
 // for these, never the phone's cached copy
-const HEALTH_KEYS = new Set(['sleep','steps','rhr','hrv','energy','weight','bodyfat','bmi','resp','temp','spo2']);
+const HEALTH_KEYS = new Set(['sleep','steps','rhr','hrv','energy','weight','bodyfat','bmi','resp','temp','spo2','spend','budget']);
 // a night with no recorded sleep is missing data, not zero hours — an older
 // version of the health sync stored it as 0 and it drags every average down
 function scrubStats(){
@@ -1457,7 +1457,8 @@ const TILES = [
   { key:'energy', label:'Active energy', unit:'kcal', dot:'var(--serious)', src:'health', carry:0,  hint:'Active energy (kcal)', ph:'e.g. 540', fmt:'int' },
   { key:'weight', label:'Weight',        unit:'lb',   dot:'var(--accent)',  src:'health', carry:30, hint:'Weight (lb)', ph:'e.g. 186.0' },
   { key:'bodyfat',label:'Body fat',      unit:'%',    dot:'var(--serious)', src:'health', carry:30, hint:'Body fat (%)', ph:'e.g. 23.0' },
-  { key:'budget', label:'Budget',        unit:'',     dot:'var(--good)',    src:'manual', carry:7,  hint:'YNAB', ph:'e.g. $430 left', always:true },
+  { key:'spend',  label:'Spent today',   unit:'',     dot:'var(--gold)',    src:'ynab',   carry:0,  hint:'Spent today', ph:'e.g. 84.20', fmt:'usd' },
+  { key:'budget', label:'Left this month',unit:'',     dot:'var(--good)',    src:'ynab',   carry:7,  hint:'Everyday envelopes', ph:'e.g. 4300', fmt:'usd', always:true },
 ];
 // one pass over the whole history: the newest reading for every key that has
 // ever arrived. A tile the device has never sent doesn't appear at all, and
@@ -1491,10 +1492,11 @@ function tilesHTML(st, day){
       const p = idx[tl.key];
       if(p && daysApart(p.day, t) <= tl.carry){ raw = p.val; has = true; stale = agoLabel(p.day, t); }
     }
-    const disp = has ? (tl.fmt === 'int' ? Number(raw).toLocaleString() : esc(String(raw))) : null;
-    const hint = stale ? stale
-      : has ? (tl.src === 'health' ? 'via Apple Health' : tl.hint)
-      : (tl.src === 'health' ? 'no reading yet' : tl.hint);
+    const disp = has ? (tl.fmt === 'int' ? Number(raw).toLocaleString()
+      : tl.fmt === 'usd' ? '$' + Number(raw).toLocaleString(undefined,{maximumFractionDigits:0})
+      : esc(String(raw))) : null;
+    const via = tl.src === 'health' ? 'via Apple Health' : tl.src === 'ynab' ? 'via YNAB' : tl.hint;
+    const hint = stale ? stale : has ? via : (tl.src === 'manual' ? tl.hint : 'nothing yet today');
     return '<div class="tile" onclick="editTile(\''+tl.key+'\')">' +
       '<div class="label"><span class="dot" style="background:'+tl.dot+'"></span>'+tl.label+'</div>' +
       '<div class="value"'+(stale?' style="opacity:.72"':'')+'>'+(has ? disp+(tl.unit ? '<span class="unit">'+tl.unit+'</span>' : '') : '<span style="color:var(--muted);font-size:18px">—</span>')+'</div>' +
@@ -3698,13 +3700,19 @@ const TRENDS=[
   {key:'rhr', kind:'stat', label:'Resting HR', unit:' bpm', color:'var(--magenta)', goodUp:false, dp:0},
   {key:'steps', kind:'stat', label:'Steps', unit:'', color:'var(--aqua)', goodUp:true, dp:0, fmt:'int'},
   {key:'hrv', kind:'stat', label:'HRV', unit:' ms', color:'var(--gold)', goodUp:true, dp:0},
+  {key:'spend', kind:'stat', label:'Spending', unit:'', color:'var(--gold)', goodUp:false, dp:0, fmt:'usd', zero:true},
+  {key:'resp', kind:'stat', label:'Respiratory rate', unit:' /min', color:'var(--accent)', goodUp:false, dp:1},
+  {key:'temp', kind:'stat', label:'Body temp', unit:'°F', color:'var(--serious)', goodUp:true, dp:1},
+  {key:'spo2', kind:'stat', label:'Blood oxygen', unit:'%', color:'var(--magenta)', goodUp:true, dp:0},
   {key:'hap', kind:'checkin', label:'Happiness', unit:'/10', color:'var(--accent)', goodUp:true, dp:1},
   {key:'anx', kind:'checkin', label:'Anxiety', unit:'/10', color:'var(--warning)', goodUp:false, dp:1},
 ];
-function trendSeries(kind, key, nDays){
+function trendSeries(kind, key, nDays, zero){
+  const t=today();
   const out=[]; for(let i=nDays-1;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); const ds=dstr(d);
     let v=null;
-    if(kind==='stat'){ const st=DB.stats[ds]; v=(st && st[key]!=null && !isNaN(st[key]))?Number(st[key]):null; }
+    if(kind==='stat'){ const st=DB.stats[ds]; v=(st && st[key]!=null && !isNaN(st[key]))?Number(st[key]):null;
+      if(v===null && zero && ds<t) v=0; }
     else { const c=DB.checkins[ds]; if(c) v=(key==='anx')?ckAnx(c):ckHap(c); }
     out.push({ v }); }
   return out;
@@ -3724,14 +3732,16 @@ function sparkline(vals, color){
     '<circle cx="'+X(last.i).toFixed(1)+'" cy="'+Y(last.v).toFixed(1)+'" r="2.6" fill="'+color+'"/></svg>';
 }
 function trendCardHTML(m){
-  const vals=trendSeries(m.kind, m.key, 30);
+  const vals=trendSeries(m.kind, m.key, 30, m.zero);
   const nn=vals.filter(o=>o.v!=null); if(nn.length<3) return '';
   const latest=nn[nn.length-1].v;
   const nz=nn.map(o=>o.v); const last7=nz.slice(-7), prior=nz.slice(-14,-7);
   const m7=mean(last7), mp=prior.length? mean(prior):null;
   const spark=sparkline(vals, m.color); if(!spark) return '';
-  const disp = m.fmt==='int' ? Math.round(latest).toLocaleString() : (Math.round(latest*Math.pow(10,m.dp))/Math.pow(10,m.dp));
-  const sub = m7!=null ? ('7-day avg '+(m.fmt==='int'?Math.round(m7).toLocaleString():(Math.round(m7*10)/10))+m.unit+(mp!=null?arrowHTML(m7,mp,m.goodUp):'')+' <span style="color:var(--faint)">· '+nn.length+' days</span>') : (nn.length+' days logged');
+  const disp = m.fmt==='int' ? Math.round(latest).toLocaleString()
+    : m.fmt==='usd' ? '$'+Math.round(latest).toLocaleString()
+    : (Math.round(latest*Math.pow(10,m.dp))/Math.pow(10,m.dp));
+  const sub = m7!=null ? ('7-day avg '+(m.fmt==='int'?Math.round(m7).toLocaleString():m.fmt==='usd'?'$'+Math.round(m7).toLocaleString():(Math.round(m7*10)/10))+m.unit+(mp!=null?arrowHTML(m7,mp,m.goodUp):'')+' <span style="color:var(--faint)">· '+nn.length+' days</span>') : (nn.length+' days logged');
   return '<div class="trend"><div class="tr-top"><span class="tr-label">'+esc(m.label)+'</span><span class="tr-val">'+disp+'<span class="tr-unit">'+esc(m.unit)+'</span></span></div>'+spark+'<div class="tr-sub">'+sub+'</div></div>';
 }
 function renderInsightsView(){
