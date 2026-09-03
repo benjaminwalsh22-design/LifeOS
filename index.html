@@ -732,7 +732,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.5</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.6</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -826,7 +826,7 @@ const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
 const DEFAULTS = { profile:{name:'Benjamin', heightIn:72}, settings:{apiKey:'', theme:'light', healthSyncUrl:''}, briefLine:null, otd:null,
-  events:[], friends:[], stats:{}, journal:[], memories:[], memCand:[], checkins:{}, places:null, placeNames:{}, placeGeo:{}, goals:[], calEvents:[], reviews:[], tomb:{}, statsManual:{} };
+  events:[], friends:[], stats:{}, journal:[], memories:[], memCand:[], checkins:{}, places:null, placeNames:{}, placeGeo:{}, placeTrip:{}, goals:[], calEvents:[], reviews:[], tomb:{}, statsManual:{} };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
@@ -844,7 +844,7 @@ function scrubStats(){
   return n;
 }
 if(scrubStats()){ try{ save(); }catch(e){} }
-DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[]; DB.statsManual=DB.statsManual||{};
+DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[]; DB.statsManual=DB.statsManual||{}; DB.placeTrip=DB.placeTrip||{};
 DB.mealLog=DB.mealLog||{};
 if(!DB.settings.macros) DB.settings.macros={p:150,f:30,s:25};
 if(!DB.twy || DB.twy.id!=='fall2026'){
@@ -2365,7 +2365,7 @@ async function importData(e){
       const ids = new Set(merged[k].map(x => x.id));
       (db[k] || []).forEach(x => { if (!ids.has(x.id)) merged[k].push(x); });
     });
-    ['stats','checkins','placeNames','placeGeo','mealLog'].forEach(k =>
+    ['stats','checkins','placeNames','placeGeo','placeTrip','mealLog'].forEach(k =>
       merged[k] = Object.assign({}, db[k] || {}, merged[k] || {}));
     merged.profile  = Object.assign({}, db.profile  || {}, merged.profile  || {});
     merged.settings = Object.assign({}, db.settings || {}, merged.settings || {});
@@ -2521,13 +2521,58 @@ function buildPlaces(parsed){
 }
 function placeName(key){
   const c = DB.places.clusters[key]; if (!c) return 'Unknown';
-  if (DB.placeNames[key]) return DB.placeNames[key];
+  if (DB.placeNames[key]) return DB.placeNames[key];          // what you typed always wins
   if (c.type){ const t = c.type.toLowerCase();
     if (t.includes('home')) return 'Home';
     if (t.includes('work')) return 'Work'; }
+  const tp = DB.placeTrip && DB.placeTrip[key];               // a hotel beats a road name
+  if (tp && tp.label) return tp.label;
   if (c.name) return c.name;
   if (DB.placeGeo && DB.placeGeo[key] && DB.placeGeo[key].label) return DB.placeGeo[key].label;
   return c.lat.toFixed(3) + ', ' + c.lng.toFixed(3);
+}
+// ---------- naming places from the trip itineraries ----------
+// Google's Timeline knows a set of coordinates; TripIt knows that those
+// coordinates are the Park Hyatt Zurich. Match them on distance.
+function metresBetween(aLat, aLng, bLat, bLng){
+  const R = 6371000, r = Math.PI/180;
+  const dLat = (bLat-aLat)*r, dLng = (bLng-aLng)*r;
+  const h = Math.sin(dLat/2)**2 + Math.cos(aLat*r)*Math.cos(bLat*r)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.min(1, Math.sqrt(h)));
+}
+// A flight is not a place, and TripIt's coordinates for one are the trip's city
+// rather than the airport — matching on those puts a flight number on a
+// restaurant. Only things you actually stand in get to name a place.
+const TRIP_RANK  = { lodging:0, car:1, rail:2 };
+const TRIP_RANGE = { lodging:600, car:250, rail:250 };   // metres; a resort is wide, a rental desk is not
+async function matchTripPlaces(){
+  if(!DB.places){ toast('No places imported yet'); return; }
+  if(!SUPA || !SUPA.session){ toast('Sign in to read your trips'); return; }
+  toast('Reading your itineraries\u2026');
+  const places = await photosRpc('trip_places', {});
+  if(!places || !places.length){ toast('No trips with coordinates yet'); return; }
+  DB.placeTrip = DB.placeTrip || {};
+  let named = 0, changed = 0;
+  for(const [key, c] of Object.entries(DB.places.clusters)){
+    if(DB.placeNames[key]) continue;                          // never overwrite your own name
+    let best = null, bestD = Infinity;
+    for(const p of places){
+      const range = TRIP_RANGE[p.kind]; if(!range) continue;
+      const d = metresBetween(c.lat, c.lng, p.lat, p.lng);
+      if(d > range) continue;
+      // within range, prefer a hotel over a rental counter, then the closer one
+      if(!best || TRIP_RANK[p.kind] < TRIP_RANK[best.kind] ||
+         (TRIP_RANK[p.kind] === TRIP_RANK[best.kind] && d < bestD)){ best = p; bestD = d; }
+    }
+    if(!best) continue;
+    const prev = DB.placeTrip[key] && DB.placeTrip[key].label;
+    DB.placeTrip[key] = { label: String(best.label).slice(0,60), m: Math.round(bestD), kind: best.kind };
+    named++; if(prev !== best.label) changed++;
+  }
+  save();
+  renderPlaces();
+  toast(named ? changed + ' place' + (changed===1?'':'s') + ' named from your trips'
+              : 'No places matched a trip location');
 }
 // ---------- reverse geocoding (OpenStreetMap Nominatim) ----------
 let _geoRunning=false;
@@ -2584,12 +2629,14 @@ function renderPlaces(){
     '<div class="tile"><div class="label"><span class="dot" style="background:var(--accent)"></span>Places</div><div class="value">'+Object.keys(P.clusters).length+'</div><div class="hint">'+P.totalVisits+' visits · '+esc(P.start||'')+' → '+esc(P.end||'')+'</div></div>'+
     '<div class="tile"><div class="label"><span class="dot" style="background:var(--aqua)"></span>Traveled</div><div class="value">'+mi(P.weeks.reduce((a,w) => a+w.d, 0))+'</div><div class="hint">across '+P.weeks.length+' weeks</div></div>'+
     '</div>'+
-    '<div class="section-head"><h2>Where your time goes</h2></div>'+
+    '<div class="section-head"><h2>Where your time goes</h2>'+
+      '<button class="action" onclick="matchTripPlaces()">Name from trips</button></div>'+
     topPlaces.map(([key, c]) =>
       '<div class="place">'+
       '<span class="p-ico"><svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-6.5-5.4-6.5-10.2a6.5 6.5 0 0 1 13 0C18.5 15.6 12 21 12 21Z"/><circle cx="12" cy="10.5" r="2.4"/></svg></span>'+
       '<span class="p-body"><span class="p-name">'+esc(placeName(key))+'</span>'+
-      '<span class="p-meta" style="display:block">'+c.n+' visits · '+hrs(c.ms)+' · last '+esc(c.last)+'</span></span>'+
+      '<span class="p-meta" style="display:block">'+c.n+' visits · '+hrs(c.ms)+' · last '+esc(c.last)+
+        ((DB.placeTrip&&DB.placeTrip[key]&&!DB.placeNames[key]) ? ' · from your itinerary' : '')+'</span></span>'+
       '<button class="mini" onclick="namePlace(\''+key+'\')">Name</button>'+
       '<button class="mini" onclick="window.open(\'https://maps.google.com/?q='+c.lat+','+c.lng+'\')">Map</button>'+
       '</div>').join('')+
@@ -3836,7 +3883,7 @@ function mergeRemote(db){
     }
     DB[k]=out;
   });
-  ['placeNames','placeGeo'].forEach(k=> DB[k]=Object.assign({}, db[k]||{}, DB[k]||{}));
+  ['placeNames','placeGeo','placeTrip'].forEach(k=> DB[k]=Object.assign({}, db[k]||{}, DB[k]||{}));
   scrubStats(); dropStatIndex();
   DB.profile=Object.assign({}, db.profile||{}, DB.profile||{});
   DB.settings=Object.assign({}, db.settings||{}, DB.settings||{});
