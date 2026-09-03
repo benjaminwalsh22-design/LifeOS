@@ -760,7 +760,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.7</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.8</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -820,8 +820,11 @@ nav.tabbar {
     <div class="lock-inner">
       <svg width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path stroke-linecap="round" d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
       <div class="lock-title">LifeOS is locked</div>
+      <button class="btn" id="lockFace" style="max-width:220px;display:none" onclick="faceUnlock()">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" style="vertical-align:-3px;margin-right:7px"><path stroke-linecap="round" d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path stroke-linecap="round" d="M9 10v1.5M15 10v1.5M9.5 15.2a3.6 3.6 0 0 0 5 0"/></svg>Unlock with Face ID</button>
+      <div id="lockOr" style="display:none;font-size:12px;color:var(--muted);margin:14px 0 2px">or enter your PIN</div>
       <input id="lockPin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" maxlength="8">
-      <button class="btn" style="max-width:220px" onclick="tryUnlock()">Unlock</button>
+      <button class="btn" id="lockPinBtn" style="max-width:220px" onclick="tryUnlock()">Unlock</button>
       <div class="lock-forgot" onclick="lockForgot()">Forgot PIN?</div>
     </div>
   </div>
@@ -4292,8 +4295,71 @@ async function pinHash(pin, salt){
   const h=await crypto.subtle.digest('SHA-256', data);
   return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
+// Face ID goes through WebAuthn's platform authenticator. There is no server to
+// verify the signature against, so this is a gate on the same footing as the PIN
+// — it keeps someone holding your phone out, and it is the phone itself doing
+// the checking. It is not a vault.
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const unb64 = s => { const t=s.replace(/-/g,'+').replace(/_/g,'/'); const bin=atob(t);
+  return Uint8Array.from(bin, c=>c.charCodeAt(0)); };
+async function faceAvailable(){
+  try{ return !!(window.PublicKeyCredential &&
+    await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); }catch(e){ return false; }
+}
+async function faceEnroll(){
+  const cfg=lockCfg();
+  if(!cfg){ toast('Set a PIN first'); return; }
+  if(!await faceAvailable()){ toast('This device has no Face ID or Touch ID for the web'); return; }
+  try{
+    const cred = await navigator.credentials.create({ publicKey:{
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name:'LifeOS' },
+      user: { id: new TextEncoder().encode('lifeos:'+(cfg.salt||'local')),
+              name: DB.profile.name||'me', displayName: DB.profile.name||'me' },
+      pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'discouraged' },
+      attestation:'none', timeout: 60000 } });
+    if(!cred) throw new Error('no credential');
+    cfg.cred = b64(cred.rawId);
+    store.setItem(LOCK_KEY, JSON.stringify(cfg));
+    closeSheet(); renderLockCard(); toast('Face ID on');
+  }catch(e){
+    toast(e && e.name==='NotAllowedError' ? 'Face ID cancelled' : 'Could not set up Face ID');
+  }
+}
+function faceDisable(){
+  const cfg=lockCfg(); if(!cfg) return;
+  delete cfg.cred; store.setItem(LOCK_KEY, JSON.stringify(cfg));
+  renderLockCard(); toast('Face ID off — PIN only');
+}
+async function faceUnlock(){
+  const cfg=lockCfg(); if(!cfg || !cfg.cred) return;
+  const btn=$('lockFace'); if(btn) btn.disabled=true;
+  try{
+    const ok = await navigator.credentials.get({ publicKey:{
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials: [{ type:'public-key', id: unb64(cfg.cred), transports:['internal'] }],
+      userVerification:'required', timeout: 60000 } });
+    if(ok) unlockUI();
+  }catch(e){
+    // cancelled or failed — the PIN is still sitting right there
+    const el=$('lockscreen');
+    if(el && e && e.name!=='NotAllowedError'){ el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),350); }
+  }
+  if(btn) btn.disabled=false;
+}
 let _lastHidden=0;
-function lockNow(){ if(!lockCfg()) return; const el=$('lockscreen'); if(el){ el.style.display='flex'; const p=$('lockPin'); if(p){ p.value=''; } } }
+function lockNow(){
+  if(!lockCfg()) return;
+  const el=$('lockscreen'); if(!el) return;
+  el.style.display='flex';
+  const p=$('lockPin'); if(p) p.value='';
+  const cfg=lockCfg(), has=!!(cfg && cfg.cred);
+  const fb=$('lockFace'), or=$('lockOr');
+  if(fb) fb.style.display = has ? '' : 'none';
+  if(or) or.style.display = has ? '' : 'none';
+  // iOS will not raise the Face ID sheet without a tap, so the button is the gesture
+}
 function unlockUI(){ const el=$('lockscreen'); if(el) el.style.display='none'; }
 async function tryUnlock(){
   const cfg=lockCfg(); if(!cfg){ unlockUI(); return; }
@@ -4325,6 +4391,9 @@ function openLockSetup(){
     '<div class="field"><label>Require PIN after</label><select id="lkDelay">'+
       [[0,'Immediately'],[60,'1 minute in background'],[300,'5 minutes in background']].map(o=>'<option value="'+o[0]+'"'+(cfg&&cfg.delay===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></div>'+
     '<button class="btn" onclick="setLockPin()">'+(cfg?'Update lock':'Turn on lock')+'</button>'+
+    (cfg ? (cfg.cred
+      ? '<button class="btn secondary" onclick="faceDisable()">Turn off Face ID</button>'
+      : '<button class="btn secondary" onclick="faceEnroll()">Use Face ID instead</button>') : '')+
     '<div class="notice">The PIN lives only on this device (set it on each device you use). Forgetting it means resetting this device — synced data returns when you log back in.</div>');
   setTimeout(()=>{ const el=$('lkNew'); if(el) el.focus(); }, 60);
 }
@@ -4332,8 +4401,11 @@ function renderLockCard(){
   const el=$('lockCard'); if(!el) return;
   const cfg=lockCfg();
   el.innerHTML='<div style="font-size:15px;font-weight:650;margin-bottom:6px">App lock</div>'+
-    '<div class="notice" style="margin-top:0">'+(cfg?('On — PIN required '+(cfg.delay?('after '+(cfg.delay===60?'1 minute':'5 minutes')+' in background'):'every time you open')+'.'):'Protect your journals with a PIN on this device.')+'</div>'+
-    '<button class="btn secondary" style="margin-top:12px" onclick="openLockSetup()">'+(cfg?'Change PIN or timing':'Set up app lock')+'</button>'+
+    '<div class="notice" style="margin-top:0">'+(cfg
+      ? ('On — '+(cfg.cred?'Face ID':'PIN')+' required '+(cfg.delay?('after '+(cfg.delay===60?'1 minute':'5 minutes')+' in background'):'every time you open')+'.'
+         +(cfg.cred?' Your PIN still works if Face ID fails.':''))
+      : 'Protect your journals on this device.')+'</div>'+
+    '<button class="btn secondary" style="margin-top:12px" onclick="openLockSetup()">'+(cfg?'Change PIN, Face ID or timing':'Set up app lock')+'</button>'+
     (cfg?'<button class="btn danger" onclick="disableLock()">Turn off</button>':'');
 }
 document.addEventListener('visibilitychange', () => {
