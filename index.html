@@ -773,7 +773,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.9</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.0</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -4394,6 +4394,7 @@ async function faceEnroll(){
               name: DB.profile.name||'me', displayName: DB.profile.name||'me' },
       pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
       authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'discouraged' },
+      hints: ['client-device'],
       attestation:'none', timeout: 60000 } });
     if(!cred) throw new Error('no credential');
     cfg.cred = b64(cred.rawId);
@@ -4470,6 +4471,9 @@ function openLockSetup(){
     (cfg ? (cfg.cred
       ? '<button class="btn secondary" onclick="faceDisable()">Turn off Face ID</button>'
       : '<button class="btn secondary" onclick="faceEnroll()">Use Face ID instead</button>') : '')+
+    (cfg ? '<div class="notice">If a password manager asks for its master password instead of showing Face ID, it has claimed the passkey. '+
+      'iPhone Settings \u2192 General \u2192 AutoFill &amp; Passwords, turn that manager off, delete the LifeOS passkey inside it, '+
+      'then turn Face ID off and on again here so Apple\u2019s keychain takes it.</div>' : '')+
     '<div class="notice">The PIN lives only on this device (set it on each device you use). Forgetting it means resetting this device — synced data returns when you log back in.</div>');
   setTimeout(()=>{ const el=$('lkNew'); if(el) el.focus(); }, 60);
 }
