@@ -732,7 +732,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.1</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.2</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -832,6 +832,15 @@ try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); 
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
 const save = () => { const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); if (window._syncDirty) window._syncDirty(); };
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
+// a night with no recorded sleep is missing data, not zero hours — an older
+// version of the health sync stored it as 0 and it drags every average down
+function scrubStats(){
+  const S=DB.stats||{}; let n=0;
+  for(const d in S){ const v=S[d];
+    if(v && typeof v==='object' && Number(v.sleep)===0 && v.sleep!=null){ delete v.sleep; n++; } }
+  return n;
+}
+if(scrubStats()){ try{ save(); }catch(e){} }
 DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[];
 DB.mealLog=DB.mealLog||{};
 if(!DB.settings.macros) DB.settings.macros={p:150,f:30,s:25};
@@ -3743,7 +3752,17 @@ function mergeRemote(db){
     });
     DB[k]=[...map.values()].filter(x=>x&&!tomb[x.id]);
   });
-  ['stats','checkins','placeNames','placeGeo'].forEach(k=> DB[k]=Object.assign({}, db[k]||{}, DB[k]||{}));
+  // stats and check-ins merge key by key, not day by day: the phone often knows
+  // only steps for a day while the cloud has sleep and heart rate for the same
+  // day, and a whole-object overwrite threw the other half away
+  ['stats','checkins'].forEach(k=>{
+    const out=Object.assign({}, db[k]||{}), loc=DB[k]||{};
+    for(const d in loc){ const r=out[d], l=loc[d];
+      out[d] = (r && l && typeof r==='object' && typeof l==='object') ? Object.assign({}, r, l) : l; }
+    DB[k]=out;
+  });
+  ['placeNames','placeGeo'].forEach(k=> DB[k]=Object.assign({}, db[k]||{}, DB[k]||{}));
+  scrubStats();
   DB.profile=Object.assign({}, db.profile||{}, DB.profile||{});
   DB.settings=Object.assign({}, db.settings||{}, DB.settings||{});
   if(db.places && !DB.places) DB.places=db.places;
