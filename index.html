@@ -587,6 +587,34 @@ nav.tabbar {
 .mr-nav{display:flex;gap:10px;padding:12px 20px calc(env(safe-area-inset-bottom) + 16px)}
 .mr-nav button{flex:1;padding:15px;border-radius:14px;border:1px solid var(--hairline);background:var(--surface);color:var(--ink);font-size:15px;font-weight:650}
 .mr-nav button.pri{background:var(--fill);color:var(--fill-ink);border-color:var(--fill)}
+
+/* ---- money panel & written observations ---- */
+.mny{background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:16px 16px 14px;margin-bottom:10px}
+.mny-lead{font-size:15px;line-height:1.5;color:var(--ink-2)}
+.mny-lead b{color:var(--ink);font-size:26px;font-weight:700;letter-spacing:-.02em}
+.mny-row{display:grid;grid-template-columns:78px 1fr 68px;gap:10px;align-items:center;margin-top:9px;font-size:13.5px}
+.mny-row .k{color:var(--ink-2);text-transform:capitalize}
+.mny-row .v{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.mny-bar{position:relative;height:16px}
+.mny-bar i{position:absolute;left:0;height:6px;border-radius:3px;display:block}
+.mny-bar .now{top:1px;background:var(--accent)}
+.mny-bar .typ{top:9px;background:var(--muted);opacity:.45}
+.mny-key{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:12px}
+.mny-key span{display:flex;align-items:center;gap:5px}
+.mny-key i{width:11px;height:5px;border-radius:3px;display:inline-block}
+.mny-items{margin-top:12px;border-top:1px solid var(--hairline);padding-top:10px}
+.mny-item{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:4px 0;color:var(--ink-2)}
+.mny-item b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.obs{background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:15px 16px;margin-bottom:9px}
+.obs-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.obs-kind{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.obs-str{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:20px;font-weight:600}
+.obs-strong{background:rgba(94,115,83,.16);color:var(--good)}
+.obs-moderate{background:rgba(169,118,43,.16);color:var(--gold)}
+.obs-thin{background:var(--surface-2);color:var(--muted)}
+.obs h4{margin:0 0 5px;font-size:16px;line-height:1.34;font-weight:650;color:var(--ink)}
+.obs p{margin:0;font-size:14px;line-height:1.55;color:var(--ink-2)}
+.obs-when{font-size:12px;color:var(--muted);margin:2px 0 12px}
 </style>
 </head>
 <body>
@@ -732,7 +760,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.6</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.7</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1456,6 +1484,75 @@ function briefHTML(){
 }
 
 
+
+// ---------- the joined view: money in context, and what Claude sees in it ----------
+let LIFE = { digest:null, obs:null, at:0, loading:false };
+async function loadLife(force){
+  if(LIFE.loading) return;
+  if(!force && LIFE.digest && Date.now()-LIFE.at < 900000) return;
+  if(!SUPA || !SUPA.session) return;
+  LIFE.loading = true;
+  try{
+    const [d, o] = await Promise.all([photosRpc('my_digest', {}), photosRpc('latest_insights', {})]);
+    if(d) LIFE.digest = d;
+    if(o) LIFE.obs = o;
+    LIFE.at = Date.now();
+  } finally { LIFE.loading = false; }
+  renderInsightsView();
+}
+const money0 = n => '$' + Math.round(Number(n)||0).toLocaleString();
+function moneyPanelHTML(){
+  const d = LIFE.digest; if(!d || !d.money) return '';
+  const m = d.money, now = m.month_to_date||{}, typ = m.typical_same_window||{};
+  const mtd = Number(m.mtd_total)||0, tot = Number(m.typical_total)||0;
+  const dayN = new Date().getDate();
+  const pct = tot ? Math.round(100*mtd/tot) : null;
+  const keys = [...new Set([...Object.keys(now), ...Object.keys(typ)])]
+    .sort((a,b) => (Number(typ[b])||0)+(Number(now[b])||0) - ((Number(typ[a])||0)+(Number(now[a])||0)));
+  const max = Math.max(1, ...keys.map(k => Math.max(Number(now[k])||0, Number(typ[k])||0)));
+  const lead = pct == null ? '' :
+    '<div class="mny-lead"><b>'+money0(mtd)+'</b> spent so far this month.<br>'+
+    'By day '+dayN+' a typical month is '+money0(tot)+' \u2014 you are '+
+    (pct < 100 ? '<b style="font-size:15px;color:var(--good)">'+(100-pct)+'% under</b>'
+               : '<b style="font-size:15px;color:var(--serious)">'+(pct-100)+'% over</b>')+' that pace.</div>';
+  const rows = keys.slice(0,7).map(k => {
+    const a = Number(now[k])||0, b = Number(typ[k])||0;
+    return '<div class="mny-row"><span class="k">'+esc(k === 'day' ? 'day-to-day' : k)+'</span>'+
+      '<span class="mny-bar"><i class="now" style="width:'+(100*a/max).toFixed(1)+'%"></i>'+
+      '<i class="typ" style="width:'+(100*b/max).toFixed(1)+'%"></i></span>'+
+      '<span class="v">'+money0(a)+'</span></div>';
+  }).join('');
+  const items = (m.biggest_this_month||[]).slice(0,5).map(x =>
+    '<div class="mny-item"><span>'+esc(String(x.payee||'').replace(/^Transfer : /,''))+
+    ' <span style="color:var(--muted)">\u00b7 '+esc(x.cat||'')+'</span></span><b>'+money0(x.amt)+'</b></div>').join('');
+  return '<div class="section-head" style="margin-top:22px"><h2>This month</h2>'+
+      '<span class="action" style="cursor:default">'+esc(String(d.as_of||''))+'</span></div>'+
+    '<div class="mny">'+lead+rows+
+      '<div class="mny-key"><span><i style="background:var(--accent)"></i>this month</span>'+
+      '<span><i style="background:var(--muted);opacity:.45"></i>typical by day '+dayN+'</span></div>'+
+      (items ? '<div class="mny-items">'+items+'</div>' : '')+
+    '</div>';
+}
+function obsHTML(){
+  const o = LIFE.obs;
+  if(!o || !o.items || !o.items.length) return '';
+  const when = o.at ? new Date(o.at) : null;
+  const ago = when ? (Math.round((Date.now()-when.getTime())/3600000) < 24
+      ? 'read your data today' : 'read your data ' + fmtDate(dstr(when))) : '';
+  return '<div class="section-head" style="margin-top:22px"><h2>What stands out</h2>'+
+      '<button class="action" onclick="refreshObs()">Re-read</button></div>'+
+    (ago ? '<div class="obs-when">'+esc(ago)+'</div>' : '')+
+    o.items.map(it =>
+      '<div class="obs"><div class="obs-top"><span class="obs-kind">'+esc(it.kind||'')+'</span>'+
+      '<span class="obs-str obs-'+esc(it.strength||'thin')+'">'+esc(it.strength||'')+'</span></div>'+
+      '<h4>'+esc(it.title||'')+'</h4><p>'+esc(it.body||'')+'</p></div>').join('');
+}
+async function refreshObs(){
+  toast('Reading it again\u2026');
+  await photosRpc('kick_insights', {});
+  setTimeout(() => loadLife(true), 12000);
+}
+
 // ---------- render: dashboard ----------
 // `carry` is how many days a reading stays meaningful. A step count from
 // yesterday is simply wrong, so it never carries; a weight from three weeks ago
@@ -1742,7 +1839,7 @@ function renderPerson(){
   const up=[]; if(bd) up.push({title:p.name+'’s birthday', label:(bd.days===0?'today':bd.days===1?'tomorrow':'in '+bd.days+' days'), days:bd.days});
   upcomingEvents(p,180).forEach(e=>up.push({title:e.title,label:e.dateLabel,days:e.days,eid:e.id}));
   up.sort((a,b)=>a.days-b.days);
-  h+= up.length? '<div class="card" style="padding:6px 16px">'+up.map(u=>'<div class="kv"><span class="k">'+esc(u.title)+(u.eid?' <span style="color:var(--faint);cursor:pointer" onclick="delPersonEvent(\''+p.id+'\',\''+u.eid+'\')">✕</span>':'')+'</span><span class="v">'+esc(u.label)+'</span></div>').join('')+'</div>' : '<div class="empty">No dates yet — add anniversaries, kids’ birthdays, work milestones.</div>';
+  h+= up.length? '<div class="card" style="padding:6px 16px">'+up.map(u=>'<div class="kv"><span class="k">'+esc(u.title)+(u.eid?' <span style="color:var(--muted);cursor:pointer" onclick="delPersonEvent(\''+p.id+'\',\''+u.eid+'\')">✕</span>':'')+'</span><span class="v">'+esc(u.label)+'</span></div>').join('')+'</div>' : '<div class="empty">No dates yet — add anniversaries, kids’ birthdays, work milestones.</div>';
   h+='<div class="section-head" style="margin-top:20px"><h2>About</h2><button class="action" onclick="editFriend(\''+p.id+'\')">Edit</button></div>';
   const ab=[['Family',p.family],['Favorites & interests',p.favorites],['Sports team',p.team],['How we met',p.how],['Gift ideas',p.giftIdeas],['Notes',p.notes],['Stay in touch',p.stay||(p.cadence?('every '+p.cadence+' days'):'')]].filter(a=>a[1]);
   h+= ab.length? '<div class="card" style="padding:6px 16px">'+ab.map(a=>'<div class="kv"><span class="k">'+esc(a[0])+'</span><span class="v">'+esc(a[1])+'</span></div>').join('')+'</div>' : '<div class="empty">Tap Edit to add family, interests, notes.</div>';
@@ -3802,14 +3899,16 @@ function trendCardHTML(m){
   const disp = m.fmt==='int' ? Math.round(latest).toLocaleString()
     : m.fmt==='usd' ? '$'+Math.round(latest).toLocaleString()
     : (Math.round(latest*Math.pow(10,m.dp))/Math.pow(10,m.dp));
-  const sub = m7!=null ? ('7-day avg '+(m.fmt==='int'?Math.round(m7).toLocaleString():m.fmt==='usd'?'$'+Math.round(m7).toLocaleString():(Math.round(m7*10)/10))+m.unit+(mp!=null?arrowHTML(m7,mp,m.goodUp):'')+' <span style="color:var(--faint)">· '+nn.length+' days</span>') : (nn.length+' days logged');
+  const sub = m7!=null ? ('7-day avg '+(m.fmt==='int'?Math.round(m7).toLocaleString():m.fmt==='usd'?'$'+Math.round(m7).toLocaleString():(Math.round(m7*10)/10))+m.unit+(mp!=null?arrowHTML(m7,mp,m.goodUp):'')+' <span style="color:var(--muted)">· '+nn.length+' days</span>') : (nn.length+' days logged');
   return '<div class="trend"><div class="tr-top"><span class="tr-label">'+esc(m.label)+'</span><span class="tr-val">'+disp+'<span class="tr-unit">'+esc(m.unit)+'</span></span></div>'+spark+'<div class="tr-sub">'+sub+'</div></div>';
 }
 function renderInsightsView(){
   const ex=$('insightsExtra'); if(!ex) return;
+  loadLife(false);
   if($('tiles')) $('tiles').innerHTML = tilesHTML(DB.stats[today()]||{});
   const hi=healthInsights(), pat=patternInsights();
   let h='';
+  h += moneyPanelHTML() + obsHTML();
   const trendCards=TRENDS.map(trendCardHTML).filter(Boolean);
   if(trendCards.length){ h+='<div class="section-head" style="margin-top:22px"><h2>Trends</h2><span class="action" style="cursor:default">last 30 days</span></div>'+trendCards.join(''); }
   h+='<div class="section-head" style="margin-top:20px"><h2>Signals</h2></div>';
