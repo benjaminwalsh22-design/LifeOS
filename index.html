@@ -732,7 +732,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.4</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.5</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1069,10 +1069,24 @@ function healthInsights(){
   const s7=statsVals('sleep',0,7), s14=statsVals('sleep',7,14);
   if(s7.length>=4 && s14.length>=3){ const a=mean(s7), b=mean(s14); if(a-b>=0.5) out.push({ score:38, tone:'good', text:'Your sleep has improved this week.', why:'Up to '+a.toFixed(1)+'h a night on average.' }); }
   // cross-source: sleep (Health) vs anxiety (check-in)
-  const xs=[], ys=[]; Object.keys(DB.checkins).forEach(d => { const st=DB.stats[d], c=DB.checkins[d];
-    if(st && st.sleep!=null && !isNaN(st.sleep) && c){ const a=ckAnx(c); if(a!=null){ xs.push(Number(st.sleep)); ys.push(a); } } });
-  if(xs.length>=12){ const rr=pearson(xs,ys); if(rr!=null && rr<=-0.25) out.push({ score:64, tone:'info', text:'You run more anxious on low-sleep nights.', why:'A real link across '+xs.length+' days of your own data.' }); }
+  const anxOf = {};
+  Object.keys(DB.checkins).forEach(d => { const a = ckAnx(DB.checkins[d]); if(a != null) anxOf[d] = a; });
+  (DB.journal||[]).forEach(j => { if(j && j.date && j.anx > 0 && anxOf[j.date] == null) anxOf[j.date] = j.anx; });
+  const xs=[], ys=[];
+  for(const d in anxOf){ const st = DB.stats[d];
+    if(st && st.sleep != null && !isNaN(st.sleep)){ xs.push(Number(st.sleep)); ys.push(anxOf[d]); } }
+  if(xs.length>=12){ const rr=pearson(xs,ys);
+    if(rr!=null && rr<=-0.25) out.push({ score:64, tone:'info', text:'You run more anxious on low-sleep nights.', why:'A real link across '+xs.length+' days of your own data.' });
+    else if(rr!=null && Math.abs(rr)<0.1 && xs.length>=60) out.push({ score:20, tone:'info', text:'Sleep and anxiety move independently for you.', why:'Across '+xs.length+' days there is no link either way — worth knowing before you blame a bad night.' }); }
   return out;
+}
+// how much health data is actually on hand, so an empty Signals list can say
+// which of the two reasons it is empty
+function healthDepth(){
+  let n = 0; const t = today();
+  for(const d in (DB.stats||{})){ if(d > t) continue; const v = DB.stats[d];
+    if(v && (v.sleep != null || v.rhr != null || v.steps != null)) n++; }
+  return n;
 }
 function ingestHealth(){
   const hash=(location.hash||'').replace(/^#/,'');
@@ -3752,7 +3766,10 @@ function renderInsightsView(){
   const trendCards=TRENDS.map(trendCardHTML).filter(Boolean);
   if(trendCards.length){ h+='<div class="section-head" style="margin-top:22px"><h2>Trends</h2><span class="action" style="cursor:default">last 30 days</span></div>'+trendCards.join(''); }
   h+='<div class="section-head" style="margin-top:20px"><h2>Signals</h2></div>';
-  h+= hi.length ? hi.map(insightCardHTML).join('') : '<div class="empty">Sync a few days from Apple Health and trends show up here.</div>';
+  h+= hi.length ? hi.map(insightCardHTML).join('')
+    : '<div class="empty">'+(healthDepth() >= 14
+        ? 'Nothing out of the ordinary in your numbers right now. Signals speak up when something moves \u2014 a jump in resting heart rate, a short night, a week of better sleep.'
+        : 'Sync a few days from Apple Health and trends show up here.')+'</div>';
   if(pat.length){ h+='<div class="section-head" style="margin-top:20px"><h2>Patterns in your data</h2></div>'+pat.map(insightCardHTML).join(''); }
   const rv=(DB.reviews||[])[0];
   h+='<div class="section-head" style="margin-top:20px"><h2>Weekly Review</h2><button class="action" onclick="showView(\'review\')">Open</button></div>';
