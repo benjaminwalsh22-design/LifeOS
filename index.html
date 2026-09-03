@@ -732,7 +732,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.0</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.1</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1437,17 +1437,32 @@ const TILES = [
   { key:'rhr',    label:'Resting HR',    unit:'bpm',  dot:'var(--magenta)', src:'health', hint:'Resting heart rate (bpm)', ph:'e.g. 54' },
   { key:'hrv',    label:'HRV',           unit:'ms',   dot:'var(--gold)',    src:'health', hint:'HRV (ms)', ph:'e.g. 48' },
   { key:'energy', label:'Active energy', unit:'kcal', dot:'var(--serious)', src:'health', hint:'Active energy (kcal)', ph:'e.g. 540', fmt:'int' },
-  { key:'weight', label:'Weight',        unit:'lb',   dot:'var(--accent)',  src:'health', hint:'Weight (lb)', ph:'e.g. 186.0' },
-  { key:'bodyfat',label:'Body fat',      unit:'%',    dot:'var(--serious)', src:'health', hint:'Body fat (%)', ph:'e.g. 23.0' },
+  { key:'weight', label:'Weight',        unit:'lb',   dot:'var(--accent)',  src:'health', hint:'Weight (lb)', ph:'e.g. 186.0', carry:true },
+  { key:'bodyfat',label:'Body fat',      unit:'%',    dot:'var(--serious)', src:'health', hint:'Body fat (%)', ph:'e.g. 23.0', carry:true },
   { key:'budget', label:'Budget',        unit:'',     dot:'var(--good)',    src:'manual', hint:'YNAB — manual for now', ph:'e.g. $430 left' },
 ];
-function tilesHTML(st){ return TILES.map(tl => {
-    const raw = st[tl.key]; const has = raw != null && raw !== '';
+// the scale only gets stepped on every few days, so those tiles show the last
+// reading rather than a dash
+function lastStat(key, upto){
+  const S = DB.stats || {}; let best = null;
+  for(const d in S){ const v = S[d] && S[d][key];
+    if(v != null && v !== '' && d <= upto && (!best || d > best)) best = d; }
+  return best ? { day:best, val:S[best][key] } : null;
+}
+function agoLabel(d, from){
+  const n = Math.round((Date.parse(from+'T12:00:00Z') - Date.parse(d+'T12:00:00Z')) / 86400000);
+  return n <= 0 ? 'today' : n === 1 ? 'yesterday' : n + ' days ago';
+}
+function tilesHTML(st, day){
+  const t = day || today();
+  return TILES.map(tl => {
+    let raw = st[tl.key]; let has = raw != null && raw !== ''; let stale = null;
+    if(!has && tl.carry){ const p = lastStat(tl.key, t); if(p){ raw = p.val; has = true; stale = agoLabel(p.day, t); } }
     const disp = has ? (tl.fmt === 'int' ? Number(raw).toLocaleString() : esc(String(raw))) : null;
-    const hint = tl.src === 'health' ? (has ? 'via Apple Health' : 'Sync from Health') : tl.hint;
+    const hint = stale ? stale : (tl.src === 'health' ? (has ? 'via Apple Health' : 'Sync from Health') : tl.hint);
     return '<div class="tile" onclick="editTile(\''+tl.key+'\')">' +
       '<div class="label"><span class="dot" style="background:'+tl.dot+'"></span>'+tl.label+'</div>' +
-      '<div class="value">'+(has ? disp+(tl.unit ? '<span class="unit">'+tl.unit+'</span>' : '') : '<span style="color:var(--muted);font-size:18px">—</span>')+'</div>' +
+      '<div class="value"'+(stale?' style="opacity:.72"':'')+'>'+(has ? disp+(tl.unit ? '<span class="unit">'+tl.unit+'</span>' : '') : '<span style="color:var(--muted);font-size:18px">—</span>')+'</div>' +
       '<div class="hint">'+hint+'</div></div>'; }).join(''); }
 function renderToday(){
   const t = today();
