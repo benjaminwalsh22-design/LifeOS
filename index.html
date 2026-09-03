@@ -615,6 +615,19 @@ nav.tabbar {
 .obs h4{margin:0 0 5px;font-size:16px;line-height:1.34;font-weight:650;color:var(--ink)}
 .obs p{margin:0;font-size:14px;line-height:1.55;color:var(--ink-2)}
 .obs-when{font-size:12px;color:var(--muted);margin:2px 0 12px}
+
+/* ---- mood scores on entries ---- */
+.sc-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sc{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;
+  font-size:13px;font-weight:600;background:var(--surface-2)}
+.sc i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.sc b{font-variant-numeric:tabular-nums;font-size:15px}
+.sc-mini{display:inline-flex;gap:7px;align-items:center;font-size:12px;color:var(--muted);
+  font-variant-numeric:tabular-nums;margin-top:3px}
+.sc-mini u{text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.sc-mini i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.sc-bar{height:5px;border-radius:3px;background:var(--surface-2);overflow:hidden;flex:1;min-width:56px;max-width:110px}
+.sc-bar span{display:block;height:100%;border-radius:3px}
 </style>
 </head>
 <body>
@@ -760,7 +773,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.8</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.9</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -2263,6 +2276,9 @@ async function renderJournalList(){
       '<div class="jsum">'+status+'</div>' +
       (flags.length ? '<div class="jmood" style="color:var(--warning)">⚑ '+esc(flags[0])+'</div>' : '') +
       (moodBits.length ? '<div class="jmood">'+moodBits.map(esc).join(' · ')+'</div>' : '') +
+      (j.hap > 0 ? '<div class="sc-mini"><u><i style="background:'+SC_HAP+'"></i>'+j.hap+'</u>'+
+        '<u><i style="background:'+SC_ANX+'"></i>'+j.anx+'</u>'+
+        (j.hapMine ? '<span style="opacity:.7">yours</span>' : '')+'</div>' : '') +
       '</div></div>';
   }));
   $('journalList').innerHTML = _banner + rows.join('') + (list.length>150 ? '<div class="empty">Showing 150 of '+list.length+' — search to narrow.</div>' : '');
@@ -2366,6 +2382,68 @@ function logJournalToPerson(pid, jid){
   p.log.push({ id:uid(), ts:(parseD(j.date).getTime()||Date.now()), date:j.date, kind:'journal', text:(j.summary||mentionSnippet(j,p.name)), srcJournal:j.id });
   save(); toast('Logged to '+p.name.split(/\s+/)[0]); renderAll(); openEntry(jid);
 }
+
+// ---------- how the day scored ----------
+const SC_HAP='var(--accent)', SC_ANX='var(--serious)';
+function scoreBlockHTML(j){
+  const has = j.hap > 0;
+  const bar = (v,c) => '<span class="sc-bar"><span style="width:'+(v*10)+'%;background:'+c+'"></span></span>';
+  if(has){
+    return '<div class="detail-block"><h4>How the day scored</h4>'+
+      '<div class="sc-row" style="margin-bottom:7px"><span class="sc"><i style="background:'+SC_HAP+'"></i>'+
+        '<b>'+j.hap+'</b>/10 happiness</span>'+bar(j.hap, SC_HAP)+'</div>'+
+      '<div class="sc-row"><span class="sc"><i style="background:'+SC_ANX+'"></i>'+
+        '<b>'+j.anx+'</b>/10 anxiety</span>'+bar(j.anx, SC_ANX)+'</div>'+
+      '<p style="margin-top:9px"><span style="color:var(--muted);font-size:13px">'+
+      (j.hapMine ? 'Your own scoring.' : 'Read from what you wrote, on the same scale as your check-ins.')+
+      ' <span style="color:var(--accent);cursor:pointer;font-weight:600" onclick="openScoreEdit(\''+j.id+'\')">'+
+      (j.hapMine?'Change':'Disagree?')+'</span></span></p></div>';
+  }
+  if(j.hap === 0 && j.anx === 0)
+    return '<div class="detail-block"><h4>How the day scored</h4><p><span style="color:var(--muted);font-size:13px">'+
+      'This page couldn\u2019t be scored automatically. '+
+      '<span style="color:var(--accent);cursor:pointer;font-weight:600" onclick="openScoreEdit(\''+j.id+'\')">Score it yourself</span></span></p></div>';
+  if(j.status !== 'done' || !(j.transcription||'').trim()) return '';
+  return '<div class="detail-block"><h4>How the day scored</h4><p><span style="color:var(--muted);font-size:13px">'+
+    'Not scored yet \u2014 this runs hourly once the entry reaches the cloud. '+
+    '<span style="color:var(--accent);cursor:pointer;font-weight:600" onclick="openScoreEdit(\''+j.id+'\')">Score it now</span></span></p></div>';
+}
+function openScoreEdit(id){
+  const j = DB.journal.find(x => x.id === id); if(!j) return;
+  const pick = (key, label, colour, cur) =>
+    '<div class="field"><label>'+label+'</label><div class="sc-row" id="scRow'+key+'">'+
+      [1,2,3,4,5,6,7,8,9,10].map(n =>
+        '<span class="sc" data-k="'+key+'" data-n="'+n+'" onclick="scPick(\''+key+'\','+n+')" '+
+        'style="cursor:pointer;padding:6px 9px'+(cur===n?';background:'+colour+';color:#fff':'')+'">'+n+'</span>').join('')+
+    '</div></div>';
+  openSheet('<h3>How did '+fmtDate(j.date)+' actually feel?</h3>'+
+    pick('hap','Happiness (1–10)', SC_HAP, j.hap||0)+
+    pick('anx','Anxiety (1–10)', SC_ANX, j.anx||0)+
+    '<button class="btn" onclick="saveScore(\''+id+'\')">Save</button>'+
+    (j.hap>0 && !j.hapMine ? '<div class="notice">Claude read this as '+j.hap+' happiness, '+j.anx+' anxiety. Yours replaces it and is never overwritten.</div>'
+                           : '<div class="notice">Your scoring is kept and never overwritten by the automatic pass.</div>'));
+  _scDraft = { hap: j.hap||0, anx: j.anx||0 };
+}
+let _scDraft = { hap:0, anx:0 };
+function scPick(key, n){
+  _scDraft[key] = n;
+  const row = $('scRow'+key); if(!row) return;
+  const colour = key === 'hap' ? SC_HAP : SC_ANX;
+  [...row.children].forEach(el => {
+    const on = Number(el.dataset.n) === n;
+    el.style.background = on ? colour : ''; el.style.color = on ? '#fff' : '';
+  });
+}
+function saveScore(id){
+  const j = DB.journal.find(x => x.id === id); if(!j) return;
+  if(!_scDraft.hap || !_scDraft.anx){ toast('Pick both'); return; }
+  j.hap = _scDraft.hap; j.anx = _scDraft.anx;
+  j.hapMine = 1;                       // yours; the cloud pass skips anything already scored
+  j.mt = Date.now();
+  save(); closeSheet(); renderJournalList();
+  toast('Saved \u2014 ' + j.hap + ' happiness, ' + j.anx + ' anxiety');
+}
+
 async function openEntry(id){
   const j = DB.journal.find(x => x.id === id); if (!j) return;
   if(/^\d{4}-\d{2}-\d{2}$/.test(j.date||'')) setTimeout(()=>loadPhotoStrip('entryPhotos', { day:j.date }), 30);
@@ -2376,9 +2454,7 @@ async function openEntry(id){
     (j.status === 'queued' ? '<div class="detail-block"><p><span class="spinner"></span>Waiting for cloud transcription… it runs even with the app closed.</p></div>' : '') +
     (j.status === 'error' && j.refused ? '<div class="notice" style="margin-top:0">Claude declined to transcribe this page — retrying won\u2019t help. Tap Edit text to type it in yourself.</div>' : '') +
     (j.summary ? '<div class="detail-block"><h4>Summary</h4><p>'+esc(j.summary)+'</p></div>' : '') +
-    (j.hap > 0 ? '<div class="detail-block"><h4>How the day scored</h4><p>' +
-      '<b>' + j.hap + '/10</b> happiness &nbsp;·&nbsp; <b>' + j.anx + '/10</b> anxiety' +
-      '<br><span style="color:var(--muted);font-size:13px">Read from what you wrote, on the same scale as your check-ins.</span></p></div>' : '') +
+    scoreBlockHTML(j) +
     (j.mood || (j.themes||[]).length ? '<div class="detail-block"><h4>Mood &amp; themes</h4><div class="pill-row">' +
       [j.mood, ...(j.themes||[])].filter(Boolean).map(x => '<span class="pill">'+esc(x)+'</span>').join('') + '</div></div>' : '') +
     (j.insight ? '<div class="detail-block"><h4>Reflection</h4><p>'+esc(j.insight)+'</p></div>' : '') +
