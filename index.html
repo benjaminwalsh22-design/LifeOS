@@ -732,7 +732,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.2</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v8.3</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -826,12 +826,15 @@ const KEY = 'lifeos_v1';
 const store = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
   catch(e){ const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k,v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; } })();
 const DEFAULTS = { profile:{name:'Benjamin', heightIn:72}, settings:{apiKey:'', theme:'light', healthSyncUrl:''}, briefLine:null, otd:null,
-  events:[], friends:[], stats:{}, journal:[], memories:[], memCand:[], checkins:{}, places:null, placeNames:{}, placeGeo:{}, goals:[], calEvents:[], reviews:[], tomb:{} };
+  events:[], friends:[], stats:{}, journal:[], memories:[], memCand:[], checkins:{}, places:null, placeNames:{}, placeGeo:{}, goals:[], calEvents:[], reviews:[], tomb:{}, statsManual:{} };
 let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
-const save = () => { const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); if (window._syncDirty) window._syncDirty(); };
+const save = () => { _statIdx = null; const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); if (window._syncDirty) window._syncDirty(); };
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
+// numbers the watch, ring or scale supplies — the cloud is the source of truth
+// for these, never the phone's cached copy
+const HEALTH_KEYS = new Set(['sleep','steps','rhr','hrv','energy','weight','bodyfat','bmi','resp','temp','spo2']);
 // a night with no recorded sleep is missing data, not zero hours — an older
 // version of the health sync stored it as 0 and it drags every average down
 function scrubStats(){
@@ -841,7 +844,7 @@ function scrubStats(){
   return n;
 }
 if(scrubStats()){ try{ save(); }catch(e){} }
-DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[];
+DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[]; DB.statsManual=DB.statsManual||{};
 DB.mealLog=DB.mealLog||{};
 if(!DB.settings.macros) DB.settings.macros={p:150,f:30,s:25};
 if(!DB.twy || DB.twy.id!=='fall2026'){
@@ -1440,35 +1443,58 @@ function briefHTML(){
 
 
 // ---------- render: dashboard ----------
+// `carry` is how many days a reading stays meaningful. A step count from
+// yesterday is simply wrong, so it never carries; a weight from three weeks ago
+// still tells you roughly where you are.
 const TILES = [
-  { key:'sleep',  label:'Sleep',         unit:'hrs',  dot:'var(--violet)',  src:'health', hint:'Hours asleep last night', ph:'e.g. 7.5' },
-  { key:'steps',  label:'Steps',         unit:'',     dot:'var(--aqua)',    src:'health', hint:'Steps today', ph:'e.g. 8200', fmt:'int' },
-  { key:'rhr',    label:'Resting HR',    unit:'bpm',  dot:'var(--magenta)', src:'health', hint:'Resting heart rate (bpm)', ph:'e.g. 54' },
-  { key:'hrv',    label:'HRV',           unit:'ms',   dot:'var(--gold)',    src:'health', hint:'HRV (ms)', ph:'e.g. 48' },
-  { key:'energy', label:'Active energy', unit:'kcal', dot:'var(--serious)', src:'health', hint:'Active energy (kcal)', ph:'e.g. 540', fmt:'int' },
-  { key:'weight', label:'Weight',        unit:'lb',   dot:'var(--accent)',  src:'health', hint:'Weight (lb)', ph:'e.g. 186.0', carry:true },
-  { key:'bodyfat',label:'Body fat',      unit:'%',    dot:'var(--serious)', src:'health', hint:'Body fat (%)', ph:'e.g. 23.0', carry:true },
-  { key:'budget', label:'Budget',        unit:'',     dot:'var(--good)',    src:'manual', hint:'YNAB — manual for now', ph:'e.g. $430 left' },
+  { key:'sleep',  label:'Sleep',         unit:'hrs',  dot:'var(--violet)',  src:'health', carry:1,  hint:'Hours asleep last night', ph:'e.g. 7.5' },
+  { key:'steps',  label:'Steps',         unit:'',     dot:'var(--aqua)',    src:'health', carry:0,  hint:'Steps today', ph:'e.g. 8200', fmt:'int' },
+  { key:'rhr',    label:'Resting HR',    unit:'bpm',  dot:'var(--magenta)', src:'health', carry:3,  hint:'Resting heart rate (bpm)', ph:'e.g. 54' },
+  { key:'hrv',    label:'HRV',           unit:'ms',   dot:'var(--gold)',    src:'health', carry:3,  hint:'HRV (ms)', ph:'e.g. 48' },
+  { key:'resp',   label:'Respiratory',   unit:'/min', dot:'var(--accent)',  src:'health', carry:3,  hint:'Breaths per minute', ph:'e.g. 14.2' },
+  { key:'temp',   label:'Body temp',     unit:'°F',   dot:'var(--serious)', src:'health', carry:3,  hint:'Wrist temperature', ph:'e.g. 97.6' },
+  { key:'spo2',   label:'Blood oxygen',  unit:'%',    dot:'var(--magenta)', src:'health', carry:3,  hint:'Blood oxygen (%)', ph:'e.g. 96', fmt:'int' },
+  { key:'energy', label:'Active energy', unit:'kcal', dot:'var(--serious)', src:'health', carry:0,  hint:'Active energy (kcal)', ph:'e.g. 540', fmt:'int' },
+  { key:'weight', label:'Weight',        unit:'lb',   dot:'var(--accent)',  src:'health', carry:30, hint:'Weight (lb)', ph:'e.g. 186.0' },
+  { key:'bodyfat',label:'Body fat',      unit:'%',    dot:'var(--serious)', src:'health', carry:30, hint:'Body fat (%)', ph:'e.g. 23.0' },
+  { key:'budget', label:'Budget',        unit:'',     dot:'var(--good)',    src:'manual', carry:7,  hint:'YNAB', ph:'e.g. $430 left', always:true },
 ];
-// the scale only gets stepped on every few days, so those tiles show the last
-// reading rather than a dash
-function lastStat(key, upto){
-  const S = DB.stats || {}; let best = null;
-  for(const d in S){ const v = S[d] && S[d][key];
-    if(v != null && v !== '' && d <= upto && (!best || d > best)) best = d; }
-  return best ? { day:best, val:S[best][key] } : null;
+// one pass over the whole history: the newest reading for every key that has
+// ever arrived. A tile the device has never sent doesn't appear at all, and
+// appears on its own the day it starts arriving.
+var _statIdx = null, _statIdxDay = '';   // var: save() may clear this before the line is reached
+function statIndex(upto){
+  if(_statIdx && _statIdxDay === upto) return _statIdx;
+  const S = DB.stats || {}, out = {};
+  for(const d in S){
+    if(d > upto) continue;
+    const v = S[d]; if(!v || typeof v !== 'object') continue;
+    for(const k in v){ const x = v[k];
+      if(x == null || x === '') continue;
+      if(!out[k] || d > out[k].day) out[k] = { day:d, val:x }; }
+  }
+  _statIdx = out; _statIdxDay = upto; return out;
+}
+function dropStatIndex(){ _statIdx = null; }
+function daysApart(a, b){
+  return Math.round((Date.parse(b+'T12:00:00Z') - Date.parse(a+'T12:00:00Z')) / 86400000);
 }
 function agoLabel(d, from){
-  const n = Math.round((Date.parse(from+'T12:00:00Z') - Date.parse(d+'T12:00:00Z')) / 86400000);
+  const n = daysApart(d, from);
   return n <= 0 ? 'today' : n === 1 ? 'yesterday' : n + ' days ago';
 }
 function tilesHTML(st, day){
-  const t = day || today();
-  return TILES.map(tl => {
+  const t = day || today(), idx = statIndex(t);
+  return TILES.filter(tl => tl.always || idx[tl.key]).map(tl => {
     let raw = st[tl.key]; let has = raw != null && raw !== ''; let stale = null;
-    if(!has && tl.carry){ const p = lastStat(tl.key, t); if(p){ raw = p.val; has = true; stale = agoLabel(p.day, t); } }
+    if(!has && tl.carry > 0){
+      const p = idx[tl.key];
+      if(p && daysApart(p.day, t) <= tl.carry){ raw = p.val; has = true; stale = agoLabel(p.day, t); }
+    }
     const disp = has ? (tl.fmt === 'int' ? Number(raw).toLocaleString() : esc(String(raw))) : null;
-    const hint = stale ? stale : (tl.src === 'health' ? (has ? 'via Apple Health' : 'Sync from Health') : tl.hint);
+    const hint = stale ? stale
+      : has ? (tl.src === 'health' ? 'via Apple Health' : tl.hint)
+      : (tl.src === 'health' ? 'no reading yet' : tl.hint);
     return '<div class="tile" onclick="editTile(\''+tl.key+'\')">' +
       '<div class="label"><span class="dot" style="background:'+tl.dot+'"></span>'+tl.label+'</div>' +
       '<div class="value"'+(stale?' style="opacity:.72"':'')+'>'+(has ? disp+(tl.unit ? '<span class="unit">'+tl.unit+'</span>' : '') : '<span style="color:var(--muted);font-size:18px">—</span>')+'</div>' +
@@ -1505,9 +1531,18 @@ function editTile(key){
   setTimeout(() => { const el = $('tileVal'); if (el) el.focus(); }, 60);
 }
 function saveTile(key){
-  const t = today(); DB.stats[t] = DB.stats[t] || {};
-  DB.stats[t][key] = $('tileVal').value.trim();
+  const t = today(); DB.stats[t] = DB.stats[t] || {}; DB.statsManual = DB.statsManual || {};
+  const v = $('tileVal').value.trim();
+  if(v === ''){
+    delete DB.stats[t][key];
+    if(DB.statsManual[t]) delete DB.statsManual[t][key];
+  } else {
+    const n = Number(v);
+    DB.stats[t][key] = Number.isFinite(n) ? n : v;          // keep numbers as numbers
+    (DB.statsManual[t] = DB.statsManual[t] || {})[key] = 1; // a typed value outranks the cloud
+  }
   save(); closeSheet(); renderToday();
+  if(typeof renderHealthView === 'function') renderHealthView();
 }
 
 // ---------- render: schedule ----------
@@ -3754,15 +3789,28 @@ function mergeRemote(db){
   });
   // stats and check-ins merge key by key, not day by day: the phone often knows
   // only steps for a day while the cloud has sleep and heart rate for the same
-  // day, and a whole-object overwrite threw the other half away
+  // day, and a whole-object overwrite threw the other half away.
+  // Health numbers only ever originate in the cloud, so there the cloud wins —
+  // otherwise a stale phone keeps overwriting today's sync with this morning's
+  // half of it. A value typed into a tile is marked in statsManual and stands.
+  DB.statsManual = Object.assign({}, db.statsManual||{}, DB.statsManual||{});
   ['stats','checkins'].forEach(k=>{
     const out=Object.assign({}, db[k]||{}), loc=DB[k]||{};
-    for(const d in loc){ const r=out[d], l=loc[d];
-      out[d] = (r && l && typeof r==='object' && typeof l==='object') ? Object.assign({}, r, l) : l; }
+    for(const d in loc){
+      const r=out[d], l=loc[d];
+      if(!(r && l && typeof r==='object' && typeof l==='object')){ out[d]=l; continue; }
+      const m=Object.assign({}, r);
+      const typed=(DB.statsManual[d]||{});
+      for(const key in l){
+        if(k==='stats' && HEALTH_KEYS.has(key) && r[key]!=null && !typed[key]) continue;
+        m[key]=l[key];
+      }
+      out[d]=m;
+    }
     DB[k]=out;
   });
   ['placeNames','placeGeo'].forEach(k=> DB[k]=Object.assign({}, db[k]||{}, DB[k]||{}));
-  scrubStats();
+  scrubStats(); dropStatIndex();
   DB.profile=Object.assign({}, db.profile||{}, DB.profile||{});
   DB.settings=Object.assign({}, db.settings||{}, DB.settings||{});
   if(db.places && !DB.places) DB.places=db.places;
