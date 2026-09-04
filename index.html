@@ -773,7 +773,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.0</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.1</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1517,6 +1517,7 @@ async function loadLife(force){
   renderInsightsView();
 }
 const money0 = n => '$' + Math.round(Number(n)||0).toLocaleString();
+const ord = n => n + (n%100>=11&&n%100<=13 ? 'th' : ['th','st','nd','rd'][n%10] || 'th');
 function moneyPanelHTML(){
   const d = LIFE.digest; if(!d || !d.money) return '';
   const m = d.money, now = m.month_to_date||{}, typ = m.typical_same_window||{};
@@ -1526,11 +1527,20 @@ function moneyPanelHTML(){
   const keys = [...new Set([...Object.keys(now), ...Object.keys(typ)])]
     .sort((a,b) => (Number(typ[b])||0)+(Number(now[b])||0) - ((Number(typ[a])||0)+(Number(now[a])||0)));
   const max = Math.max(1, ...keys.map(k => Math.max(Number(now[k])||0, Number(typ[k])||0)));
+  const through = m.settled_through || '', pending = Number(m.days_still_posting)||0;
+  const wk = Number(m.last_settled_week)||0, wkTyp = Number(m.typical_week)||0;
+  const settledDay = through ? Number(String(through).slice(8,10)) : dayN;
   const lead = pct == null ? '' :
-    '<div class="mny-lead"><b>'+money0(mtd)+'</b> spent so far this month.<br>'+
-    'By day '+dayN+' a typical month is '+money0(tot)+' \u2014 you are '+
+    '<div class="mny-lead"><b>'+money0(mtd)+'</b> spent this month through the '+ord(settledDay)+'.<br>'+
+    'A typical month reaches '+money0(tot)+' by then \u2014 you are '+
     (pct < 100 ? '<b style="font-size:15px;color:var(--good)">'+(100-pct)+'% under</b>'
-               : '<b style="font-size:15px;color:var(--serious)">'+(pct-100)+'% over</b>')+' that pace.</div>';
+               : '<b style="font-size:15px;color:var(--serious)">'+(pct-100)+'% over</b>')+' that pace.</div>'+
+    (wk ? '<div class="mny-lead" style="font-size:14px;margin-top:8px">Last settled week: <b style="font-size:17px">'+money0(wk)+'</b>'+
+      (wkTyp ? ' <span style="color:var(--muted)">against '+money0(wkTyp)+' in a usual week</span>' : '')+'</div>' : '')+
+    (pending > 0 ? '<div style="font-size:12.5px;color:var(--muted);margin-top:8px">'+
+      'The bank takes a few days to report. '+pending+' day'+(pending===1?'':'s')+
+      ' since the '+ord(settledDay)+' '+(pending===1?'is':'are')+' still posting and '+
+      (pending===1?'is':'are')+' not counted above.</div>' : '');
   const rows = keys.slice(0,7).map(k => {
     const a = Number(now[k])||0, b = Number(typ[k])||0;
     return '<div class="mny-row"><span class="k">'+esc(k === 'day' ? 'day-to-day' : k)+'</span>'+
@@ -1545,8 +1555,31 @@ function moneyPanelHTML(){
       '<span class="action" style="cursor:default">'+esc(String(d.as_of||''))+'</span></div>'+
     '<div class="mny">'+lead+rows+
       '<div class="mny-key"><span><i style="background:var(--accent)"></i>this month</span>'+
-      '<span><i style="background:var(--muted);opacity:.45"></i>typical by day '+dayN+'</span></div>'+
+      '<span><i style="background:var(--muted);opacity:.45"></i>typical by the '+ord(settledDay)+'</span></div>'+
       (items ? '<div class="mny-items">'+items+'</div>' : '')+
+    '</div>';
+}
+function workHTML(){
+  const w = LIFE.digest && LIFE.digest.work;
+  if(!w) return '';
+  const M = w.metrics || {};
+  const money = k => M[k] != null ? money0(M[k]) : null;
+  const cells = [
+    ['Billed', money('billed')], ['Collected', money('collected')],
+    ['Hours', M.hours != null ? M.hours : null],
+    ['Billable', M.billable_hours != null ? M.billable_hours : null],
+    ['Open matters', M.matters_open != null ? M.matters_open : null],
+    ['Retirement YTD', money('retirement_ytd')],
+    ['Defined benefit YTD', money('defined_benefit_ytd')],
+    ['Revenue YTD', money('revenue_ytd')],
+  ].filter(c => c[1] != null);
+  return '<div class="section-head" style="margin-top:22px"><h2>The firm</h2>'+
+      '<span class="action" style="cursor:default">'+esc(String(w.period||''))+'</span></div>'+
+    '<div class="mny">'+
+      (cells.length ? '<div class="tiles" style="margin:0 0 10px">'+cells.map(c =>
+        '<div class="tile" style="padding:12px 13px"><div class="label" style="margin:0">'+esc(c[0])+'</div>'+
+        '<div class="value" style="font-size:20px">'+esc(String(c[1]))+'</div></div>').join('')+'</div>' : '')+
+      (w.narrative ? '<div style="font-size:14.5px;line-height:1.6;color:var(--ink-2)">'+esc(w.narrative)+'</div>' : '')+
     '</div>';
 }
 function obsHTML(){
@@ -1584,7 +1617,6 @@ const TILES = [
   { key:'energy', label:'Active energy', unit:'kcal', dot:'var(--serious)', src:'health', carry:0,  hint:'Active energy (kcal)', ph:'e.g. 540', fmt:'int' },
   { key:'weight', label:'Weight',        unit:'lb',   dot:'var(--accent)',  src:'health', carry:30, hint:'Weight (lb)', ph:'e.g. 186.0' },
   { key:'bodyfat',label:'Body fat',      unit:'%',    dot:'var(--serious)', src:'health', carry:30, hint:'Body fat (%)', ph:'e.g. 23.0' },
-  { key:'spend',  label:'Spent today',   unit:'',     dot:'var(--gold)',    src:'ynab',   carry:0,  hint:'Spent today', ph:'e.g. 84.20', fmt:'usd' },
   { key:'budget', label:'Left this month',unit:'',     dot:'var(--good)',    src:'ynab',   carry:7,  hint:'Everyday envelopes', ph:'e.g. 4300', fmt:'usd', always:true },
 ];
 // one pass over the whole history: the newest reading for every key that has
@@ -3937,7 +3969,6 @@ const TRENDS=[
   {key:'rhr', kind:'stat', label:'Resting HR', unit:' bpm', color:'var(--magenta)', goodUp:false, dp:0},
   {key:'steps', kind:'stat', label:'Steps', unit:'', color:'var(--aqua)', goodUp:true, dp:0, fmt:'int'},
   {key:'hrv', kind:'stat', label:'HRV', unit:' ms', color:'var(--gold)', goodUp:true, dp:0},
-  {key:'spend', kind:'stat', label:'Spending', unit:'', color:'var(--gold)', goodUp:false, dp:0, fmt:'usd', zero:true},
   {key:'resp', kind:'stat', label:'Respiratory rate', unit:' /min', color:'var(--accent)', goodUp:false, dp:1},
   {key:'temp', kind:'stat', label:'Body temp', unit:'°F', color:'var(--serious)', goodUp:true, dp:1},
   {key:'spo2', kind:'stat', label:'Blood oxygen', unit:'%', color:'var(--magenta)', goodUp:true, dp:0},
@@ -3987,7 +4018,7 @@ function renderInsightsView(){
   if($('tiles')) $('tiles').innerHTML = tilesHTML(DB.stats[today()]||{});
   const hi=healthInsights(), pat=patternInsights();
   let h='';
-  h += moneyPanelHTML() + obsHTML();
+  h += moneyPanelHTML() + workHTML() + obsHTML();
   const trendCards=TRENDS.map(trendCardHTML).filter(Boolean);
   if(trendCards.length){ h+='<div class="section-head" style="margin-top:22px"><h2>Trends</h2><span class="action" style="cursor:default">last 30 days</span></div>'+trendCards.join(''); }
   h+='<div class="section-head" style="margin-top:20px"><h2>Signals</h2></div>';
