@@ -773,7 +773,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.1</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.2</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1561,25 +1561,55 @@ function moneyPanelHTML(){
 }
 function workHTML(){
   const w = LIFE.digest && LIFE.digest.work;
-  if(!w) return '';
-  const M = w.metrics || {};
-  const money = k => M[k] != null ? money0(M[k]) : null;
-  const cells = [
-    ['Billed', money('billed')], ['Collected', money('collected')],
+  if(!w || (!w.latest && !w.last_narrative)) return '';
+  const days = (w.days||[]).slice().reverse();      // oldest first for the chart
+  const L = w.latest || {}, M = L.metrics || {};
+  const ytd = (w.ytd && w.ytd.metrics) || {};
+  const num = v => v == null ? null : Number(v);
+
+  // hours worked, last few weeks
+  let spark = '';
+  const hs = days.filter(d => num(d.hours) != null);
+  if(hs.length >= 3){
+    const W=320, H=40, mx=Math.max(...hs.map(d=>num(d.hours)), 8);
+    const X=i=>2+(i/(hs.length-1))*(W-4), Y=v=>4+(1-v/mx)*(H-8);
+    const pts=hs.map((d,i)=>X(i).toFixed(1)+','+Y(num(d.hours)).toFixed(1));
+    spark='<svg width="100%" height="40" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="display:block;margin:10px 0 2px">'+
+      '<polyline points="'+pts.join(' ')+'" fill="none" stroke="var(--accent)" stroke-width="2" '+
+      'stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>'+
+      '<div style="font-size:12px;color:var(--muted)">hours a day, last '+hs.length+' reported</div>';
+  }
+  const tiles = [
     ['Hours', M.hours != null ? M.hours : null],
     ['Billable', M.billable_hours != null ? M.billable_hours : null],
+    ['Billed', M.billed != null ? money0(M.billed) : null],
     ['Open matters', M.matters_open != null ? M.matters_open : null],
-    ['Retirement YTD', money('retirement_ytd')],
-    ['Defined benefit YTD', money('defined_benefit_ytd')],
-    ['Revenue YTD', money('revenue_ytd')],
   ].filter(c => c[1] != null);
+
+  // the money the household ledger never sees
+  const saved = ['retirement_ytd','defined_benefit_ytd'].reduce((a,k)=> a + (num(ytd[k])||0), 0);
+  const ytdRow = [
+    ['Revenue YTD', ytd.revenue_ytd], ['Owner comp YTD', ytd.owner_comp_ytd],
+    ['Retirement YTD', ytd.retirement_ytd], ['Defined benefit YTD', ytd.defined_benefit_ytd],
+    ['SDE YTD', ytd.sde_ytd],
+  ].filter(c => c[1] != null);
+
   return '<div class="section-head" style="margin-top:22px"><h2>The firm</h2>'+
-      '<span class="action" style="cursor:default">'+esc(String(w.period||''))+'</span></div>'+
+      (L.period_end ? '<span class="action" style="cursor:default">through '+esc(String(L.period_end))+'</span>' : '')+
+    '</div>'+
     '<div class="mny">'+
-      (cells.length ? '<div class="tiles" style="margin:0 0 10px">'+cells.map(c =>
+      (tiles.length ? '<div class="tiles" style="margin:0">'+tiles.map(c =>
         '<div class="tile" style="padding:12px 13px"><div class="label" style="margin:0">'+esc(c[0])+'</div>'+
         '<div class="value" style="font-size:20px">'+esc(String(c[1]))+'</div></div>').join('')+'</div>' : '')+
-      (w.narrative ? '<div style="font-size:14.5px;line-height:1.6;color:var(--ink-2)">'+esc(w.narrative)+'</div>' : '')+
+      spark+
+      (w.last_narrative ? '<div style="font-size:14.5px;line-height:1.6;color:var(--ink-2);margin-top:12px;'+
+        'border-top:1px solid var(--hairline);padding-top:11px">'+esc(w.last_narrative)+'</div>' : '')+
+      (ytdRow.length ? '<div class="mny-items">'+ytdRow.map(c =>
+        '<div class="mny-item"><span>'+esc(c[0])+'</span><b>'+money0(c[1])+'</b></div>').join('')+
+        (saved ? '<div class="mny-item" style="border-bottom:0;padding-top:8px"><span style="color:var(--ink)">'+
+          '<b style="font-weight:600">Saved at the firm</b><br><span style="font-size:12.5px;color:var(--muted)">'+
+          'never reaches the household budget</span></span><b style="color:var(--good)">'+money0(saved)+'</b></div>' : '')+
+        '</div>' : '')+
     '</div>';
 }
 function obsHTML(){
