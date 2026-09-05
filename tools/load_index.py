@@ -33,10 +33,12 @@ def walk(x):
     if isinstance(x, list): return [walk(i) for i in x]
     return x
 
+# prefer the relinked copies (tools/relink_quotes.py) when they exist
+pick = lambda n: n + '.linked.json' if os.path.exists(n + '.linked.json') else n + '.json'
 files = {
-  'wisdom_index': 'wisdom_index.json',
-  'future_ben':   'future_ben.json',
-  'voice_pool':   'voice_pool.json',
+  'wisdom_index': pick('wisdom_index'),
+  'future_ben':   pick('future_ben'),
+  'voice_pool':   pick('voice_pool'),
 }
 for y in glob.glob('years/distilled_*.json'):
     files['years/' + re.search(r'(\d{4})', y).group(1)] = y
