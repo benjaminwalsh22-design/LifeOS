@@ -855,7 +855,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.3</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.4</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -4399,7 +4399,9 @@ async function syncPush(){
   if(!SUPA||!SUPA.session||_syncing) return; _syncing=true;
   try{
     const row=[{ user_id:SUPA.session.user.id, payload:buildPayload(), updated_at:new Date().toISOString() }];
-    const r=await supaRest('lifeos_data?on_conflict=user_id',{ method:'POST', prefer:'resolution=merge-duplicates,return=representation', body:row });
+    // select=updated_at: the row is 10 MB and only the stamp is needed back —
+    // return=representation without it re-downloaded the whole payload every save
+    const r=await supaRest('lifeos_data?on_conflict=user_id&select=updated_at',{ method:'POST', prefer:'resolution=merge-duplicates,return=representation', body:row });
     if(r.ok){ const rows=await r.json().catch(()=>[]); SUPA.dirty=false; SUPA.lastSync=Date.now();
       if(rows[0]&&rows[0].updated_at) SUPA.lastRemoteTs=rows[0].updated_at; supaSave(); renderAcct(); }
   }catch(e){ console.error('sync push', e); }

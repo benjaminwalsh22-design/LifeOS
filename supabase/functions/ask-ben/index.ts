@@ -61,11 +61,15 @@ const TOOL_RULE: Record<string, string> = {
   deep:  `- You may call search_journal (up to ${MAX_SEARCH} times) and read_entry (up to ${MAX_READ} times) when the situation involves a specific person, place, event or year, or when you want his exact words from an entry not in the index. Prefer the INDEX for patterns; use the journal tools for specifics. Use get_index to pull exact quotes before quoting.`,
   quick: `- Journal search is off in this mode; work from the INDEX and get_index only, and say so in one clause if a specific search would have helped.`,
 };
+// Appended to both tool rules. Smaller models like to announce the tool call
+// ("Let me look that up") and then forget the headings altogether.
+const NO_NARRATION = `
+- Never narrate what you are about to do. Call tools silently. Your reply text begins with the first heading and contains nothing before it.`;
 
 export function pickRules(voice: string, depth: string) {
   return {
     voice: VOICE_RULE[voice] ?? VOICE_RULE.both,
-    tool:  TOOL_RULE[depth]  ?? TOOL_RULE.deep,
+    tool:  (TOOL_RULE[depth] ?? TOOL_RULE.deep) + NO_NARRATION,
   };
 }
 
@@ -224,6 +228,17 @@ export function trimPreamble(markdown: string) {
   return fixed.slice(i).trim();
 }
 
+// The two-voice format is the feature. A reply that lacks the headings the
+// voice setting calls for is sent back once to be rewritten — the client and
+// the stored turn only ever see the repaired version.
+export function formatOk(markdown: string, voice: string) {
+  const rec = /(^|\n)## From the record\b/.test(markdown);
+  const fut = /(^|\n)## From the Ben you're becoming\b/i.test(markdown);
+  if (voice === "past") return rec;
+  if (voice === "future") return fut;
+  return rec && fut;
+}
+
 // ------------------------------------------------------------------ citations
 export function parseSources(markdown: string) {
   const i = markdown.indexOf("## Sources");
@@ -369,8 +384,31 @@ Deno.serve(async (req) => {
           messages.push({ role: "user", content: results });
         }
 
+        // ---- enforce the format mechanically
+        let draft = trimPreamble(answer);
+        if (!formatOk(draft, voice)) {
+          ctx.log.push("reformatting"); send("tool", { line: "reformatting" });
+          const fix = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
+            body: JSON.stringify({
+              model, max_tokens: 2000, tools, tool_choice: { type: "none" },   // earlier turns carry tool blocks
+              system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+              messages: [...messages, { role: "user", content:
+                "That reply was not in the required format. Rewrite it now, complete, in the exact format the rules call for: " +
+                rules.voice + " Begin with the first heading; no text before it; no narration about tools. " +
+                "Keep every quote verbatim and every date as it was. Do not add claims you did not already make. End with \"## Sources\"." }],
+            }),
+          });
+          if (fix.ok) {
+            const j = await fix.json();
+            const txt = (j.content ?? []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("");
+            if (formatOk(trimPreamble(txt), voice)) draft = trimPreamble(txt);
+          }
+        }
+
         // ---- check the quotes, parse the sources, keep the turn
-        const { markdown, unverified } = verifyQuotes(trimPreamble(answer), [...idx.quotes, ...ctx.seen]);
+        const { markdown, unverified } = verifyQuotes(draft, [...idx.quotes, ...ctx.seen]);
         const sources = parseSources(markdown);
         const { data: turn } = await admin.from("coach_turns").insert({
           session_id: sessionId, user_id: uid, question, answer_markdown: markdown,

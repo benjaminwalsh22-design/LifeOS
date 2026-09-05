@@ -143,15 +143,18 @@ async function cacheBatch(admin: any, row: any, tok: string, budget: number, onl
   let copied = 0, matched = 0;
 
   const want: { from: string; to: string; cap: number; month: boolean }[] = [];
+  // a month window ends on the first day of the next month, exclusive —
+  // "YYYY-MM-31" is not a date in June, and Postgres rejected the whole query
+  const nextMonth = (m: string) => { const [y, mo] = m.split("-").map(Number); return mo === 12 ? (y + 1) + "-01-01" : y + "-" + String(mo + 1).padStart(2, "0") + "-01"; };
   if (only?.day) want.push({ from: only.day, to: only.day, cap: PER_DAY, month: false });
-  else if (only?.month) want.push({ from: only.month + "-01", to: only.month + "-31", cap: PER_MONTH, month: true });
-  else for (const m of months) want.push({ from: m + "-01", to: m + "-31", cap: PER_MONTH, month: true });
+  else if (only?.month) want.push({ from: only.month + "-01", to: nextMonth(only.month), cap: PER_MONTH, month: true });
+  else for (const m of months) want.push({ from: m + "-01", to: nextMonth(m), cap: PER_MONTH, month: true });
 
   for (const w of want) {
     if (copied >= budget) break;
     const { data: pool } = await admin.from("photo_index")
       .select("item_id,taken,state,entry_id")
-      .eq("user_id", row.user_id).gte("taken", w.from).lte("taken", w.to)
+      .eq("user_id", row.user_id).gte("taken", w.from)[w.month ? "lt" : "lte"]("taken", w.to)
       .neq("state", "gone").order("taken_ts", { ascending: true }).limit(400);
     if (!pool || !pool.length) continue;
 

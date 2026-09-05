@@ -1,6 +1,6 @@
 // deno test tests/
 import { assertEquals, assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { verifyQuotes, parseSources, pickRules } from "../supabase/functions/ask-ben/index.ts";
+import { formatOk, verifyQuotes, parseSources, pickRules } from "../supabase/functions/ask-ben/index.ts";
 
 Deno.test("voice and tool rules select per request", () => {
   assert(pickRules("both", "deep").voice.includes("both voices"));
@@ -82,4 +82,14 @@ Deno.test("suggested dialogue and echoed words are not treated as citations", ()
   assertEquals(r.unverified, 1);
   assert(r.markdown.includes('not once" *(unverified'));
   assert(!r.markdown.includes('patience tonight" *(unverified'));
+});
+
+Deno.test("formatOk demands the headings the voice calls for", () => {
+  const both = "## From the record\n\nx\n\n## From the Ben you're becoming\n\ny\n\n## Sources\n- 2024-01-12 · a · entry:abcdefghijkl";
+  assertEquals(formatOk(both, "both"), true);
+  assertEquals(formatOk(both, "past"), true);
+  assertEquals(formatOk("## From the record\n\nx", "both"), false);
+  assertEquals(formatOk("## From the record\n\nx", "past"), true);
+  assertEquals(formatOk("## From the Ben you're becoming\n\ny", "future"), true);
+  assertEquals(formatOk("I need to search your journal. Let me pull the entries.", "both"), false);
 });

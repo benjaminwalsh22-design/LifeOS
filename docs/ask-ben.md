@@ -37,6 +37,10 @@ index.html  ──POST /functions/v1/ask-ben (user JWT)──▶  edge function
      date), against the set of quotes in the index plus the transcripts actually
      read this turn. A quote that is not a substring of any of those is marked
      `*(unverified — not found in the journal)*` and counted.
+   - `formatOk` checks the headings the voice setting calls for are present.
+     If not (Haiku sometimes narrates instead), one non-streamed repair call
+     rewrites the reply in the exact format; the client's `done` event carries
+     the repaired markdown and replaces what streamed.
    - `parseSources` turns the `## Sources` list into `[{date,label,entry_id}]`.
 6. The turn is stored in `coach_turns` (markdown, sources, tool log, unverified
    count, model) and the session's `updated_at` moves; the app receives `done`.
@@ -78,8 +82,10 @@ Phase 3 turns this into an edge function on a cron that rebuilds from
 ## Tables
 
 - `journal_entries` — the journal as rows, mirrored from the `lifeos_data.payload`
-  jsonb by the `journal_entries_t` trigger (only rows whose `mt` changed are
-  touched). Everything server-side should read this, not the blob.
+  jsonb by the `journal_entries_t` trigger. The trigger diffs on `(id, mt)` first
+  and only extracts and indexes rows whose stamp moved (~300 ms per save; the
+  first version rebuilt every row and cost 2.9 s). Everything server-side should
+  read this, not the blob — `life_digest` already does.
 - `coach_sessions`, `coach_turns` — RLS: the signed-in user can select their own;
   only the service role writes.
 - `coach_index` — service role only.
