@@ -43,10 +43,6 @@ cyc_phase as (
   where c.phase in ('menstrual','follicular','ovulatory','luteal')
   group by c.phase
 ),
-cyc_now as (
-  select phase, cycle_day, cycle_start, phase_est, d
-  from cyc where d <= current_date order by d desc limit 1
-),
 -- one row per working day, from the firm's daily report
 work_day as (
   select period_end d,
@@ -193,8 +189,7 @@ select jsonb_build_object(
   -- his scores by where Annalise is in her cycle. Tracked since 2017 (gaps in
   -- pregnancies and postpartum). Phase differences to date are ~0.1-0.2 points.
   'cycle', jsonb_build_object(
-     'today', (select jsonb_build_object('phase', phase, 'cycle_day', cycle_day, 'cycle_start', cycle_start,
-                  'estimated', phase_est, 'data_through', d) from cyc_now),
+     'today', public.cycle_today(p_uid),
      'by_phase', (select jsonb_object_agg(phase, jsonb_build_object(
                   'n', n_all, 'hap', hap_all, 'anx', anx_all,
                   'n_1y', n_1y, 'hap_1y', hap_1y, 'anx_1y', anx_1y)) from cyc_phase)),

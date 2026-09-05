@@ -13,9 +13,13 @@ length minus the average luteal length (11 days) and phase_est is set. Cycles
 with goal PREGNANT are 'pregnant'; days beyond 45 of an untracked stretch are
 'unknown'. Apply out.sql as the service role; re-running is an upsert.
 """
-import csv, collections, sys, datetime
+import csv, collections, sys, datetime, os
 src, uid, out = sys.argv[1], sys.argv[2], sys.argv[3]
 today = datetime.date.today().isoformat()
+# rows after the export's own date are Natural Cycles predictions, not data
+fert = os.path.join(os.path.dirname(src), 'Fertility.csv')
+if os.path.exists(fert):
+    today = min(today, next(csv.DictReader(open(fert)))['Today Date'])
 LUTEAL = 11
 r = [x for x in csv.DictReader(open(src)) if x['Date'] <= today]
 cyc = collections.defaultdict(list)
@@ -42,6 +46,6 @@ sql = []
 for i in range(0, len(rows), 500):
     sql.append("insert into public.cycle_days (user_id, day, cycle_no, cycle_day, cycle_start, phase, menstruation, ovulation, goal, phase_est) values\n"
                + ",\n".join(rows[i:i+500])
-               + "\non conflict (user_id, person, day) do update set cycle_no=excluded.cycle_no, cycle_day=excluded.cycle_day, cycle_start=excluded.cycle_start, phase=excluded.phase, menstruation=excluded.menstruation, ovulation=excluded.ovulation, goal=excluded.goal, phase_est=excluded.phase_est;")
+               + "\non conflict (user_id, person, day) do update set cycle_no=excluded.cycle_no, cycle_day=excluded.cycle_day, cycle_start=excluded.cycle_start, phase=excluded.phase, menstruation=excluded.menstruation, ovulation=excluded.ovulation, goal=excluded.goal, phase_est=excluded.phase_est, source='natural_cycles';")
 open(out, 'w').write("\n".join(sql))
 print(len(rows), 'days →', out, collections.Counter(x.split(',')[5].strip("'") for x in rows))

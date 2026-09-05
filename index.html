@@ -855,7 +855,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.4</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.5</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1771,7 +1771,50 @@ function tilesHTML(st, day){
     return '<div class="tile" onclick="editTile(\''+tl.key+'\')">' +
       '<div class="label"><span class="dot" style="background:'+tl.dot+'"></span>'+tl.label+'</div>' +
       '<div class="value"'+(stale?' style="opacity:.72"':'')+'>'+(has ? disp+(tl.unit ? '<span class="unit">'+tl.unit+'</span>' : '') : '<span style="color:var(--muted);font-size:18px">—</span>')+'</div>' +
-      '<div class="hint">'+hint+'</div></div>'; }).join(''); }
+      '<div class="hint">'+hint+'</div></div>'; }).join('') + cycleTileHTML(); }
+
+// ---- Annalise's cycle: one tile, read from cycle_days, written by "Period started".
+// Between Natural Cycles exports the projection keeps today's phase current.
+let CYCLE = { t:null, at:0 };
+const PHASE_LABEL = { menstrual:'period', follicular:'follicular', ovulatory:'ovulatory', luteal:'luteal', pregnant:'pregnant', unknown:'untracked' };
+async function loadCycle(force){
+  if(!SUPA || !SUPA.session) return;
+  if(!force && CYCLE.at && Date.now() - CYCLE.at < 30*60*1000) return;
+  const t = await photosRpc('my_cycle_today'); if(t === null) return;
+  CYCLE.t = t; CYCLE.at = Date.now();
+  if($('tiles')) $('tiles').innerHTML = tilesHTML(DB.stats[today()]||{});
+}
+function cycleTileHTML(){
+  const c = CYCLE.t; if(!c) return '';
+  const ph = PHASE_LABEL[c.phase] || c.phase;
+  const hint = c.phase === 'unknown' ? 'tap when her period starts'
+    : ph + (c.phase_est ? ' · est.' : '') + (c.source === 'manual' ? ' · from your tap' : ' · via Natural Cycles');
+  return '<div class="tile" onclick="editTile(\'cycle\')">' +
+    '<div class="label"><span class="dot" style="background:var(--magenta)"></span>Annalise</div>' +
+    '<div class="value">'+(c.cycle_day ? 'Day '+c.cycle_day : '<span style="color:var(--muted);font-size:18px">—</span>')+'</div>' +
+    '<div class="hint">'+esc(hint)+'</div></div>';
+}
+function openCycleSheet(){
+  const c = CYCLE.t || {};
+  openSheet('<h3>Annalise</h3>' +
+    (c.cycle_start ? '<p style="color:var(--muted);margin:0 0 12px">Current cycle started '+fmtDate(c.cycle_start)+' · day '+c.cycle_day+' · '+(PHASE_LABEL[c.phase]||c.phase)+(c.phase_est?' (estimated)':'')+'</p>' : '') +
+    '<div class="field"><label>Period started on</label><input id="cycleDay" type="date" value="'+today()+'" max="'+today()+'"></div>' +
+    '<button class="btn" onclick="saveCycleStart()">Period started</button>' +
+    (c.source === 'manual' ? '<button class="btn secondary" style="margin-top:8px" onclick="undoCycleStart()">Undo this cycle</button>' : '') +
+    '<div class="notice" style="margin-top:12px">Phases from here are estimated from her averages until the next Natural Cycles export replaces them.</div>');
+}
+async function saveCycleStart(){
+  const d = ($('cycleDay').value || '').trim(); if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ toast('Pick a date'); return; }
+  const t = await photosRpc('my_cycle_start', { p_day: d });
+  if(!t){ toast('Could not save'); return; }
+  CYCLE.t = t; CYCLE.at = Date.now(); closeSheet(); toast('Cycle started '+fmtDate(d));
+  if($('tiles')) $('tiles').innerHTML = tilesHTML(DB.stats[today()]||{});
+}
+async function undoCycleStart(){
+  const t = await photosRpc('my_cycle_undo'); if(t === null){ toast('Could not undo'); return; }
+  CYCLE.t = t; CYCLE.at = Date.now(); closeSheet(); toast('Removed');
+  if($('tiles')) $('tiles').innerHTML = tilesHTML(DB.stats[today()]||{});
+}
 function renderToday(){
   const t = today();
   $('topDate').textContent = fmtDate(t);
@@ -1782,6 +1825,7 @@ function renderToday(){
 
   $('briefCard').innerHTML = briefHTML();
   ensureBriefLine();
+  loadCycle();
 
   // this week's people digest
   const pw = peopleThisWeek();
@@ -1797,6 +1841,7 @@ function renderToday(){
     areaRow('settings','',IC_GEAR,'Settings','Name, theme, API key, backups');
 }
 function editTile(key){
+  if(key === 'cycle'){ openCycleSheet(); return; }
   const tl = TILES.find(x => x.key === key); const st = DB.stats[today()] || {};
   openSheet('<h3>'+tl.label+'</h3>' +
     '<div class="field"><label>'+(tl.hint||tl.label)+'</label><input id="tileVal" placeholder="'+tl.ph+'" value="'+esc(st[key] || '')+'"></div>' +
