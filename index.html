@@ -628,6 +628,54 @@ nav.tabbar {
 .sc-mini i{width:6px;height:6px;border-radius:50%;display:inline-block}
 .sc-bar{height:5px;border-radius:3px;background:var(--surface-2);overflow:hidden;flex:1;min-width:56px;max-width:110px}
 .sc-bar span{display:block;height:100%;border-radius:3px}
+
+/* ---- Ask Ben ---- */
+.ask-wrap{max-width:640px;margin:0 auto}
+.ask-mast{padding:6px 2px 14px}
+.ask-title{font-family:var(--serif);font-size:34px;font-weight:600;letter-spacing:-.01em;margin:0 0 4px}
+.ask-meta{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);letter-spacing:.02em}
+.ask-quote:empty{display:none}
+.ask-quote{background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.ask-quote q{display:block;font-family:var(--serif);font-style:italic;font-size:17px;line-height:1.5;color:var(--ink);quotes:none}
+.ask-quote .aq-meta{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)}
+.ask-quote .aq-meta a,.ask-quote .aq-meta span[role=button]{color:var(--accent);cursor:pointer;font-weight:600;text-decoration:none}
+.ask-chips{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
+.ask-chips button{background:var(--surface-2);border:1px solid var(--hairline);color:var(--ink-2);border-radius:20px;padding:6px 11px;font-size:12.5px;cursor:pointer}
+.ask-chips button:active{background:var(--accent-soft)}
+.ask-box{background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:12px}
+.ask-box textarea{width:100%;border:0;background:transparent;color:var(--ink);font:inherit;font-size:15.5px;line-height:1.5;resize:vertical;min-height:88px;outline:none}
+.ask-ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;padding-top:10px;border-top:1px solid var(--hairline)}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:20px;padding:2px}
+.seg button{border:0;background:transparent;color:var(--muted);font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:18px;cursor:pointer}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-soft)}
+.ask-go{margin-left:auto;display:flex;gap:6px}
+.ask-go .btn{width:auto;margin:0;padding:8px 16px}
+.ask-thread{margin-top:18px}
+.turn{margin-bottom:26px}
+.turn-q{font-family:var(--serif);font-size:21px;line-height:1.3;font-weight:600;color:var(--ink);margin:0 0 4px}
+.turn-meta{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--muted);margin-bottom:10px}
+.turn-log{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--muted);line-height:1.7;margin:4px 0 8px;opacity:.85}
+.turn-log div::before{content:'› ';opacity:.6}
+.turn-a{font-size:15.5px;line-height:1.62;color:var(--ink)}
+.turn-a h2{font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:20px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--hairline);color:var(--ink-2)}
+.turn-a h2.h-record{border-color:var(--aqua)}
+.turn-a h2.h-future{border-color:var(--gold)}
+.turn-a h2.h-sources{border-color:var(--hairline);color:var(--muted)}
+.turn-a h2:first-child{margin-top:4px}
+.turn-a p{margin:0 0 11px}
+.turn-a blockquote{margin:10px 0 12px;padding:2px 0 2px 14px;border-left:3px solid var(--hairline);font-family:var(--serif);font-style:italic;font-size:16.5px;line-height:1.5;color:var(--ink)}
+.turn-a .d{font-family:ui-monospace,Menlo,monospace;font-style:normal;font-size:12px;color:var(--muted);white-space:nowrap}
+.turn-a ul{margin:0 0 10px;padding-left:18px}
+.turn-a li{margin-bottom:5px}
+.turn-a .src{list-style:none;padding:0}
+.turn-a .src li{display:flex;gap:10px;align-items:baseline;font-size:14px;color:var(--ink-2)}
+.turn-a .src a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
+.turn-a .unv{color:var(--serious);font-size:12.5px}
+.turn-a .cursor{display:inline-block;width:8px;height:15px;background:var(--accent);vertical-align:-2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.ask-sess{padding:10px 2px;border-bottom:1px solid var(--hairline);cursor:pointer;display:flex;justify-content:space-between;gap:12px}
+.ask-sess b{font-weight:600;color:var(--ink);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ask-sess span{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--muted);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -701,7 +749,7 @@ nav.tabbar {
         </div>
         <div class="jbtn-big" id="jChat">
           <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 12a7.5 7.5 0 0 1-10.9 6.7L4 20l1.3-4.4A7.5 7.5 0 1 1 20.5 12Z"/></svg>
-          <div class="lbl">Chat</div>
+          <div class="lbl">Ask Ben</div>
         </div>
         <div class="jbtn-big" id="jBulk">
           <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15V4m0 0-4 4m4-4 4 4M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>
@@ -721,6 +769,40 @@ nav.tabbar {
       </div>
       <div class="section-head"><h2 id="journalCount">Entries</h2></div>
       <div id="journalList"></div>
+    </section>
+
+    <!-- ============ ASK BEN ============ -->
+    <section class="view" id="view-ask">
+      <div class="backrow" onclick="showView('journal')">&lsaquo; Journal</div>
+      <div class="ask-wrap">
+        <div class="ask-mast">
+          <h1 class="ask-title">Ask Ben</h1>
+          <div class="ask-meta" id="askMeta">&nbsp;</div>
+        </div>
+        <div class="ask-quote" id="askQuote"></div>
+        <div class="ask-chips" id="askChips"></div>
+        <div class="ask-box">
+          <textarea id="askInput" rows="4" placeholder="What’s the situation? Be specific. Names, dates, what you’re tempted to do."></textarea>
+          <div class="ask-ctl">
+            <div class="seg" id="askVoice">
+              <button data-v="both" class="on">Both</button><button data-v="past">Past Ben</button><button data-v="future">Future Ben</button>
+            </div>
+            <div class="seg" id="askDepth">
+              <button data-d="deep" class="on">Deep</button><button data-d="quick">Quick</button>
+            </div>
+            <div class="ask-go">
+              <button class="btn" id="askGo" onclick="askBen()">Ask</button>
+              <button class="btn secondary" id="askStop" onclick="askStop()" style="display:none">Stop</button>
+            </div>
+          </div>
+        </div>
+        <div class="ask-thread" id="askThread"></div>
+        <div class="ask-past">
+          <div class="section-head" style="margin-top:26px"><h2>Past conversations</h2>
+            <button class="action" onclick="askNewSession()">New</button></div>
+          <div id="askSessions"><div class="empty">Nothing yet.</div></div>
+        </div>
+      </div>
     </section>
 
     <!-- ============ PLACES ============ -->
@@ -773,7 +855,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.2</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.3</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -967,8 +1049,8 @@ function closeSheet(){ $('overlay').classList.remove('open'); $('sheet').innerHT
 $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) closeSheet(); });
 
 // ---------- navigation ----------
-const VIEWS = { today:'Today', friends:'Friends', person:'', journal:'Journal', memories:'52 Memories', insights:'Insights', schedule:'Schedule', places:'Places', health:'Health', goals:'Goals', review:'Weekly Review', settings:'Settings' };
-const TAB_OF = { today:'today', schedule:'today', places:'today', goals:'goals', settings:'today', friends:'friends', person:'friends', journal:'journal', memories:'journal', insights:'insights', health:'insights', review:'insights' };
+const VIEWS = { today:'Today', friends:'Friends', person:'', journal:'Journal', ask:'Ask Ben', memories:'52 Memories', insights:'Insights', schedule:'Schedule', places:'Places', health:'Health', goals:'Goals', review:'Weekly Review', settings:'Settings' };
+const TAB_OF = { today:'today', schedule:'today', places:'today', goals:'goals', settings:'today', friends:'friends', person:'friends', journal:'journal', ask:'journal', memories:'journal', insights:'insights', health:'insights', review:'insights' };
 let currentView = 'today';
 let currentPersonId = null;
 const FOCUS_APPS = { journal:{title:'Journal', tab:'journal'}, friends:{title:'Friends', tab:'friends'}, insights:{title:'Insights', tab:'insights'} };
@@ -3420,6 +3502,181 @@ function exportMemCand(){
   toast('Draft exported');
 }
 
+
+// ---------- Ask Ben: a coach in two voices, built from the journal ----------
+const ASK_PRESETS = [
+  ['About to pick a fight', "I'm about to pick a fight with Annalise. Here's what's going on: "],
+  ["I'm spiraling",         "I'm spiraling. Here's what it feels like right now: "],
+  ['A decision',            "I have a decision to make. The options are: "],
+  ['Am I doing the thing again?', "Am I doing the thing again? Here's what I've been doing this week: "],
+  ['Work is eating everything', "Work is eating everything again. Specifically: "],
+  ['Hit the goal, feel flat', "I hit the goal and I feel flat. The goal was: "],
+];
+let ASK = { session: null, voice: 'both', depth: 'deep', ctl: null, sessions: null, quoteAt: 0, rendered: false };
+
+function askMeta(){
+  const es = (DB.journal||[]).filter(j => j && /^\d{4}-\d{2}-\d{2}$/.test(j.date||''));
+  if(!es.length) return '';
+  const ds = es.map(j => j.date).sort();
+  const mon = d => { const x = parseD(d); return MON[x.getMonth()] + ' ' + x.getFullYear(); };
+  return es.length.toLocaleString() + ' entries · ' + mon(ds[0]) + ' – ' + mon(ds[ds.length-1]);
+}
+const MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function askMetaLong(){
+  const es = (DB.journal||[]).filter(j => j && /^\d{4}-\d{2}-\d{2}$/.test(j.date||''));
+  if(!es.length) return '';
+  const ds = es.map(j => j.date).sort();
+  const mon = d => { const x = parseD(d); return MONTHS_LONG[x.getMonth()] + ' ' + x.getFullYear(); };
+  return es.length.toLocaleString() + ' entries · ' + mon(ds[0]) + ' – ' + mon(ds[ds.length-1]);
+}
+async function askQuote(force){
+  const el = $('askQuote'); if(!el) return;
+  if(!force && Date.now() - ASK.quoteAt < 60000 && el.innerHTML) return;
+  const q = await photosRpc('voice_line', {});
+  if(!q || !q.quote){ el.innerHTML = ''; return; }
+  ASK.quoteAt = Date.now();
+  el.innerHTML = '<q>' + esc(q.quote) + '</q><div class="aq-meta"><span>' + esc(q.date||'') +
+    (q.entry_id ? ' · <a onclick="openEntry(\'' + esc(q.entry_id) + '\')">open the entry</a>' : '') + '</span>' +
+    '<span role="button" onclick="askQuote(true)">another line</span></div>';
+}
+function renderAsk(){
+  if(currentView !== 'ask') return;
+  const m = $('askMeta'); if(m) m.textContent = askMetaLong();
+  if(!ASK.rendered){
+    ASK.rendered = true;
+    $('askChips').innerHTML = ASK_PRESETS.map(([l, t]) =>
+      '<button onclick="askPreset(' + JSON.stringify(t).replace(/"/g,'&quot;') + ')">' + esc(l) + '</button>').join('');
+    $('askVoice').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return;
+      ASK.voice = b.dataset.v; [...$('askVoice').children].forEach(x => x.classList.toggle('on', x === b)); });
+    $('askDepth').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return;
+      ASK.depth = b.dataset.d; [...$('askDepth').children].forEach(x => x.classList.toggle('on', x === b)); });
+    $('askInput').addEventListener('keydown', e => { if((e.metaKey || e.ctrlKey) && e.key === 'Enter'){ e.preventDefault(); askBen(); } });
+  }
+  askQuote(false);
+  askLoadSessions();
+}
+function askPreset(t){ const el = $('askInput'); el.value = t; el.focus(); el.setSelectionRange(t.length, t.length); }
+function askNewSession(){ ASK.session = null; $('askThread').innerHTML = ''; $('askInput').value = ''; $('askInput').focus(); toast('New conversation'); }
+
+// ---- a small markdown renderer: headings, blockquotes, lists, bold, italic, dates, entry links.
+// Everything is escaped first; the only HTML that exists is what this function writes.
+function askMd(md){
+  const lines = String(md||'').replace(/\r/g,'').split('\n');
+  const inl = t => esc(t)
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<i>$2</i>')
+    .replace(/entry:([a-z0-9]{10,24})/gi, (m, id) => '<a onclick="openEntry(\'' + id.toLowerCase() + '\')">open</a>')
+    .replace(/\((\d{4}-\d{2}-\d{2})\)/g, '<span class="d">($1)</span>');
+  let out = '', list = null, inSources = false, para = [];
+  const flush = () => { if(para.length){ out += '<p>' + para.join(' ') + '</p>'; para = []; } };
+  const closeList = () => { if(list){ out += '</ul>'; list = null; } };
+  for(let raw of lines){
+    const line = raw.trimEnd();
+    const h = line.match(/^##\s+(.*)$/);
+    if(h){ flush(); closeList();
+      const t = h[1].trim(); const cls = /^from the record/i.test(t) ? 'h-record' : /becoming/i.test(t) ? 'h-future' : /^sources/i.test(t) ? 'h-sources' : '';
+      inSources = cls === 'h-sources';
+      out += '<h2 class="' + cls + '">' + esc(t) + '</h2>'; continue; }
+    const bq = line.match(/^>\s?(.*)$/);
+    if(bq){ flush(); closeList(); out += '<blockquote>' + inl(bq[1]) + '</blockquote>'; continue; }
+    const li = line.match(/^\s*[-*]\s+(.*)$/);
+    if(li){ flush();
+      if(!list){ list = true; out += inSources ? '<ul class="src">' : '<ul>'; }
+      if(inSources){
+        const m = li[1].match(/^(\d{4}-\d{2}-\d{2})\s*[·\-–|]\s*(.+?)\s*(?:[·\-–|]\s*)?(?:entry:([a-z0-9]{10,24}))?\s*$/i);
+        if(m){ out += '<li>' + (m[3] ? '<a onclick="openEntry(\'' + m[3].toLowerCase() + '\')">' + esc(m[1]) + '</a>' : '<span class="d">' + esc(m[1]) + '</span>') +
+               '<span>' + esc(m[2].replace(/\s*[·\-–|]\s*$/, '')) + '</span></li>'; continue; }
+      }
+      out += '<li>' + inl(li[1]) + '</li>'; continue; }
+    if(!line.trim()){ flush(); closeList(); continue; }
+    closeList();
+    para.push(inl(line).replace(/\*\(unverified[^)]*\)\*/i, '<span class="unv">(unverified — not found in the record)</span>'));
+  }
+  flush(); closeList();
+  return out;
+}
+
+function askTurnEl(q){
+  const now = new Date();
+  const el = document.createElement('div'); el.className = 'turn';
+  el.innerHTML = '<div class="turn-q">' + esc(q) + '</div>' +
+    '<div class="turn-meta">' + dstr(now) + ' · ' + (ASK.voice === 'both' ? 'both voices' : ASK.voice === 'past' ? 'Past Ben' : 'Future Ben') +
+    ' · ' + ASK.depth + '</div>' +
+    '<div class="turn-log"></div><div class="turn-a"><span class="cursor"></span></div>';
+  $('askThread').appendChild(el);
+  return el;
+}
+async function askBen(){
+  const q = ($('askInput').value || '').trim();
+  if(!q) return;
+  if(!SUPA || !SUPA.session){ toast('Sign in first'); return; }
+  if(!DB.settings.apiKey){ toast('Add an API key in Settings'); return; }
+  if(ASK.ctl) return;
+  const el = askTurnEl(q), log = el.querySelector('.turn-log'), ans = el.querySelector('.turn-a');
+  $('askInput').value = ''; $('askGo').disabled = true; $('askStop').style.display = '';
+  ASK.ctl = new AbortController();
+  let raw = '';
+  const draw = () => { ans.innerHTML = askMd(raw) + '<span class="cursor"></span>'; };
+  try{
+    const res = await fetch(SUPA.url + '/functions/v1/ask-ben', {
+      method: 'POST', signal: ASK.ctl.signal,
+      headers: { 'content-type': 'application/json', 'apikey': SUPA.key, 'Authorization': 'Bearer ' + SUPA.session.access_token },
+      body: JSON.stringify({ question: q, voice: ASK.voice, depth: ASK.depth, session_id: ASK.session }),
+    });
+    if(!res.ok || !res.body) throw new Error('HTTP ' + res.status);
+    const reader = res.body.getReader(), dec = new TextDecoder(); let buf = '', done = false, lastDraw = 0;
+    while(!done){
+      const { value, done: d } = await reader.read(); if(d) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while((i = buf.indexOf('\n\n')) >= 0){
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+        const ev = (chunk.match(/^event: (.*)$/m) || [])[1]; const dl = (chunk.match(/^data: (.*)$/m) || [])[1];
+        if(!ev || !dl) continue;
+        let data; try{ data = JSON.parse(dl); }catch(e){ continue; }
+        if(ev === 'session'){ ASK.session = data.session_id; }
+        else if(ev === 'tool'){ log.insertAdjacentHTML('beforeend', '<div>' + esc(data.line) + '</div>'); }
+        else if(ev === 'delta'){ raw += data.t; if(Date.now() - lastDraw > 80){ draw(); lastDraw = Date.now(); } }
+        else if(ev === 'done'){ raw = data.markdown; ans.innerHTML = askMd(raw); done = true;
+          if(data.unverified) log.insertAdjacentHTML('beforeend', '<div>' + data.unverified + ' quote' + (data.unverified === 1 ? '' : 's') + ' could not be verified against the record</div>'); }
+        else if(ev === 'error'){ throw new Error(data.message || 'failed'); }
+      }
+    }
+    if(!done) ans.innerHTML = askMd(raw);
+  }catch(e){
+    if(e.name === 'AbortError'){ ans.innerHTML = askMd(raw) + '<p class="unv">Stopped.</p>'; }
+    else { ans.innerHTML = askMd(raw) + '<p class="unv">' + esc(String(e.message || e)) + '</p>'; }
+  }
+  ASK.ctl = null; $('askGo').disabled = false; $('askStop').style.display = 'none';
+  askLoadSessions(true);
+}
+function askStop(){ if(ASK.ctl) ASK.ctl.abort(); }
+
+// ---- past conversations (read straight from the tables; RLS scopes them to you)
+async function askLoadSessions(force){
+  const box = $('askSessions'); if(!box || !SUPA || !SUPA.session) return;
+  if(!force && ASK.sessions) return;
+  try{
+    const r = await supaRest('coach_sessions?select=id,started_at,updated_at,first_question&order=updated_at.desc&limit=30');
+    if(!r.ok) return;
+    ASK.sessions = await r.json();
+    box.innerHTML = ASK.sessions.length ? ASK.sessions.map(s =>
+      '<div class="ask-sess" onclick="askOpenSession(' + s.id + ')"><b>' + esc(s.first_question || 'Untitled') + '</b>' +
+      '<span>' + esc(String(s.updated_at||'').slice(0,10)) + '</span></div>').join('') : '<div class="empty">Nothing yet.</div>';
+  }catch(e){}
+}
+async function askOpenSession(id){
+  const r = await supaRest('coach_turns?select=question,answer_markdown,voice,depth,asked_at&session_id=eq.' + id + '&order=asked_at.asc');
+  if(!r.ok) return;
+  const turns = await r.json();
+  ASK.session = id;
+  $('askThread').innerHTML = turns.map(t =>
+    '<div class="turn"><div class="turn-q">' + esc(t.question) + '</div>' +
+    '<div class="turn-meta">' + esc(String(t.asked_at||'').slice(0,10)) + ' · ' + esc(t.voice) + ' · ' + esc(t.depth) + '</div>' +
+    '<div class="turn-a">' + askMd(t.answer_markdown || '') + '</div></div>').join('');
+  const m = document.querySelector('main'); if(m) m.scrollTop = 0;
+}
+
 function openAsk(){
   if(!DB.settings.apiKey){ toast('Add an API key in Settings to ask your journal'); return; }
   if(!DB.journal.length){ toast('No entries yet to ask about'); return; }
@@ -4324,7 +4581,7 @@ $('jBulk').addEventListener('click', () => $('archiveInput').click());
 $('archiveInput').addEventListener('change', e => { const files = [...e.target.files]; e.target.value=''; if (files.length) handleArchiveFiles(files); });
 $('jSearch').addEventListener('input', e => { jState.q = e.target.value; renderJournalList(); });
 $('jYear').addEventListener('change', e => { jState.year = e.target.value; renderJournalList(); });
-$('jChat').addEventListener('click', openAsk);
+$('jChat').addEventListener('click', () => showView('ask'));
 $('jExportBtn').addEventListener('click', exportJournalMenu);
 $('ckOpen').addEventListener('click', openCheckin);
 $('tlInput').addEventListener('change', async e => {
@@ -4339,7 +4596,7 @@ $('tlInput').addEventListener('change', async e => {
     setTimeout(()=>lookupPlaceNames(), 1200);
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
-function renderAll(){ renderMacros(); renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderMemories(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
+function renderAll(){ renderMacros(); renderAsk(); renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderMemories(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if(SUPA && SUPA.session && SUPA.dirty) syncPush(); return; } if (!document.hidden){ renderAll();
   if(SUPA && SUPA.session) syncPull();
   if((DB.settings.healthSyncUrl||'').trim() && (!DB.settings.healthLastSync || Date.now()-DB.settings.healthLastSync>3e5)) syncHealthNow(true); } });
