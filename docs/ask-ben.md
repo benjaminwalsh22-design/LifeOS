@@ -114,3 +114,11 @@ curl -X POST "https://api.supabase.com/v1/projects/$PROJECT/functions/deploy?slu
 
 `verify_jwt` is off at the gateway because the function checks the JWT itself
 and returns 401 without one.
+
+## Related: `cycle_days`
+
+Annalise's cycle from her Natural Cycles export, phases only (see
+`tools/load_cycle.py`). It feeds `life_digest.cycle` — his scores by her phase —
+and nothing else; Ask Ben never sees it. To refresh, she re-downloads at
+naturalcycles.com/downloaddata and the loader is re-run on the new
+`Fertility Days.csv`.
