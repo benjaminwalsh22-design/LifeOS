@@ -366,6 +366,10 @@ Deno.serve(async (req) => {
             } else if (ev.type === "content_block_stop") {
               if (cur?.type === "tool_use") { try { cur.input = JSON.parse(cur._json || "{}"); } catch (_) { cur.input = {}; } delete cur._json; }
               blocks.push(cur); cur = null;
+            } else if (ev.type === "message_start") {
+              // cache accounting, so the tool log shows whether the 34k prompt was read from cache
+              const u = ev.message?.usage ?? {};
+              ctx.log.push(`tokens: ${u.cache_read_input_tokens ?? 0} cached · ${u.cache_creation_input_tokens ?? 0} written · ${u.input_tokens ?? 0} fresh`);
             } else if (ev.type === "message_delta") {
               stop = ev.delta?.stop_reason ?? stop;
             } else if (ev.type === "error") {
