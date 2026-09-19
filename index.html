@@ -855,7 +855,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.6</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.7</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -4536,6 +4536,16 @@ function renderAcct(){
   }
 }
 // ---------- Oura: the ring feeds LifeOS directly over OAuth ----------
+// after an OAuth round trip the worker bounces back here with ?oura=ok / ?onedrive=err&m=…
+(function(){
+  try{
+    const q=new URLSearchParams(location.search); const o=q.get('oura'), d=q.get('onedrive');
+    if(!o && !d) return;
+    const which=o?'Oura':'OneDrive', st=o||d, m=q.get('m')||'';
+    setTimeout(()=>toast(st==='ok' ? which+' connected' : which+': '+(m||'could not connect')), 600);
+    history.replaceState(null,'',location.pathname);
+  }catch(e){}
+})();
 async function renderOura(){
   const el=$('ouraBox'); if(!el) return;
   if(!SUPA||!SUPA.session){ el.innerHTML=''; return; }

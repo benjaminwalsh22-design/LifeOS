@@ -10,16 +10,13 @@ function redirectUri() {
   return Deno.env.get("SUPABASE_URL")!.replace(".supabase.co", ".supabase.co") + "/functions/v1/ms-oauth/callback";
 }
 
+// The gateway serves function responses as text/plain, so no HTML here:
+// bounce straight back into the app, which shows the outcome as a toast.
 function page(msg: string, ok: boolean) {
-  return new Response(
-    `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>body{font:16px/1.5 -apple-system,system-ui,sans-serif;margin:0;display:grid;place-items:center;min-height:100vh;background:#F7F6F3;color:#26221D;padding:24px;text-align:center}
-.c{max-width:340px}h1{font-size:19px;margin:0 0 8px}p{color:#6B655C;margin:0 0 20px}
-a{display:block;background:#33527B;color:#fff;text-decoration:none;padding:14px;border-radius:12px;font-weight:600}</style>
-<div class="c"><h1>${ok ? "OneDrive connected" : "Couldn’t connect"}</h1><p>${msg}</p>
-<a href="${APP_URL}">Back to LifeOS</a></div>`,
-    { status: ok ? 200 : 400, headers: { "content-type": "text/html; charset=utf-8" } },
-  );
+  const u = new URL(APP_URL);
+  u.searchParams.set("onedrive", ok ? "ok" : "err");
+  if (!ok) u.searchParams.set("m", msg.slice(0, 160));
+  return Response.redirect(u.toString(), 302);
 }
 
 const CORS = {
