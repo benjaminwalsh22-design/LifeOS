@@ -855,7 +855,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.5</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.6</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -960,7 +960,7 @@ const save = () => { _statIdx = null; const o = Object.assign({}, DB); delete o.
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 // numbers the watch, ring or scale supplies — the cloud is the source of truth
 // for these, never the phone's cached copy
-const HEALTH_KEYS = new Set(['sleep','steps','rhr','hrv','energy','weight','bodyfat','bmi','resp','temp','spo2','spend','budget']);
+const HEALTH_KEYS = new Set(['sleep','steps','rhr','hrv','energy','weight','bodyfat','bmi','resp','temp','spo2','tdev','readiness','sleepscore','spend','budget']);
 // a night with no recorded sleep is missing data, not zero hours — an older
 // version of the health sync stored it as 0 and it drags every average down
 function scrubStats(){
@@ -1725,6 +1725,8 @@ const TILES = [
   { key:'hrv',    label:'HRV',           unit:'ms',   dot:'var(--gold)',    src:'health', carry:3,  hint:'HRV (ms)', ph:'e.g. 48' },
   { key:'resp',   label:'Respiratory',   unit:'/min', dot:'var(--accent)',  src:'health', carry:3,  hint:'Breaths per minute', ph:'e.g. 14.2' },
   { key:'temp',   label:'Body temp',     unit:'°F',   dot:'var(--serious)', src:'health', carry:3,  hint:'Wrist temperature', ph:'e.g. 97.6' },
+  { key:'tdev',   label:'Skin temp',     unit:'°C',   dot:'var(--serious)', src:'oura',   carry:3,  hint:'Deviation from your baseline', ph:'e.g. -0.2', fmt:'signed' },
+  { key:'readiness', label:'Readiness',  unit:'',     dot:'var(--good)',    src:'oura',   carry:1,  hint:'Oura readiness score', ph:'e.g. 82', fmt:'int' },
   { key:'spo2',   label:'Blood oxygen',  unit:'%',    dot:'var(--magenta)', src:'health', carry:3,  hint:'Blood oxygen (%)', ph:'e.g. 96', fmt:'int' },
   { key:'energy', label:'Active energy', unit:'kcal', dot:'var(--serious)', src:'health', carry:0,  hint:'Active energy (kcal)', ph:'e.g. 540', fmt:'int' },
   { key:'weight', label:'Weight',        unit:'lb',   dot:'var(--accent)',  src:'health', carry:30, hint:'Weight (lb)', ph:'e.g. 186.0' },
@@ -1765,8 +1767,9 @@ function tilesHTML(st, day){
     }
     const disp = has ? (tl.fmt === 'int' ? Number(raw).toLocaleString()
       : tl.fmt === 'usd' ? '$' + Number(raw).toLocaleString(undefined,{maximumFractionDigits:0})
+      : tl.fmt === 'signed' ? (Number(raw) > 0 ? '+' : '') + Number(raw).toFixed(2)
       : esc(String(raw))) : null;
-    const via = tl.src === 'health' ? 'via Apple Health' : tl.src === 'ynab' ? 'via YNAB' : tl.hint;
+    const via = tl.src === 'health' ? 'via Apple Health' : tl.src === 'oura' ? 'via Oura' : tl.src === 'ynab' ? 'via YNAB' : tl.hint;
     const hint = stale ? stale : has ? via : (tl.src === 'manual' ? tl.hint : 'nothing yet today');
     return '<div class="tile" onclick="editTile(\''+tl.key+'\')">' +
       '<div class="label"><span class="dot" style="background:'+tl.dot+'"></span>'+tl.label+'</div>' +
@@ -4303,6 +4306,8 @@ const TRENDS=[
   {key:'hrv', kind:'stat', label:'HRV', unit:' ms', color:'var(--gold)', goodUp:true, dp:0},
   {key:'resp', kind:'stat', label:'Respiratory rate', unit:' /min', color:'var(--accent)', goodUp:false, dp:1},
   {key:'temp', kind:'stat', label:'Body temp', unit:'°F', color:'var(--serious)', goodUp:true, dp:1},
+  {key:'readiness', kind:'stat', label:'Readiness', unit:'', color:'var(--good)', goodUp:true, dp:0},
+  {key:'sleepscore', kind:'stat', label:'Sleep score', unit:'', color:'var(--violet)', goodUp:true, dp:0},
   {key:'spo2', kind:'stat', label:'Blood oxygen', unit:'%', color:'var(--magenta)', goodUp:true, dp:0},
   {key:'hap', kind:'checkin', label:'Happiness', unit:'/10', color:'var(--accent)', goodUp:true, dp:1},
   {key:'anx', kind:'checkin', label:'Anxiety', unit:'/10', color:'var(--warning)', goodUp:false, dp:1},
@@ -4515,9 +4520,10 @@ function renderAcct(){
       '<button class="btn secondary" style="margin-top:10px" onclick="syncPull(true)">Sync now</button>'+
       '<button class="btn secondary" style="margin-top:10px" onclick="photoSyncRun()">Sync photos now</button>'+
       '<div id="lpBox" style="margin-top:16px"></div>'+
+      '<div id="ouraBox" style="margin-top:16px"></div>'+
       '<button class="btn danger" onclick="acctLogout()">Log out</button>'+
       '<div class="notice">Entries, check-ins, friends, goals and reviews sync to your Supabase project and follow your login to any device. Journal <b>photos</b> sync too — uploaded in the background to your private storage and fetched on any device you sign into.</div>';
-    renderLifePhotos();
+    renderLifePhotos(); renderOura();
   } else {
     el.innerHTML='<div class="notice" style="margin-top:0">Log in and everything (except photos) saves to your own private cloud database — open LifeOS on any device, sign in, and it’s all there.</div>'+
       '<div class="field" style="margin-top:10px"><label>Supabase project URL</label><input id="acctUrl" type="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://xxxx.supabase.co" value="'+esc(SUPA?SUPA.url||'':'')+'"></div>'+
@@ -4528,6 +4534,41 @@ function renderAcct(){
       '<button class="btn secondary" style="margin-top:10px" onclick="acctSubmit(\'signup\')">Create account</button>'+
       '<div class="notice">One-time setup: ask Claude for the 5-minute Supabase recipe (free).</div>';
   }
+}
+// ---------- Oura: the ring feeds LifeOS directly over OAuth ----------
+async function renderOura(){
+  const el=$('ouraBox'); if(!el) return;
+  if(!SUPA||!SUPA.session){ el.innerHTML=''; return; }
+  el.innerHTML='<div class="ck-label">Oura ring</div><div class="kv"><span class="k">Oura</span><span class="v"><span class="spinner"></span></span></div>';
+  const s=await photosRpc('oura_status');
+  if(!s || !s.connected){
+    el.innerHTML='<div class="ck-label">Oura ring</div>'+
+      '<div class="notice" style="margin-top:0">Connect the ring and sleep, HRV, resting heart rate, breathing, skin temperature, readiness, steps and blood oxygen arrive every morning without Apple Health in the middle.</div>'+
+      '<button class="btn secondary" style="margin-top:10px" onclick="ouraConnect()">Connect Oura</button>';
+    return;
+  }
+  el.innerHTML='<div class="ck-label">Oura ring</div>'+
+    '<div class="kv"><span class="k">Oura</span><span class="v">'+esc(s.email||'connected')+'</span></div>'+
+    '<div class="kv"><span class="k">Data through</span><span class="v">'+(s.synced_through?esc(fmtDate(s.synced_through)):'—')+'</span></div>'+
+    '<div class="kv"><span class="k">Last pull</span><span class="v">'+(s.last_sync?esc(new Date(s.last_sync).toLocaleString()):'not yet')+'</span></div>'+
+    (s.last_error?'<div class="notice" style="color:var(--serious)">'+esc(s.last_error)+'</div>':'')+
+    '<button class="btn secondary" style="margin-top:10px" onclick="ouraDisconnect()">Disconnect Oura</button>';
+}
+async function ouraConnect(){
+  if(!SUPA||!SUPA.session){ toast('Log in first'); return; }
+  toast('Opening Oura…');
+  try{
+    const r=await fetch(SUPA.url+'/functions/v1/oura-oauth/start',{ method:'POST',
+      headers:{ 'Authorization':'Bearer '+SUPA.session.access_token, 'Content-Type':'application/json' } });
+    const d=await r.json().catch(()=>({}));
+    if(d.url) location.href=d.url; else toast('Couldn’t start the connection');
+  }catch(e){ toast('Couldn’t reach the server'); }
+}
+async function ouraDisconnect(){
+  if(!confirm('Disconnect the ring? Numbers already in LifeOS stay put.')) return;
+  try{ await fetch(SUPA.url+'/functions/v1/oura-oauth/disconnect',{ method:'POST',
+      headers:{ 'Authorization':'Bearer '+SUPA.session.access_token, 'Content-Type':'application/json' } }); }catch(e){}
+  toast('Disconnected'); renderOura();
 }
 // ---------- OneDrive: your own photos, matched by date ----------
 async function renderLifePhotos(){
