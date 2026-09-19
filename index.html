@@ -310,7 +310,7 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 .mood-hd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:2px}
 .mood-t{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .mood-n{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.mood-range{display:flex;gap:6px;margin:10px 0 4px}
+.mood-range{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
 .mood-range button{flex:0 0 auto;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);
   border-radius:99px;padding:5px 11px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer}
 .mood-range button.on{background:var(--accent-soft);color:var(--accent);border-color:transparent}
@@ -855,7 +855,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.9</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.0</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1297,12 +1297,18 @@ function moodPal(){ return document.documentElement.classList.contains('dark') |
   (DB.settings.theme==='dark') ? MOODC.dark : MOODC.light; }
 let MOODV = { range:'all' };
 function moodScored(){ return (DB.journal||[]).filter(j => j && j.hap > 0 && j.anx > 0 && /^\d{4}-\d{2}/.test(j.date||'')); }
+// ranges: all / 5y / 1y are monthly points; 30d / 90d are one point per day
+const MOOD_RANGES = { all:{label:'All years', days:0, daily:false, sub:'all years'},
+  '5y':{label:'5 years', days:5*365, daily:false, sub:'5 years'},
+  '1y':{label:'This year', days:365, daily:false, sub:'this year'},
+  '30d':{label:'Month', days:30, daily:true, sub:'last 30 days'},
+  '90d':{label:'Quarter', days:90, daily:true, sub:'last 90 days'} };
+function moodDaily(){ return !!(MOOD_RANGES[MOODV.range]||{}).daily; }
 function moodMonths(){
-  const cut = MOODV.range==='all' ? '0000-00'
-    : MOODV.range==='5y' ? new Date(Date.now()-5*365*864e5).toISOString().slice(0,7)
-    : new Date(Date.now()-365*864e5).toISOString().slice(0,7);
+  const R = MOOD_RANGES[MOODV.range] || MOOD_RANGES.all;
+  const cut = R.days ? new Date(Date.now()-R.days*864e5).toISOString().slice(0, R.daily ? 10 : 7) : '0000-00';
   const by = {};
-  for(const j of moodScored()){ const k=j.date.slice(0,7); if(k<cut) continue; (by[k]=by[k]||[]).push(j); }
+  for(const j of moodScored()){ const k = R.daily ? j.date.slice(0,10) : j.date.slice(0,7); if(k<cut) continue; (by[k]=by[k]||[]).push(j); }
   return Object.keys(by).sort().map(k=>{ const a=by[k];
     return { ym:k, n:a.length,
       hap:a.reduce((s,j)=>s+j.hap,0)/a.length,
@@ -1326,7 +1332,12 @@ function moodChart(ms){
     grid += '<line x1="'+MOOD_L+'" x2="'+(MOOD_W-MOOD_R)+'" y1="'+y+'" y2="'+y+'" stroke="var(--border)" stroke-width="1"/>';
     ylab += '<text x="'+(MOOD_L-5)+'" y="'+(+y+3.2)+'" text-anchor="end" font-size="8.5" fill="var(--muted)">'+v+'</text>'; }
   let xlab='', seenY='';
-  ms.forEach((m,i)=>{ const y=m.ym.slice(0,4);
+  if(moodDaily()){
+    // a handful of dates across the span, always including the first and last
+    const step=Math.max(1, Math.ceil(n/5));
+    ms.forEach((m,i)=>{ if((i%step===0 && n-1-i >= step/2) || i===n-1){ const p=m.ym.split('-');
+      xlab += '<text x="'+moodX(i,n).toFixed(1)+'" y="'+(MOOD_H-4)+'" text-anchor="'+(i===0?'start':i===n-1?'end':'middle')+'" font-size="8.5" fill="var(--muted)">'+MON[+p[1]-1]+' '+(+p[2])+'</text>'; } });
+  } else ms.forEach((m,i)=>{ const y=m.ym.slice(0,4);
     if(y!==seenY && (n<26 || i%Math.ceil(n/7)===0)){ seenY=y;
       xlab += '<text x="'+moodX(i,n).toFixed(1)+'" y="'+(MOOD_H-4)+'" text-anchor="middle" font-size="8.5" fill="var(--muted)">'+y+'</text>'; } });
   const last=ms[n-1];
@@ -1340,7 +1351,7 @@ function moodChart(ms){
     '<line id="moodCross" x1="0" x2="0" y1="'+MOOD_T+'" y2="'+(MOOD_H-MOOD_B)+'" stroke="var(--muted)" stroke-width="1" opacity="0"/>'+
     '</svg>';
 }
-function fmtYM(ym){ const p=ym.split('-'); return MON[+p[1]-1]+' '+p[0]; }
+function fmtYM(ym){ const p=ym.split('-'); return p.length>2 ? MON[+p[1]-1]+' '+(+p[2])+', '+p[0] : MON[+p[1]-1]+' '+p[0]; }
 function renderMood(){
   const el=$('moodCard'); if(!el) return;
   const all=moodScored();
@@ -1351,21 +1362,24 @@ function renderMood(){
         :'Every journal entry is being scored for happiness and anxiety on the same 1–10 scale as your check-ins. This fills in as it runs.')+'</div></div>';
     return;
   }
-  const ms=moodMonths(), c=moodPal(), ys=moodYears();
-  const mean=k=>all.reduce((s,j)=>s+j[k],0)/all.length;
+  const ms=moodMonths(), c=moodPal(), ys=moodYears(), R=MOOD_RANGES[MOODV.range]||MOOD_RANGES.all;
+  // the averages follow the range; the year bars below always show everything
+  const inRange = ms.reduce((n,m)=>n+m.n,0);
+  const mean=k=>ms.reduce((s,m)=>s+m[k]*m.n,0)/Math.max(1,inRange);
   const best=[...ms].sort((a,b)=>b.hap-a.hap)[0], worst=[...ms].sort((a,b)=>a.hap-b.hap)[0];
+  const unit = R.daily ? 'day' : 'month';
   const pill=(k,l)=>'<button class="'+(MOODV.range===k?'on':'')+'" onclick="MOODV.range=\''+k+'\';renderMood()">'+l+'</button>';
   el.innerHTML='<div class="mood">'+
     '<div class="mood-hd"><span class="mood-t">Mood over time</span><span class="mood-n">'+all.length.toLocaleString()+' of '+total.toLocaleString()+' scored</span></div>'+
-    '<div class="mood-range">'+pill('all','All years')+pill('5y','5 years')+pill('1y','This year')+'</div>'+
+    '<div class="mood-range">'+Object.keys(MOOD_RANGES).map(k=>pill(k,MOOD_RANGES[k].label)).join('')+'</div>'+
     '<div class="mood-wrap" id="moodWrap">'+moodChart(ms)+'<div class="mood-tip" id="moodTip"></div></div>'+
     '<div class="mood-legend">'+
       '<span class="mood-key"><i style="background:'+c.hap+'"></i>Happiness</span>'+
       '<span class="mood-key"><i style="background:'+c.anx+'"></i>Anxiety</span></div>'+
     '<div class="mood-stats">'+
-      '<div class="mood-stat"><div class="k">Happiness</div><div class="v">'+mean('hap').toFixed(1)+'</div><div class="s">all years</div></div>'+
-      '<div class="mood-stat"><div class="k">Anxiety</div><div class="v">'+mean('anx').toFixed(1)+'</div><div class="s">all years</div></div>'+
-      (best?'<div class="mood-stat"><div class="k">Best month</div><div class="v">'+best.hap.toFixed(1)+'</div><div class="s">'+esc(fmtYM(best.ym))+'</div></div>':'')+
+      '<div class="mood-stat"><div class="k">Happiness</div><div class="v">'+mean('hap').toFixed(1)+'</div><div class="s">'+R.sub+'</div></div>'+
+      '<div class="mood-stat"><div class="k">Anxiety</div><div class="v">'+mean('anx').toFixed(1)+'</div><div class="s">'+R.sub+'</div></div>'+
+      (best?'<div class="mood-stat"><div class="k">Best '+unit+'</div><div class="v">'+best.hap.toFixed(1)+'</div><div class="s">'+esc(fmtYM(best.ym))+'</div></div>':'')+
       (worst?'<div class="mood-stat"><div class="k">Hardest</div><div class="v">'+worst.hap.toFixed(1)+'</div><div class="s">'+esc(fmtYM(worst.ym))+'</div></div>':'')+
     '</div>'+
     '<div class="mood-yrs">'+ys.map(r=>
