@@ -855,7 +855,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.7</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v9.8</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -4826,7 +4826,8 @@ function faceDisable(){
   renderLockCard(); toast('Face ID off — PIN only');
 }
 async function faceUnlock(){
-  const cfg=lockCfg(); if(!cfg || !cfg.cred) return;
+  const cfg=lockCfg(); if(!cfg || !cfg.cred || _faceBusy) return;
+  _faceBusy=true;
   const btn=$('lockFace'); if(btn) btn.disabled=true;
   try{
     const ok = await navigator.credentials.get({ publicKey:{
@@ -4840,6 +4841,7 @@ async function faceUnlock(){
     if(el && e && e.name!=='NotAllowedError'){ el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),350); }
   }
   if(btn) btn.disabled=false;
+  _faceBusy=false;
 }
 let _lastHidden=0;
 function lockNow(){
@@ -4851,8 +4853,10 @@ function lockNow(){
   const fb=$('lockFace'), or=$('lockOr');
   if(fb) fb.style.display = has ? '' : 'none';
   if(or) or.style.display = has ? '' : 'none';
-  // iOS will not raise the Face ID sheet without a tap, so the button is the gesture
+  // ask straight away; if the browser insists on a tap first, the button is still there
+  if(has && !_faceBusy) setTimeout(() => { if($('lockscreen').style.display !== 'none') faceUnlock(); }, 350);
 }
+let _faceBusy=false;
 function unlockUI(){ const el=$('lockscreen'); if(el) el.style.display='none'; }
 async function tryUnlock(){
   const cfg=lockCfg(); if(!cfg){ unlockUI(); return; }
