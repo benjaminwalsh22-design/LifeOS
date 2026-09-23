@@ -713,7 +713,7 @@ nav.tabbar {
       <div id="bodyCard"></div>
       <div class="section-head"><h2>Daily check-in</h2><button class="action" id="ckOpen">Check in</button></div>
       <div id="ckCard"></div>
-      <div class="section-head"><h2>Daily numbers</h2><span class="action" style="cursor:default">tap to log</span></div>
+      <div class="section-head"><h2>Daily numbers</h2><span class="action" style="cursor:default">tap for trends</span></div>
       <div class="tiles" id="tiles"></div>
       <div id="insightsExtra"></div>
     </section>
@@ -855,7 +855,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.0</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.1</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -1859,6 +1859,9 @@ function renderToday(){
 }
 function editTile(key){
   if(key === 'cycle'){ openCycleSheet(); return; }
+  openTrend(key);
+}
+function logTile(key){
   const tl = TILES.find(x => x.key === key); const st = DB.stats[today()] || {};
   openSheet('<h3>'+tl.label+'</h3>' +
     '<div class="field"><label>'+(tl.hint||tl.label)+'</label><input id="tileVal" placeholder="'+tl.ph+'" value="'+esc(st[key] || '')+'"></div>' +
@@ -4191,7 +4194,7 @@ async function goalCoach(id){
 // ---------- Weekly Review ----------
 const IC_REVIEW='<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19.5v-15Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 7.2c.3 1.8 1.5 3 3.3 3.3-1.8.3-3 1.5-3.3 3.3-.3-1.8-1.5-3-3.3-3.3 1.8-.3 3-1.5 3.3-3.3Z"/></svg>';
 const REVIEW_SPANS={ week:7, month:30, year:365 };
-function weekData(end, kind){
+function weekData(end, kind, cal){
   kind = kind || 'week'; const N = REVIEW_SPANS[kind] || 7;
   end = end || today(); const endD=parseD(end);
   const days=[]; for(let i=N-1;i>=0;i--){ const d=new Date(endD); d.setDate(d.getDate()-i); days.push(dstr(d)); }
@@ -4200,33 +4203,70 @@ function weekData(end, kind){
   const ck=days.map(d=>DB.checkins[d]).filter(Boolean);
   const ckP=prior.map(d=>DB.checkins[d]).filter(Boolean);
   const num=(arr,key)=>arr.map(d=>DB.stats[d]&&DB.stats[d][key]).filter(v=>v!=null&&!isNaN(v)).map(Number);
-  const js=(DB.journal||[]).filter(j=>j.date>=start&&j.date<=end);
+  const js=(DB.journal||[]).filter(j=>j.date>=start&&j.date<=end).sort((a,b)=>a.date<b.date?-1:1);
+  const jsP=(DB.journal||[]).filter(j=>j.date>=prior[0]&&j.date<prior[prior.length-1]);
   const tc={}; js.forEach(j=>(j.themes||[]).forEach(t=>{ tc[t]=(tc[t]||0)+1; }));
-  const themes=Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>x[0]);
+  const themes=Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,kind==='year'?10:5).map(x=>x[0]);
+  // the journal's own scores are the mood record; check-ins are occasional and only count when there are enough
+  const jsc=js.filter(j=>j.hap>0&&j.anx>0), jscP=jsP.filter(j=>j.hap>0&&j.anx>0);
+  const jHap=mean(jsc.map(j=>j.hap)), jAnx=mean(jsc.map(j=>j.anx)), jHapP=mean(jscP.map(j=>j.hap)), jAnxP=mean(jscP.map(j=>j.anx));
+  const bestDay=jsc.length?jsc.reduce((a,b)=>b.hap>a.hap?b:a):null, hardDay=jsc.length?jsc.reduce((a,b)=>(b.hap-b.anx)<(a.hap-a.anx)?b:a):null;
+  const brief=j=>({ date:j.date, hap:j.hap, anx:j.anx, summary:String(j.summary||'').slice(0,220) });
+  // what the entries said: every summary for a week, a sample across a month, monthly themes across a year
+  let entries=[];
+  if(kind==='week') entries=js.map(brief);
+  else if(kind==='month'){ const step=Math.max(1,Math.ceil(js.length/12)); entries=js.filter((_,i)=>i%step===0).map(brief); }
+  const months={}; if(kind==='year') js.forEach(j=>{ const m=j.date.slice(0,7); (months[m]=months[m]||{n:0,hap:[],anx:[],themes:{}}); months[m].n++; if(j.hap>0){months[m].hap.push(j.hap); months[m].anx.push(j.anx);} (j.themes||[]).forEach(t=>months[m].themes[t]=(months[m].themes[t]||0)+1); });
+  const byMonth=Object.keys(months).sort().map(m=>({ m, n:months[m].n, hap:mean(months[m].hap), anx:mean(months[m].anx), themes:Object.entries(months[m].themes).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]) }));
   const connected=new Set();
   (DB.friends||[]).forEach(f=>{ if(f.lastContact&&f.lastContact>=start&&f.lastContact<=end) connected.add(f.name.split(/\s+/)[0]);
     (f.log||[]).forEach(l=>{ if(l.kind!=='journal'&&l.date>=start&&l.date<=end) connected.add(f.name.split(/\s+/)[0]); }); });
   const overdue=(DB.friends||[]).filter(f=>friendStatus(f).overdue).map(f=>f.name.split(/\s+/)[0]);
   const goalProg=(DB.goals||[]).filter(g=>(g.updates||[]).some(u=>u.date>=start&&u.date<=end)).map(g=>g.name);
-  return { kind, N, start, end, ckN:ck.length,
-    anx:mean(ck.map(ckAnx)), anxP:mean(ckP.map(ckAnx)), hap:mean(ck.map(ckHap)), hapP:mean(ckP.map(ckHap)),
-    sleep:mean(num(days,'sleep')), rhr:mean(num(days,'rhr')), steps:mean(num(days,'steps')),
-    journalCount:js.length, themes, connected:[...connected], overdue, goalProg };
+  const enoughCk = ck.length >= Math.max(4, Math.round(N*0.4));
+  const calDays=(cal||[]).filter(c=>c.day>=start&&c.day<=end);
+  const calSum = calDays.length ? { days:calDays.length, events:calDays.reduce((n,c)=>n+(c.n||0),0), hours:Math.round(calDays.reduce((n,c)=>n+(c.hours||0),0)*10)/10,
+    busiest:calDays.slice().sort((a,b)=>(b.hours||0)-(a.hours||0))[0], allday:[...new Set(calDays.flatMap(c=>c.allday||[]))].slice(0,12),
+    titles:[...new Set(calDays.flatMap(c=>c.titles||[]))].slice(0, kind==='week'?25:40) } : null;
+  return { kind, N, start, end, ckN:ck.length, enoughCk,
+    // hap/anx: the journal's scores; ckHap/ckAnx: the check-ins, reported only when enough exist
+    hap:jHap, hapP:jHapP, anx:jAnx, anxP:jAnxP, scored:jsc.length,
+    ckHap:enoughCk?mean(ck.map(ckHap)):null, ckAnx:enoughCk?mean(ck.map(ckAnx)):null,
+    sleep:mean(num(days,'sleep')), sleepP:mean(num(prior,'sleep')), rhr:mean(num(days,'rhr')), steps:mean(num(days,'steps')), stepsP:mean(num(prior,'steps')),
+    hrv:mean(num(days,'hrv')), hrvP:mean(num(prior,'hrv')), readiness:mean(num(days,'readiness')), nights:num(days,'sleep').length,
+    journalCount:js.length, themes, entries, byMonth, bestDay:bestDay?brief(bestDay):null, hardDay:hardDay?brief(hardDay):null,
+    cal:calSum, connected:[...connected], overdue, goalProg };
 }
 function weekFactsText(w){
   const L=[]; const r1=v=>v==null?null:Math.round(v*10)/10;
   const KL={week:'Week',month:'Month',year:'Year'};
   L.push((KL[w.kind]||'Period')+': '+fmtDate(w.start)+' to '+fmtDate(w.end)+'.');
-  if(w.hap!=null) L.push('Happiness averaged '+r1(w.hap)+(w.hapP!=null?(' (prior period '+r1(w.hapP)+')'):'')+' out of 10.');
-  if(w.anx!=null) L.push('Anxiety averaged '+r1(w.anx)+(w.anxP!=null?(' (prior period '+r1(w.anxP)+')'):'')+' out of 10.');
-  if(w.ckN) L.push('Checked in '+w.ckN+' of '+w.N+' days.');
-  if(w.sleep!=null) L.push('Slept '+r1(w.sleep)+'h on average.');
+  L.push('');
+  L.push('JOURNAL (the primary record — every entry is scored 1-10 for happiness and anxiety from what he wrote)');
+  L.push('Journaled '+w.journalCount+' time'+(w.journalCount===1?'':'s')+', '+w.scored+' scored.');
+  if(w.hap!=null) L.push('Happiness averaged '+r1(w.hap)+(w.hapP!=null?(' (prior period '+r1(w.hapP)+')'):'')+'; anxiety '+r1(w.anx)+(w.anxP!=null?(' (prior '+r1(w.anxP)+')'):'')+'.');
+  if(w.themes.length) L.push('Themes, most frequent first: '+w.themes.join(', ')+'.');
+  if(w.bestDay) L.push('Best day: '+fmtDate(w.bestDay.date)+' ('+w.bestDay.hap+'/10) — '+w.bestDay.summary);
+  if(w.hardDay && (!w.bestDay || w.hardDay.date!==w.bestDay.date)) L.push('Hardest day: '+fmtDate(w.hardDay.date)+' (happiness '+w.hardDay.hap+', anxiety '+w.hardDay.anx+') — '+w.hardDay.summary);
+  if(w.entries.length){ L.push('What the entries said:'); w.entries.forEach(e=>L.push('- '+fmtDate(e.date)+' ('+e.hap+'/'+e.anx+'): '+e.summary)); }
+  if(w.byMonth.length){ L.push('Month by month (entries, happiness, anxiety, themes):'); w.byMonth.forEach(m=>L.push('- '+fmtYM(m.m)+': '+m.n+' entries, '+r1(m.hap)+' / '+r1(m.anx)+(m.themes.length?(', '+m.themes.join(', ')):''))); }
+  L.push('');
+  L.push('BODY');
+  if(w.sleep!=null) L.push('Slept '+r1(w.sleep)+'h on average over '+w.nights+' nights'+(w.sleepP!=null?(' (prior '+r1(w.sleepP)+'h)'):'')+'.');
+  if(w.hrv!=null) L.push('HRV averaged '+Math.round(w.hrv)+' ms'+(w.hrvP!=null?(' (prior '+Math.round(w.hrvP)+')'):'')+'.');
   if(w.rhr!=null) L.push('Resting heart rate averaged '+Math.round(w.rhr)+' bpm.');
-  if(w.steps!=null) L.push('Averaged '+Math.round(w.steps).toLocaleString()+' steps.');
-  L.push('Journaled '+w.journalCount+' time'+(w.journalCount===1?'':'s')+(w.themes.length?(', themes: '+w.themes.join(', ')):'')+'.');
+  if(w.readiness!=null) L.push('Readiness averaged '+Math.round(w.readiness)+'.');
+  if(w.steps!=null) L.push('Averaged '+Math.round(w.steps).toLocaleString()+' steps'+(w.stepsP!=null?(' (prior '+Math.round(w.stepsP).toLocaleString()+')'):'')+'.');
+  if(w.cal){ L.push(''); L.push('CALENDAR');
+    L.push(w.cal.events+' scheduled events, '+w.cal.hours+' hours in meetings across '+w.cal.days+' days'+(w.cal.busiest?('; busiest '+fmtDate(w.cal.busiest.day)+' ('+r1(w.cal.busiest.hours)+'h)'):'')+'.');
+    if(w.cal.allday.length) L.push('All-day: '+w.cal.allday.join(', ')+'.');
+    if(w.cal.titles.length) L.push('On the calendar: '+w.cal.titles.join('; ')+'.'); }
+  L.push('');
+  L.push('PEOPLE AND GOALS');
   L.push(w.connected.length?('Connected with: '+w.connected.slice(0,15).join(', ')+'.'):'No contact logged with friends in this period.');
   if(w.overdue.length) L.push('Overdue to reach out: '+w.overdue.slice(0,5).join(', ')+'.');
   if(w.goalProg.length) L.push('Made progress on goals: '+w.goalProg.join(', ')+'.');
+  if(w.enoughCk) L.push('Manual check-ins ('+w.ckN+' of '+w.N+' days): happiness '+r1(w.ckHap)+', anxiety '+r1(w.ckAnx)+'.');
   return L.join('\n');
 }
 function factsSummary(w){
@@ -4240,18 +4280,24 @@ function factsSummary(w){
   if(w.goalProg.length) s.push('You moved on '+w.goalProg.join(', ')+'.');
   return s.join(' ');
 }
+// calendar days for the review window, from the cloud (cal-tick keeps them); [] when nothing is connected
+async function calDaysLoad(kind){
+  const N=REVIEW_SPANS[kind]||7; const from=dstr(new Date(Date.now()-(2*N-1)*864e5));
+  const r=await photosRpc('my_cal_days', { from_day: from, to_day: today() });
+  return Array.isArray(r) ? r : [];
+}
 let rvKind='week';
 function setRvKind(k){ rvKind=k; renderReview(); }
 async function generateReview(kind){
   kind = kind || rvKind || 'week';
-  const w=weekData(null, kind); let narrative='';
+  const cal = await calDaysLoad(kind); const w=weekData(null, kind, cal); let narrative='';
   const NOUN={week:'week',month:'month',year:'year'};
   if(DB.settings.apiKey){
     if($('reviewBody')) $('reviewBody').innerHTML='<div class="pagehead2"><div class="a-lead">Writing your review…</div></div><div class="brief" style="margin-top:8px"><p><span class="spinner"></span>Reading your '+NOUN[kind]+'…</p></div>';
     try{
       const paras = kind==='year' ? '3 short paragraphs' : '2 short paragraphs';
-      const sys='You are writing a warm, honest '+NOUN[kind]+'ly reflection for someone, addressed to "you". From the data, write '+paras+' that notice patterns and connect them across mood, sleep, relationships, goals, and what they journaled — editorial and human, not a data dump; cite a number only where it matters. End with a final line beginning "Into the next '+NOUN[kind]+':" and ONE gentle, specific suggestion. No lists, no headers.';
-      narrative=await askClaude(sys, weekFactsText(w), kind==='year'?950:750);
+      const sys='You are writing a warm, honest '+NOUN[kind]+'ly reflection for someone, addressed to "you". The journal is the primary record: what he wrote, and how the days scored. Build the reflection from the journal and the body numbers, then the calendar and people if they add something. Write '+paras+' that notice patterns and connect them — a hard week against short sleep, a good stretch against what he was doing — editorial and human, not a data dump; cite a number only where it matters, and quote or paraphrase what he actually wrote where it helps. Never mention manual check-ins unless a line about them is present. Do not comment on how much or little data there is. End with a final line beginning "Into the next '+NOUN[kind]+':" and ONE gentle, specific suggestion. No lists, no headers.';
+      narrative=await askClaude(sys, weekFactsText(w), kind==='year'?1100:800);
     }catch(e){ narrative=''; }
   }
   const rev={ id:uid(), ts:Date.now(), kind, weekStart:w.start, weekEnd:w.end, stats:w, narrative };
@@ -4269,10 +4315,13 @@ function reviewNumbersHTML(w){
   const rows=[];
   if(w.hap!=null) rows.push(['Happiness', r1(w.hap)+'/10'+arrowHTML(w.hap,w.hapP,true)]);
   if(w.anx!=null) rows.push(['Anxiety', r1(w.anx)+'/10'+arrowHTML(w.anx,w.anxP,false)]);
-  if(w.sleep!=null) rows.push(['Sleep, avg', r1(w.sleep)+' h']);
+  if(w.sleep!=null) rows.push(['Sleep, avg', r1(w.sleep)+' h'+arrowHTML(w.sleep,w.sleepP,true)]);
+  if(w.hrv!=null) rows.push(['HRV', Math.round(w.hrv)+' ms'+arrowHTML(w.hrv,w.hrvP,true)]);
   if(w.rhr!=null) rows.push(['Resting HR', Math.round(w.rhr)+' bpm']);
+  if(w.steps!=null) rows.push(['Steps, avg', Math.round(w.steps).toLocaleString()+arrowHTML(w.steps,w.stepsP,true)]);
   rows.push(['Journal entries', String(w.journalCount)]);
-  rows.push(['Check-ins', w.ckN+' / '+(w.N||7)]);
+  if(w.cal) rows.push(['Meetings', w.cal.events+' · '+w.cal.hours+' h']);
+  if(w.enoughCk) rows.push(['Check-ins', w.ckN+' / '+(w.N||7)]);
   rows.push(['Connected with', w.connected.length?w.connected.join(', '):'—']);
   if(w.goalProg.length) rows.push(['Goals moved', w.goalProg.join(', ')]);
   return '<div class="card" style="padding:6px 16px">'+rows.map(r=>'<div class="kv"><span class="k">'+esc(r[0])+'</span><span class="v">'+r[1]+'</span></div>').join('')+'</div>';
@@ -4310,7 +4359,7 @@ function reviewInsights(){
   const out=[];
   if(due && (dow===0 || dow===6 || !last)) out.push({ score:58, tone:'info', text:'Your weekly review is ready.', why:'A minute to reflect on the week just lived.', act:{label:'Open', fn:"showView('review')"} });
   const lastM=revs.find(r=>r.kind==='month');
-  if(new Date().getDate()===1 || (lastM && daysBetween(lastM.weekEnd, today())>=32)) if((Object.keys(DB.checkins||{}).length>=10)) out.push({ score:52, tone:'info', text:'A month in review awaits.', why:'Thirty days, one page.', act:{label:'Open', fn:"setRvKind('month');showView('review')"} });
+  if(new Date().getDate()===1 || (lastM && daysBetween(lastM.weekEnd, today())>=32)) if((DB.journal||[]).length>=10) out.push({ score:52, tone:'info', text:'A month in review awaits.', why:'Thirty days, one page.', act:{label:'Open', fn:"setRvKind('month');showView('review')"} });
   return out;
 }
 const TRENDS=[
@@ -4362,6 +4411,92 @@ function trendCardHTML(m){
     : (Math.round(latest*Math.pow(10,m.dp))/Math.pow(10,m.dp));
   const sub = m7!=null ? ('7-day avg '+(m.fmt==='int'?Math.round(m7).toLocaleString():m.fmt==='usd'?'$'+Math.round(m7).toLocaleString():(Math.round(m7*10)/10))+m.unit+(mp!=null?arrowHTML(m7,mp,m.goodUp):'')+' <span style="color:var(--muted)">· '+nn.length+' days</span>') : (nn.length+' days logged');
   return '<div class="trend"><div class="tr-top"><span class="tr-label">'+esc(m.label)+'</span><span class="tr-val">'+disp+'<span class="tr-unit">'+esc(m.unit)+'</span></span></div>'+spark+'<div class="tr-sub">'+sub+'</div></div>';
+}
+// ---------- one metric over time: tap a tile ----------
+// days: one point per day for 30 days · weeks: weekly means for 26 weeks · months: monthly means for 24 months
+const TRENDV = { key:null, range:'days' };
+const TREND_RANGES = { days:{label:'Days', n:30}, weeks:{label:'Weeks', n:26}, months:{label:'Months', n:24} };
+function trendMeta(key){
+  return TRENDS.find(m=>m.key===key) || (()=>{ const tl=TILES.find(x=>x.key===key)||{}; return { key, kind:'stat', label:tl.label||key, unit:tl.unit?(' '+tl.unit):'', color:tl.dot||'var(--accent)', dp:1, fmt:tl.fmt }; })();
+}
+function trendPoints(key, range){
+  const R=TREND_RANGES[range]||TREND_RANGES.days;
+  const raw=[]; for(const d of Object.keys(DB.stats||{})){ const v=DB.stats[d]&&DB.stats[d][key]; if(v!=null&&!isNaN(v)&&/^\d{4}-\d{2}-\d{2}$/.test(d)) raw.push({d, v:Number(v)}); }
+  raw.sort((a,b)=>a.d<b.d?-1:1);
+  const t=today();
+  if(range==='days'){
+    const cut=dstr(new Date(Date.now()-(R.n-1)*864e5));
+    return raw.filter(p=>p.d>=cut&&p.d<=t).map(p=>({k:p.d, label:fmtYM(p.d), v:p.v, n:1}));
+  }
+  const bucket = range==='weeks'
+    ? d=>{ const x=parseD(d); x.setDate(x.getDate()-((x.getDay()+6)%7)); return dstr(x); }   // Monday
+    : d=>d.slice(0,7);
+  const by={}; for(const p of raw){ const k=bucket(p.d); (by[k]=by[k]||[]).push(p.v); }
+  const keys=Object.keys(by).sort().slice(-R.n);
+  return keys.map(k=>({ k, label: range==='weeks' ? 'Week of '+fmtYM(k) : fmtYM(k), v:mean(by[k]), n:by[k].length }));
+}
+function trendFmt(m, v){
+  if(v==null) return '—';
+  return m.fmt==='int' ? Math.round(v).toLocaleString() : m.fmt==='usd' ? '$'+Math.round(v).toLocaleString()
+    : m.fmt==='signed' ? (v>0?'+':'')+v.toFixed(2) : (Math.round(v*Math.pow(10,m.dp==null?1:m.dp))/Math.pow(10,m.dp==null?1:m.dp)).toString();
+}
+function trendChart(pts, m){
+  const n=pts.length; if(n<2) return '<div class="mood-empty">Not enough data for this range yet.</div>';
+  const W=MOOD_W, H=MOOD_H, L=30, R=MOOD_R, T=MOOD_T, B=MOOD_B;
+  const vs=pts.map(p=>p.v); let lo=Math.min.apply(null,vs), hi=Math.max.apply(null,vs);
+  if(hi===lo){ hi+=1; lo-=1; } const pad=(hi-lo)*0.12; lo-=pad; hi+=pad;
+  const X=i=>L+i*(W-L-R)/(n-1), Y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
+  let grid='', ylab='';
+  for(let g=0; g<=4; g++){ const v=lo+(hi-lo)*g/4, y=Y(v).toFixed(1);
+    grid+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="var(--border)" stroke-width="1"/>';
+    ylab+='<text x="'+(L-5)+'" y="'+(+y+3.2)+'" text-anchor="end" font-size="8.5" fill="var(--muted)">'+esc(trendFmt(m, Math.round(v*10)/10))+'</text>'; }
+  const step=Math.max(1, Math.ceil(n/5)); let xlab='';
+  pts.forEach((p,i)=>{ if((i%step===0 && n-1-i>=step/2) || i===n-1){ const q=p.k.split('-');
+    const lab = q.length>2 ? MON[+q[1]-1]+' '+(+q[2]) : MON[+q[1]-1]+' '+q[0].slice(2);
+    xlab+='<text x="'+X(i).toFixed(1)+'" y="'+(H-4)+'" text-anchor="'+(i===0?'start':i===n-1?'end':'middle')+'" font-size="8.5" fill="var(--muted)">'+lab+'</text>'; } });
+  const path=pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ');
+  const last=pts[n-1];
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(m.label)+' over time">'+grid+ylab+xlab+
+    '<path d="'+path+'" fill="none" stroke="'+m.color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+
+    '<circle cx="'+X(n-1).toFixed(1)+'" cy="'+Y(last.v).toFixed(1)+'" r="3.2" fill="'+m.color+'" stroke="var(--surface)" stroke-width="2"/>'+
+    '<line id="trendCross" x1="0" x2="0" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--muted)" stroke-width="1" opacity="0"/></svg>';
+}
+function openTrend(key, range){
+  TRENDV.key=key; if(range) TRENDV.range=range;
+  const m=trendMeta(key), pts=trendPoints(key, TRENDV.range), R=TREND_RANGES[TRENDV.range];
+  const vs=pts.map(p=>p.v), avg=mean(vs);
+  const half=Math.floor(pts.length/2), recent=mean(vs.slice(half)), earlier=half?mean(vs.slice(0,half)):null;
+  const best=pts.length?pts.reduce((a,b)=>b.v>a.v?b:a):null, low=pts.length?pts.reduce((a,b)=>b.v<a.v?b:a):null;
+  const pill=k=>'<button class="'+(TRENDV.range===k?'on':'')+'" onclick="openTrend(\''+key+'\',\''+k+'\')">'+TREND_RANGES[k].label+'</button>';
+  const unitTxt=(m.unit||'').trim();
+  openSheet('<h3>'+esc(m.label)+'</h3>'+
+    '<div class="mood-range" style="margin-top:2px">'+Object.keys(TREND_RANGES).map(pill).join('')+'</div>'+
+    '<div class="mood-wrap" id="trendWrap">'+trendChart(pts, m)+'<div class="mood-tip" id="trendTip"></div></div>'+
+    (pts.length?'<div class="mood-stats">'+
+      '<div class="mood-stat"><div class="k">Average</div><div class="v">'+trendFmt(m,avg)+'<span style="font-size:12px;color:var(--muted)"> '+esc(unitTxt)+'</span></div><div class="s">'+pts.length+' '+TRENDV.range.replace(/s$/,'')+(pts.length===1?'':'s')+'</div></div>'+
+      '<div class="mood-stat"><div class="k">Recent half</div><div class="v">'+trendFmt(m,recent)+(earlier!=null?arrowHTML(recent,earlier,m.goodUp!==false):'')+'</div><div class="s">'+(earlier!=null?('earlier half '+trendFmt(m,earlier)):'—')+'</div></div>'+
+      (best?'<div class="mood-stat"><div class="k">Highest</div><div class="v">'+trendFmt(m,best.v)+'</div><div class="s">'+esc(best.label)+'</div></div>':'')+
+      (low?'<div class="mood-stat"><div class="k">Lowest</div><div class="v">'+trendFmt(m,low.v)+'</div><div class="s">'+esc(low.label)+'</div></div>':'')+
+    '</div>':'')+
+    '<button class="btn secondary" style="margin-top:14px" onclick="logTile(\''+key+'\')">Log a value for today</button>');
+  trendHover(pts, m);
+}
+function trendHover(pts, m){
+  const wrap=$('trendWrap'), tip=$('trendTip'); if(!wrap||!tip||pts.length<2) return;
+  const svg=wrap.querySelector('svg'), cross=wrap.querySelector('#trendCross'); if(!svg) return;
+  const n=pts.length, L=30, X=i=>L+i*(MOOD_W-L-MOOD_R)/(n-1);
+  const at=ev=>{ const r=svg.getBoundingClientRect();
+    const px=((ev.touches?ev.touches[0].clientX:ev.clientX)-r.left)/r.width*MOOD_W;
+    let i=0, bd=1e9; pts.forEach((_,k)=>{ const d=Math.abs(X(k)-px); if(d<bd){bd=d;i=k;} });
+    const p=pts[i], x=X(i);
+    if(cross){ cross.setAttribute('x1',x); cross.setAttribute('x2',x); cross.setAttribute('opacity','.35'); }
+    tip.innerHTML='<b>'+esc(p.label)+'</b><br>'+trendFmt(m,p.v)+esc(m.unit||'')+(p.n>1?'<br><span style="color:var(--muted)">'+p.n+' days</span>':'');
+    tip.classList.add('on');
+    const left=Math.max(2, Math.min(r.width-tip.offsetWidth-2, x/MOOD_W*r.width - tip.offsetWidth/2));
+    tip.style.left=left+'px'; tip.style.top='2px'; };
+  const off=()=>{ tip.classList.remove('on'); if(cross) cross.setAttribute('opacity','0'); };
+  wrap.addEventListener('pointermove', at); wrap.addEventListener('pointerdown', at);
+  wrap.addEventListener('pointerleave', off); wrap.addEventListener('pointercancel', off);
 }
 function renderInsightsView(){
   const ex=$('insightsExtra'); if(!ex) return;

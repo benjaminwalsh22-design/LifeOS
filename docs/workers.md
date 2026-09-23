@@ -28,3 +28,13 @@ Register an app at https://cloud.ouraring.com/oauth/applications with redirect
 URI `https://<project>.supabase.co/functions/v1/oura-oauth/callback`, then set
 `OURA_CLIENT_ID` and `OURA_CLIENT_SECRET` as function secrets. Connect from
 Settings → Oura ring. `oura-tick?days=N` backfills up to 90 days.
+
+## Calendar
+
+`cal-tick` (every 4 h) reads the private iCal feeds in the `CAL_FEEDS` secret —
+`[{"name","url","titles":true|false}]` — expands recurring events with ical.js
+and stores one row per occurrence in `cal_events` for a 120-day back / 45-day
+ahead window. `my_cal_days(from,to)` gives the app per-day counts, meeting
+hours, first/last times, and titles only from feeds with `titles:true`. The
+reviews read it; `CAL_ME` is the address used to read your own RSVP so declined
+events don't count.
