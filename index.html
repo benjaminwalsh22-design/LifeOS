@@ -855,7 +855,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.1</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.2</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -957,6 +957,7 @@ let DB;
 try { DB = Object.assign({}, DEFAULTS, JSON.parse(store.getItem(KEY) || '{}')); }
 catch(e) { DB = JSON.parse(JSON.stringify(DEFAULTS)); }
 const save = () => { _statIdx = null; const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); if (window._syncDirty) window._syncDirty(); };
+const saveLocal = () => { _statIdx = null; const o = Object.assign({}, DB); delete o.journal; store.setItem(KEY, JSON.stringify(o)); };   // no push scheduled
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 // numbers the watch, ring or scale supplies — the cloud is the source of truth
 // for these, never the phone's cached copy
@@ -4597,6 +4598,16 @@ window._syncDirty = () => { if(SUPA && SUPA.session){ SUPA.dirty=true; scheduleS
 async function syncPush(){
   if(!SUPA||!SUPA.session||_syncing) return; _syncing=true;
   try{
+    // never write over a cloud copy this phone has not seen: the workers (ring,
+    // YNAB, trips) change it between pulls, and a blind push erased their days
+    try{
+      const head=await supaRest('lifeos_data?select=updated_at',{});
+      if(head.ok){ const rows=await head.json(); const ts=rows[0]?rows[0].updated_at:null;
+        if(ts && SUPA.lastRemoteTs && ts!==SUPA.lastRemoteTs){
+          const r=await supaRest('lifeos_data?select=payload,updated_at',{});
+          if(r.ok){ const data=(await r.json())[0]; if(data){ mergeRemote(data.payload||{}); SUPA.lastRemoteTs=data.updated_at; saveLocal(); renderAll(); } }
+        } }
+    }catch(e){ console.error('pre-push pull', e); }
     const row=[{ user_id:SUPA.session.user.id, payload:buildPayload(), updated_at:new Date().toISOString() }];
     // select=updated_at: the row is 10 MB and only the stamp is needed back —
     // return=representation without it re-downloaded the whole payload every save
