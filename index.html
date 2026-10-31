@@ -855,7 +855,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.2</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.3</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -974,39 +974,21 @@ if(scrubStats()){ try{ save(); }catch(e){} }
 DB.memories=DB.memories||[]; DB.memCand=DB.memCand||[]; DB.statsManual=DB.statsManual||{}; DB.placeTrip=DB.placeTrip||{};
 DB.mealLog=DB.mealLog||{};
 if(!DB.settings.macros) DB.settings.macros={p:150,f:30,s:25};
-if(!DB.twy || DB.twy.id!=='fall2026'){
-  DB.twy={ id:'fall2026', name:'Fall 2026', rev:6, start:'2026-08-24', mt:Date.now(), weeks:(DB.twy&&DB.twy.weeks)||{},
-    tactics:[
-      {k:'A',label:'Sleep 7h+',sub:'Fitbit time asleep \u00b7 5 of 7 \u00b7 auto from Health',t:5},
-      {k:'B',label:'Ben gym',sub:'Tue/Thu 5am',t:2},
-      {k:'C',label:'Protein + fiber target hit',sub:'Ben 150g \u00b7 Annalise 110g / 30g \u00b7 5 days',t:5},
-      {k:'D',label:'Added sugar under cap',sub:'under 25g \u00b7 5 days',t:5},
-      {k:'E',label:'Date night',sub:'Friday or Saturday',t:1},
-      {k:'F',label:'Sunday sync + weekly review',sub:'15 min \u00b7 before 90DF',t:1},
-      {k:'G',label:'Appreciation, spoken',sub:'6 of 7 days',t:6},
-      {k:'H',label:'Friend call or hangout',sub:'logged in Friends',t:1},
-      {k:'I',label:'Meditate',sub:'6 of 7 \u00b7 8:30\u20138:45am',t:6},
-      {k:'J',label:'No alcohol',sub:'zero, all twelve weeks',t:1}
-    ],
-    lanes:{ health:'Finish the twelve weeks stronger and eating better than you started, with the gym habit fully automatic.',
-      marriage:'The commitments made at the August retreat are still running in November, not memories.',
-      friendship:'Twelve weeks, twelve touches \u2014 turn the Friendship Tracker into an actual record.' } };
+// The plan slot. Fall 2026 (a 12 Week Year, ten weekly tactics) was stopped at
+// week ten on Oct 30 and kept under twyPast; November is a month sprint with three
+// goals instead. A 12-week plan returns in January and the legacy renderer stays
+// for it: a plan with `tactics` is a 12 Week Year, a plan with `goals` is a sprint.
+DB.twyPast=DB.twyPast||{};
+if(DB.twy && DB.twy.id==='fall2026'){
+  DB.twy.endedEarly='2026-10-30'; DB.twyPast.fall2026=DB.twy; DB.twy=null;
 }
-if(DB.twy && DB.twy.id==='fall2026' && (DB.twy.rev||1)<6){
-  DB.twy.rev=6; DB.twy.mt=Date.now();
-  DB.twy.lanes={ health:'Finish the twelve weeks stronger and eating better than you started, with the gym habit fully automatic.',
-    marriage:'The commitments made at the August retreat are still running in November, not memories.',
-    friendship:'Twelve weeks, twelve touches \u2014 turn the Friendship Tracker into an actual record.' };
-  try{ save(); }catch(e){}
-}
-if(DB.twy && DB.twy.id==='fall2026' && (DB.twy.rev||1)<5){
-  DB.twy.start='2026-08-24'; DB.twy.rev=5; DB.twy.mt=Date.now();
-  const T={ A:{label:'Sleep 7h+',sub:'Fitbit time asleep \u00b7 5 of 7 \u00b7 auto from Health',t:5},
-    C:{label:'Protein + fiber target hit',sub:'Ben 150g \u00b7 Annalise 110g / 30g \u00b7 5 days',t:5},
-    D:{label:'Added sugar under cap',sub:'under 25g \u00b7 5 days',t:5},
-    E:{sub:'Friday or Saturday'}, F:{sub:'15 min \u00b7 before 90DF'},
-    G:{sub:'6 of 7 days',t:6}, I:{sub:'6 of 7 \u00b7 8:30\u20138:45am',t:6} };
-  DB.twy.tactics.forEach(t=>{ if(T[t.k]) Object.assign(t, T[t.k]); });
+if(!DB.twy || DB.twy.id!=='nov2026'){
+  DB.twy={ id:'nov2026', kind:'month', name:'November', rev:1, start:'2026-11-01', end:'2026-11-30', mt:Date.now(),
+    goals:[
+      {k:'gym',   type:'count', target:8, label:'Gym, 8 sessions', sub:'tap after each one \u00b7 about two a week', log:[], mt:0},
+      {k:'belay', type:'done',  label:'Belay certified at Boulderdash', sub:'book the test, pass it, tap when done', done:null, mt:0},
+      {k:'quest', type:'done',  label:'Beat Brett at Quest for Knowledge', sub:'test Saturday, Nov 28', due:'2026-11-28', done:null, mt:0}
+    ] };
   try{ save(); }catch(e){}
 }
 if(!DB.settings.anniv) DB.settings.anniv='08-06';
@@ -1513,8 +1495,59 @@ const QUOTES=[
 ];
 function dayOfYear(){ const n=new Date(); const s=new Date(n.getFullYear(),0,0); return Math.floor((n-s)/86400000); }
 const TWY_LANE={A:'health',B:'health',C:'health',D:'health',I:'health',J:'health',E:'marriage',F:'marriage',G:'marriage',H:'friendship'};
+// ---- month sprint (a plan with `goals`) ----
+const isSprint = () => !!(DB.twy && DB.twy.kind==='month' && DB.twy.goals);
+function sprintDays(){            // where we are in the month
+  const T=DB.twy, d=today();
+  const total=daysBetween(T.start, T.end)+1;
+  const day=Math.min(total, Math.max(0, daysBetween(T.start, d)+1));   // 0 before it starts
+  return { total, day, left:Math.max(0, daysBetween(d, T.end)), started:d>=T.start, over:d>T.end };
+}
+function sprintCount(g){ return g.type==='count' ? (g.log||[]).length : (g.done?1:0); }
+function sprintHit(g){ return g.type==='count' ? sprintCount(g)>=g.target : !!g.done; }
+// one line per goal: what to do about it today, or null when it needs nothing
+function sprintNudge(g, S){
+  const d=today();
+  if(sprintHit(g)) return null;
+  if(g.type==='count'){
+    const n=sprintCount(g), need=g.target-n;
+    if(need>S.left+1) return {p:0, txt:g.label.split(',')[0]+': '+n+' of '+g.target+' — '+(S.left+1)+' days left, this one is slipping'};
+    const pace=Math.ceil(g.target*S.day/S.total);     // where the count should be by today
+    const last=(g.log||[]).slice(-1)[0];
+    if(n<pace) return {p:0, txt:g.label.split(',')[0]+' today — '+n+' of '+g.target+', pace says '+pace+(last?(' · last on '+fmtDate(last).slice(5)):'')};
+    if(last && daysBetween(last,d)>=3) return {p:2, txt:g.label.split(',')[0]+': '+n+' of '+g.target+', on pace — '+daysBetween(last,d)+' days since the last one'};
+    return null;
+  }
+  if(g.due){
+    const dd=daysBetween(d, g.due);
+    if(dd<0) return {p:1, txt:g.label+' — the test was '+fmtDate(g.due).slice(5)+'; tap it done, or let it go'};
+    if(dd===0) return {p:0, txt:'Test day — '+g.label.replace(/^Beat /,'beat ')};
+    return {p:dd<=7?0:2, txt:dd+' day'+(dd===1?'':'s')+' to the test — a study block today for '+g.label.replace(/^Beat /,'beating ')};
+  }
+  if(g.k==='belay') return {p:S.left<=10?0:1, txt:S.left<=10?('Belay test not done — '+S.left+' days left in the month'):'Book the belay test at Boulderdash if it isn’t on the calendar yet'};
+  return {p:1, txt:g.label};
+}
+function sprintNudges(){
+  if(!isSprint()) return null;
+  const S=sprintDays(); if(!S.started||S.over) return null;
+  const items=DB.twy.goals.map(g=>sprintNudge(g,S)).filter(Boolean).sort((a,b)=>a.p-b.p);
+  const hits=DB.twy.goals.filter(sprintHit).length;
+  return { S, hits, total:DB.twy.goals.length, items };
+}
+function sprintFocusHTML(){
+  const nd=sprintNudges();
+  if(!nd){
+    const S=isSprint()?sprintDays():null;
+    if(S && !S.started) return '<div class="brief-goal"><b>'+esc(DB.twy.name)+'</b> starts '+fmtDate(DB.twy.start)+' — three goals, nothing due yet.</div>';
+    return goalFocusHTML();
+  }
+  let h='<div class="brief-goal"><b>'+esc(DB.twy.name)+', day '+nd.S.day+' of '+nd.S.total+'</b> · '+nd.hits+' of '+nd.total+' done · <span style="color:var(--accent);cursor:pointer" onclick="showView(\'goals\')">the three</span></div>';
+  if(!nd.items.length) h+='<div class="brief-goal" style="color:var(--good)">All three are on track today. Enjoy it.</div>';
+  else h+=nd.items.slice(0,3).map(i=>'<div class="brief-goal" onclick="showView(\'goals\')" style="cursor:pointer">'+esc(i.txt)+'</div>').join('');
+  return h;
+}
 function twyNudges(){
-  if(!DB.twy) return null;
+  if(!DB.twy || isSprint()) return null;
   const n=twyWeekOf(today()); if(n<1||n>12) return null;
   const w=(DB.twy.weeks||{})['w'+n]||{c:{}}; const c=w.c||{};
   const M=DB.settings.macros||{p:150,f:30,s:25};
@@ -1537,6 +1570,7 @@ function twyNudges(){
   return { n, hits, total:DB.twy.tactics.length, phase:twyPhase(n), items:out.slice(0,3) };
 }
 function twyFocusHTML(){
+  if(isSprint()) return sprintFocusHTML();
   const nd=twyNudges();
   if(!nd) return goalFocusHTML();
   let h='<div class="brief-goal"><b>Week '+nd.n+' of 12</b> \u00b7 '+nd.hits+' of '+nd.total+' tactics hit \u00b7 <span style="color:var(--accent);cursor:pointer" onclick="openMemoriesGuard()">'+esc(nd.phase)+'</span></div>';
@@ -1567,10 +1601,14 @@ async function ensureBriefLine(){
   if(DB.briefLine && DB.briefLine.date===today()) return;
   if(_briefGen) return; _briefGen=true;
   try{
-    const nd=twyNudges();
+    const nd=twyNudges(), sp=sprintNudges();
     const st=DB.stats[today()]||{}; const c=DB.checkins[today()];
     let ctx;
-    if(nd){
+    if(sp){
+      const gs=DB.twy.goals.map(g=>g.label+(g.type==='count'?(' ('+sprintCount(g)+' of '+g.target+')'):(g.done?' (done)':g.due?(' (test '+fmtDate(g.due)+')'):' (not yet)'))).join('; ');
+      ctx=DB.twy.name+' sprint, day '+sp.S.day+' of '+sp.S.total+', three goals: '+gs+'. Due today: '+(sp.items.map(i=>i.txt).join('; ')||'nothing pressing')+'.'
+        +(st.sleep?(' Slept '+st.sleep+'h.'):'')+(c&&ckHap(c)!=null?(' Mood is decent.'):'');
+    } else if(nd){
       const open=nd.items.map(i=>i.txt).join('; ');
       ctx='12 Week Year, week '+nd.n+' of 12 ('+nd.phase+'), '+nd.hits+' of '+nd.total+' weekly tactics already hit. Due today: '+(open||'everything already done')+'.'
         +(st.sleep?(' Slept '+st.sleep+'h.'):'')+(c&&ckHap(c)!=null?(' Mood is decent.'):'');
@@ -4051,9 +4089,62 @@ function twyTap(k,dir){
   if((w.c[k]||0)===t.t) toast(t.k+' \u2014 hit \u2713');
 }
 function twySetNote(v){ const n=TWYV.wk; if(!n) return; const w=twyWk(n); w.note=v; w.mt=Date.now(); save(); }
+function sprintGoal(k){ return (DB.twy.goals||[]).find(g=>g.k===k); }
+function sprintTap(k, dir){
+  const g=sprintGoal(k); if(!g) return;
+  if(g.type==='count'){
+    g.log=g.log||[];
+    if(dir>0){ if(g.log.length>=99) return; g.log.push(today()); }
+    else g.log.pop();
+    g.mt=Date.now(); save(); renderTWY();
+    const n=g.log.length;
+    if(dir>0) toast(n>=g.target ? (g.label.split(',')[0]+' — '+g.target+' done ✓') : (n+' of '+g.target));
+  } else {
+    g.done = g.done ? null : today();
+    g.mt=Date.now(); save(); renderTWY();
+    if(g.done) toast(g.label+' ✓');
+  }
+}
+function renderSprint(el){
+  const T=DB.twy, S=sprintDays();
+  const hits=T.goals.filter(sprintHit).length;
+  const past=DB.twyPast&&DB.twyPast.fall2026;
+  let h='<div class="section-head"><h2>'+esc(T.name)+' sprint</h2>'+
+    '<span style="font-size:12px;color:var(--muted)">'+(!S.started?('starts '+fmtDate(T.start)):S.over?'complete':('day '+S.day+' of '+S.total+' · '+S.left+' left'))+'</span></div>';
+  h+='<div class="card">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:18px">Three goals</b>'+
+     '<span style="font-size:12.5px;color:var(--muted)">'+fmtDate(T.start).slice(5)+' – '+fmtDate(T.end).slice(5)+'</span></div>';
+  h+=T.goals.map(g=>{
+    const hit=sprintHit(g);
+    let right, sub=g.sub, bar='';
+    if(g.type==='count'){
+      const n=sprintCount(g), pace=S.started?Math.ceil(g.target*S.day/S.total):0;
+      right=n+'/'+g.target;
+      const last=(g.log||[]).slice(-1)[0];
+      if(!hit && S.started) sub=(n>=pace?'on pace':('behind — pace is '+pace+' by today'))+(last?(' · last '+fmtDate(last).slice(5)):'')+' · tap to add one';
+      bar='<div class="g-bar" style="margin:6px 0 2px"><i style="width:'+Math.min(100,Math.round(n/g.target*100))+'%'+(!hit&&n<pace?';background:var(--warning)':'')+'"></i></div>';
+    } else {
+      right=hit?'done':(g.due?(daysBetween(today(),g.due)>=0?(daysBetween(today(),g.due)+'d'):'past'):'—');
+      if(hit) sub='done '+fmtDate(g.done);
+    }
+    return '<div class="tac'+(hit?' hit':'')+'" onclick="sprintTap(\''+g.k+'\',1)" oncontextmenu="event.preventDefault();sprintTap(\''+g.k+'\',-1)">'+
+      '<span class="tk">'+(hit?'✓':(g.type==='count'?sprintCount(g):'○'))+'</span>'+
+      '<span class="tl"><b>'+esc(g.label)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+bar+'</span>'+
+      '<span class="tc" onclick="event.stopPropagation();sprintTap(\''+g.k+'\',-1)">'+esc(right)+'</span></div>';
+  }).join('');
+  h+='<div class="twy-score"><span style="font-size:12.5px;color:var(--muted)">'+hits+' of '+T.goals.length+' done'+(T.goals.some(g=>g.type==='count')?' · long-press a row to undo':'')+'</span><b style="color:'+(hits===T.goals.length?'var(--good)':'var(--ink)')+'">'+hits+'/'+T.goals.length+'</b></div>';
+  h+='</div>';
+  if(past){
+    const wk=past.weeks||{}, scored=Object.keys(wk).filter(k=>Object.keys(wk[k].c||{}).length).length;
+    const avg=scored?Math.round(Object.keys(wk).reduce((a,k)=>a+(past.tactics.filter(t=>((wk[k].c||{})[t.k]||0)>=t.t).length),0)/scored/past.tactics.length*100):0;
+    h+='<div style="font-size:12.5px;color:var(--muted);margin:10px 4px 0">'+esc(past.name)+' 12 Week Year stopped at week '+Math.max(1,Math.min(12,Math.floor((parseD(past.endedEarly||today())-parseD(past.start))/(7*86400000))+1))+' · '+scored+' weeks scored, '+avg+'% average. The next twelve weeks start in January.</div>';
+  }
+  el.innerHTML=h;
+}
 function renderTWY(){
   const el=$('twyBody'); if(!el) return;
   if(!DB.twy){ el.innerHTML=''; return; }
+  if(isSprint()) return renderSprint(el);
   const T=DB.twy, today_=today();
   const curW=twyWeekOf(today_);
   if(TWYV.wk===null) TWYV.wk=Math.min(12, Math.max(1, curW));
@@ -4586,9 +4677,14 @@ function mergeRemote(db){
   if(db.places && !DB.places) DB.places=db.places;
   if(db.briefLine && (!DB.briefLine || (db.briefLine.date||'')>(DB.briefLine.date||''))) DB.briefLine=db.briefLine;
   if(db.otd && (!DB.otd || (db.otd.date||'')>(DB.otd.date||'') || ((db.otd.date||'')===(DB.otd.date||'') && (db.otd.n||0)>(DB.otd.n||0)))) DB.otd=db.otd;
+  DB.twyPast=Object.assign({}, db.twyPast||{}, DB.twyPast||{});
   if(db.twy && DB.twy && db.twy.id===DB.twy.id){
     const rw=db.twy.weeks||{}; DB.twy.weeks=DB.twy.weeks||{};
     for(const k in rw){ if(!DB.twy.weeks[k] || (rw[k].mt||0)>(DB.twy.weeks[k].mt||0)) DB.twy.weeks[k]=rw[k]; }
+    if(db.twy.goals && DB.twy.goals){      // sprint goals: the later tap wins, goal by goal
+      db.twy.goals.forEach(rg=>{ const lg=DB.twy.goals.find(g=>g.k===rg.k);
+        if(!lg) DB.twy.goals.push(rg); else if((rg.mt||0)>(lg.mt||0)) Object.assign(lg, rg); });
+    }
   } else if(db.twy && !DB.twy) DB.twy=db.twy;
   DB.tomb=tomb;
 }
