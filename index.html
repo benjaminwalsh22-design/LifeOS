@@ -858,7 +858,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.4</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.5</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -875,6 +875,8 @@ nav.tabbar {
       <div id="assistantFeed"></div>
     </section>
 
+    <!-- ============ STUDY (Quest for Knowledge, under Goals) ============ -->
+    <section class="view" id="view-study"><div id="studyBody"></div></section>
     <!-- ============ GOALS (under Life) ============ -->
     <section class="view" id="view-goals">
       <div id="twyBody"></div>
@@ -1036,8 +1038,8 @@ function closeSheet(){ $('overlay').classList.remove('open'); $('sheet').innerHT
 $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) closeSheet(); });
 
 // ---------- navigation ----------
-const VIEWS = { today:'Today', friends:'Friends', person:'', journal:'Journal', ask:'Ask Ben', memories:'52 Memories', insights:'Insights', schedule:'Schedule', places:'Places', health:'Health', goals:'Goals', review:'Weekly Review', settings:'Settings' };
-const TAB_OF = { today:'today', schedule:'today', places:'today', goals:'goals', settings:'today', friends:'friends', person:'friends', journal:'journal', ask:'journal', memories:'journal', insights:'insights', health:'insights', review:'insights' };
+const VIEWS = { today:'Today', friends:'Friends', person:'', journal:'Journal', ask:'Ask Ben', memories:'52 Memories', insights:'Insights', schedule:'Schedule', places:'Places', health:'Health', goals:'Goals', study:'Quest for Knowledge', review:'Weekly Review', settings:'Settings' };
+const TAB_OF = { today:'today', schedule:'today', places:'today', goals:'goals', study:'goals', settings:'today', friends:'friends', person:'friends', journal:'journal', ask:'journal', memories:'journal', insights:'insights', health:'insights', review:'insights' };
 let currentView = 'today';
 let currentPersonId = null;
 const FOCUS_APPS = { journal:{title:'Journal', tab:'journal'}, friends:{title:'Friends', tab:'friends'}, insights:{title:'Insights', tab:'insights'} };
@@ -1534,8 +1536,9 @@ function sprintNudge(g, S){
   if(g.due){
     const dd=daysBetween(d, g.due);
     if(dd<0) return {p:1, txt:g.label+' — the test was '+fmtDate(g.due).slice(5)+'; tap it done, or let it go'};
-    if(dd===0) return {p:0, txt:'Test day — '+g.label.replace(/^Beat /,'beat ')};
-    return {p:dd<=7?0:2, txt:dd+' day'+(dd===1?'':'s')+' to the test — a study block today for '+g.label.replace(/^Beat /,'beating ')};
+    if(dd===0) return {p:0, view:'study', txt:'Test day — '+g.label.replace(/^Beat /,'beat ')};
+    if(DB.study && DB.study.log && DB.study.log[d]) return null;      // studied tonight: nothing to nag about
+    return {p:dd<=7?0:2, view:'study', txt:dd+' day'+(dd===1?'':'s')+' to the test — tonight is '+subName(studyTonight())+(dd<=7?'; nothing matters more this week':'')};
   }
   if(g.k==='belay') return {p:S.left<=10?0:1, txt:S.left<=10?('Belay test not done — '+S.left+' days left in the month'):'Book the belay test at Boulderdash if it isn’t on the calendar yet'};
   return {p:1, txt:g.label};
@@ -1556,7 +1559,7 @@ function sprintFocusHTML(){
   }
   let h='<div class="brief-goal"><b>'+esc(DB.twy.name)+', day '+nd.S.day+' of '+nd.S.total+'</b> · '+nd.hits+' of '+nd.total+' done · <span style="color:var(--accent);cursor:pointer" onclick="showView(\'goals\')">the three</span></div>';
   if(!nd.items.length) h+='<div class="brief-goal" style="color:var(--good)">All three are on track today. Enjoy it.</div>';
-  else h+=nd.items.slice(0,3).map(i=>'<div class="brief-goal" onclick="showView(\'goals\')" style="cursor:pointer">'+esc(i.txt)+'</div>').join('');
+  else h+=nd.items.slice(0,3).map(i=>'<div class="brief-goal" onclick="showView(\''+(i.view||'goals')+'\')" style="cursor:pointer">'+esc(i.txt)+'</div>').join('');
   return h;
 }
 function twyNudges(){
@@ -4157,6 +4160,10 @@ function renderSprint(el){
       '<span class="tl"><b>'+esc(g.label)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+bar+'</span>'+
       '<span class="tc" onclick="event.stopPropagation();sprintTap(\''+g.k+'\',-1)">'+esc(right)+'</span></div>';
   }).join('');
+  if(typeof QFK!=='undefined' && today()<=QFK.exam){
+    const left=daysBetween(today(),QFK.exam), nights=studyLast7(), tonight=studyTonight();
+    h+='<div class="notice" style="margin:4px 0 0;padding:10px 12px;border-radius:10px;background:var(--accent-soft);color:var(--accent);cursor:pointer" onclick="showView(\'study\')"><b>Quest for Knowledge</b> — '+(left>0?left+' day'+(left===1?'':'s')+' to the test':'test day')+' · tonight '+esc(subName(tonight))+' · '+nights+' of the last 7 nights studied. Open the study hub →</div>';
+  }
   h+='<div class="twy-score"><span style="font-size:12.5px;color:var(--muted)">'+hits+' of '+T.goals.length+' done'+(T.goals.some(g=>g.type==='count')?' · long-press a row to undo':'')+'</span><b style="color:'+(hits===T.goals.length?'var(--good)':'var(--ink)')+'">'+hits+'/'+T.goals.length+'</b></div>';
   h+='</div>';
   if(past){
@@ -4741,6 +4748,13 @@ function mergeRemote(db){
   if(db.briefLine && (!DB.briefLine || (db.briefLine.date||'')>(DB.briefLine.date||''))) DB.briefLine=db.briefLine;
   if(db.otd && (!DB.otd || (db.otd.date||'')>(DB.otd.date||'') || ((db.otd.date||'')===(DB.otd.date||'') && (db.otd.n||0)>(DB.otd.n||0)))) DB.otd=db.otd;
   DB.twyPast=Object.assign({}, db.twyPast||{}, DB.twyPast||{});
+  if(db.study){   // study hub: nights logged are a union, each card keeps its later grade, tests are a union by id
+    const R=db.study, L=DB.study||(DB.study={log:{},cards:{},tests:[]});
+    L.log=Object.assign({}, R.log||{}, L.log||{});
+    L.cards=L.cards||{}; for(const k in (R.cards||{})){ if(!L.cards[k] || (R.cards[k].t||0)>(L.cards[k].t||0)) L.cards[k]=R.cards[k]; }
+    L.tests=L.tests||[]; const ids=new Set(L.tests.map(t=>t.id)); (R.tests||[]).forEach(t=>{ if(t&&t.id&&!ids.has(t.id)) L.tests.push(t); });
+    L.tests.sort((a,b)=>(a.date<b.date?-1:a.date>b.date?1:0));
+  }
   if(db.twy && DB.twy && db.twy.id===DB.twy.id){
     const rw=db.twy.weeks||{}; DB.twy.weeks=DB.twy.weeks||{};
     for(const k in rw){ if(!DB.twy.weeks[k] || (rw[k].mt||0)>(DB.twy.weeks[k].mt||0)) DB.twy.weeks[k]=rw[k]; }
@@ -5017,7 +5031,7 @@ $('tlInput').addEventListener('change', async e => {
     setTimeout(()=>lookupPlaceNames(), 1200);
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
-function renderAll(){ renderMacros(); renderAsk(); renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderMemories(); renderCheckin(); renderPlaces(); renderGoals(); renderPerson(); renderReview(); renderInsightsView(); }
+function renderAll(){ renderMacros(); renderAsk(); renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderMemories(); renderCheckin(); renderPlaces(); renderGoals(); renderStudy(); renderPerson(); renderReview(); renderInsightsView(); }
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if(SUPA && SUPA.session && SUPA.dirty) syncPush(); return; } if (!document.hidden){ renderAll();
   if(SUPA && SUPA.session) syncPull();
   if((DB.settings.healthSyncUrl||'').trim() && (!DB.settings.healthLastSync || Date.now()-DB.settings.healthLastSync>3e5)) syncHealthNow(true); } });
@@ -5027,15 +5041,935 @@ function routeHash(){
   if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }
   return false;
 }
+// ---------- Quest for Knowledge: the study hub's data ----------
+// Source of truth is the v3 curriculum and the three study guides in Notion
+// (Personal Home → Quest for Knowledge). This is that material condensed into
+// what a phone screen can drill: a guide to read, cards to flip, question pools
+// for practice tests, and the visual third drawn or fetched on the fly.
+const QFK = {
+  exam: '2026-11-28', opponent: 'Brett', stake: '$250',
+  notion: 'https://app.notion.com/p/3ef89921a6db818289c2c1f914c25ae5',
+  subjects: {
+    hist:    { name: 'U.S. History', short: 'History',   color: '#1f3a5f', mix: '10 visual/source · 15 fill in · 15 multiple choice' },
+    astro:   { name: 'Astronomy',    short: 'Astronomy', color: '#3b2d6e', mix: '15 visual · 12 fill in · 13 multiple choice' },
+    animals: { name: 'Animals',      short: 'Animals',   color: '#235a3a', mix: '16 visual · 12 fill in · 12 multiple choice' },
+  },
+  // November, compressed from the rule guide's eight weeks into four
+  plan: [
+    { from: '2026-11-01', to: '2026-11-07', title: 'Week 1 · foundations',
+      hist: 'Contact, colonies, Revolution and founding (1491–1800)', astro: 'A night sky & B solar system', animals: 'A classification & B anatomy',
+      do: 'Read the guide sections, flip the cards for those sections daily, moon phases + solar-system drill.' },
+    { from: '2026-11-08', to: '2026-11-14', title: 'Week 2 · the middle',
+      hist: 'Growth, reform, expansion, Civil War, Reconstruction (1800–1877)', astro: 'C stars & D galaxies', animals: 'C evolution & D habitats',
+      do: 'Cards daily, first full-subject practice test in each subject, constellation drill nightly.' },
+    { from: '2026-11-15', to: '2026-11-21', title: 'Week 3 · modern & visual',
+      hist: 'Gilded Age to present (1865–now) + maps, portraits, sources', astro: 'E discovery + every visual drill', animals: 'E species, records, look-alike pairs',
+      do: 'Photo drills every night (41 of 120 questions are pictures). Second practice tests.' },
+    { from: '2026-11-22', to: '2026-11-27', title: 'Week 4 · review',
+      hist: 'Timelines: road to war, civil rights, territorial expansion', astro: 'Weak sections only', animals: 'Weak sections only',
+      do: 'Mixed 60-question tests under time. Cards: only what is still in box 1–2. Sleep the night before.' },
+  ],
+  // which subject the 8pm reminder and the "tonight" card point at
+  rotation: ['animals', 'hist', 'astro', 'animals', 'hist', 'astro', 'test'],   // Sun..Sat
+  listen: [
+    { s: 'hist', title: 'Crash Course U.S. History', who: 'John Green · ~48 × 12 min, built on the AP framework. Best time-to-value.', url: 'https://www.youtube.com/results?search_query=crash+course+us+history+playlist' },
+    { s: 'hist', title: "Heimler's History", who: 'AP U.S. History review by period. Week 4.', url: 'https://www.youtube.com/@heimlershistory' },
+    { s: 'hist', title: "History That Doesn't Suck", who: 'Greg Jackson · narrative, chronological. Commutes.', url: 'https://historythatdoesntsuck.com/' },
+    { s: 'hist', title: 'American History Tellers', who: 'Wondery · seasons on the Revolution, Cold War, Prohibition.', url: 'https://wondery.com/shows/american-history-tellers/' },
+    { s: 'hist', title: 'The History of the United States, 2nd Ed.', who: 'Great Courses audiobook · 84 lectures in curriculum order. Play the ones that match the week.', url: 'https://www.audible.com/search?keywords=history+of+the+united+states+2nd+edition+great+courses' },
+    { s: 'astro', title: 'Crash Course Astronomy', who: 'Phil Plait · ~46 episodes that map onto sections A–E. Top pick.', url: 'https://www.youtube.com/results?search_query=crash+course+astronomy+playlist' },
+    { s: 'astro', title: 'Astronomy Cast', who: 'Fraser Cain & Pamela Gay · search the concept you are weak on.', url: 'https://www.astronomycast.com/' },
+    { s: 'astro', title: 'Sky Tour', who: 'Sky & Telescope · what is up this month. Listen before a night outside.', url: 'https://skyandtelescope.org/observing/sky-tour-astronomy-podcast/' },
+    { s: 'astro', title: 'Stellarium Web', who: 'Free planetarium in the browser. Practice the 13 constellations indoors, confirm outdoors.', url: 'https://stellarium-web.org/' },
+    { s: 'astro', title: 'Astrophysics for People in a Hurry', who: 'Tyson · 4 hours · section D.', url: 'https://www.audible.com/search?keywords=astrophysics+for+people+in+a+hurry' },
+    { s: 'astro', title: 'OpenStax Astronomy 2e', who: 'The reference the rule guide names. Free.', url: 'https://openstax.org/details/books/astronomy-2e' },
+    { s: 'animals', title: 'Life on Earth', who: 'Attenborough reads it · the animal groups in order, which is section A. Top pick.', url: 'https://www.audible.com/search?keywords=life+on+earth+attenborough' },
+    { s: 'animals', title: 'Crash Course Zoology', who: 'Rae Wynn-Grant · classification and the major groups.', url: 'https://www.youtube.com/results?search_query=crash+course+zoology+playlist' },
+    { s: 'animals', title: 'An Immense World', who: 'Ed Yong · animal senses, echolocation. Section B.', url: 'https://www.audible.com/search?keywords=an+immense+world+ed+yong' },
+    { s: 'animals', title: 'Ologies', who: 'Alie Ward · pick bats, sharks, cephalopods, spiders.', url: 'https://www.alieward.com/ologies' },
+    { s: 'animals', title: 'Planet Earth / Blue Planet', who: 'The recognition list by sight, and biomes come free.', url: 'https://www.bbcearth.com/' },
+    { s: 'animals', title: 'OpenStax Biology 2e', who: 'Evolution, animal diversity, ecology chapters.', url: 'https://openstax.org/details/books/biology-2e' },
+  ],
+  // ---- the guide: one entry per curriculum section ----
+  guide: {
+    hist: [
+      { h: '1491–1607 · Contact', q: 2, pts: [
+        'Indigenous societies were diverse: Pueblo adobe towns and irrigation, Mississippian mound cities (Cahokia), Iroquois longhouses, Plains bison hunters, Aztec and Inca empires.',
+        'Why Europe explored: "God, gold and glory" — a sea route to Asia, wealth, Christianity, rivalry. Columbus sailed for Spain in **1492**.',
+        'Columbian Exchange: Americas → Europe maize, potatoes, tomatoes, tobacco, cacao. Europe → Americas horses, cattle, pigs, wheat, sugar, smallpox.',
+        'Consequences: disease killed most Native people; encomienda forced labor; the Atlantic slave trade began; horses remade Plains life.' ] },
+      { h: '1607–1754 · Colonies', q: 3, pts: [
+        'Chesapeake: Jamestown **1607**, first permanent English settlement, saved by tobacco (John Rolfe). Indentured servants, then enslaved Africans (1619). House of Burgesses 1619. Bacon\'s Rebellion 1676 pushed planters toward slavery.',
+        'New England: Plymouth **1620**, Mayflower Compact. Massachusetts Bay 1630, Winthrop\'s "city upon a hill." Families, towns, small farms, fishing, town meetings. Roger Williams → Rhode Island.',
+        'Middle colonies: diverse breadbasket; Penn\'s Quaker Pennsylvania; New York from the Dutch. South: plantations, tobacco/rice/indigo, heaviest slavery.',
+        'Atlantic trade: mercantilism, Navigation Acts, triangular trade, Middle Passage. "Salutary neglect" let colonies get used to self-rule.',
+        'First Great Awakening (1730s–40s) and the Enlightenment both encouraged questioning authority.' ] },
+      { h: '1754–1800 · Revolution & founding', q: 7, pts: [
+        'French and Indian War 1754–63: Britain won land to the Mississippi and debt → new taxes. Proclamation of 1763 closed the West.',
+        'Stamp Act 1765 ("no taxation without representation") → Townshend duties → Boston Massacre 1770 → Tea Party 1773 → Intolerable Acts 1774 → Lexington and Concord April 1775.',
+        'Common Sense (Paine, 1776). Declaration of Independence **July 4, 1776**, mainly Jefferson: natural rights, consent of the governed, grievances.',
+        'War: Trenton 1776 (morale), **Saratoga 1777** (France allies), Valley Forge winter, **Yorktown 1781** (Cornwallis surrenders), Treaty of Paris 1783.',
+        'Articles of Confederation: no power to tax, no executive, no courts, unanimity to amend. Northwest Ordinance 1787 the success; Shays\' Rebellion the warning.',
+        'Constitutional Convention 1787, Philadelphia. Madison "Father of the Constitution." Great Compromise (House by population, Senate equal). Three-Fifths Compromise. Separation of powers, checks and balances, federalism.',
+        'Ratification: Federalists (Hamilton, Madison, Jay — Federalist Papers) vs. Anti-Federalists who feared central power and demanded a bill of rights. **Bill of Rights 1791**; 1st Amendment: religion, speech, press, assembly, petition.',
+        'Washington\'s precedents: cabinet, two terms, neutrality, Whiskey Rebellion put down, Farewell Address against parties and permanent alliances. Hamilton: assume state debts, national bank, tariffs.',
+        'First parties: Federalists (Hamilton/Adams, strong center, commerce, pro-British) vs. Democratic-Republicans (Jefferson/Madison, states\' rights, farmers, pro-French). Adams: XYZ Affair, Alien and Sedition Acts. Election of 1800: first peaceful transfer between parties.' ] },
+      { h: '1800–1848 · Growth & reform', q: 5, pts: [
+        '**Louisiana Purchase 1803** from France (Napoleon), $15 million, doubled the country; Lewis and Clark. Marbury v. Madison 1803: judicial review (Marshall).',
+        'War of 1812: impressment and trade interference. Washington burned, "Star-Spangled Banner," Jackson at New Orleans. Result: nationalism, Era of Good Feelings, Federalists collapse. Monroe Doctrine 1823.',
+        'Market Revolution: Erie Canal 1825, steamboats, railroads, telegraph, textile mills. Cotton gin (Whitney) made cotton hugely profitable and expanded slavery.',
+        'Missouri Compromise 1820: Missouri slave, Maine free, no slavery north of 36°30′.',
+        'Jacksonian democracy: elected 1828, "common man," spoils system, killed the Second Bank, faced down South Carolina (Nullification Crisis). Indian Removal Act 1830 → Cherokee **Trail of Tears 1838** despite Worcester v. Georgia.',
+        'Second Great Awakening fueled reform: abolition (Garrison, Douglass, Tubman and the Underground Railroad), temperance, public schools (Horace Mann), women\'s rights — **Seneca Falls 1848**, Elizabeth Cady Stanton.' ] },
+      { h: '1844–1877 · Expansion, Civil War, Reconstruction', q: 6, pts: [
+        'Manifest Destiny (Polk). Texas annexed 1845. Oregon 1846 (49th parallel). Mexican-American War 1846–48 → Treaty of Guadalupe Hidalgo, Mexican Cession. Gadsden Purchase 1853. Every new territory reopened the slavery question.',
+        'Road to war, in order: Compromise of 1850 (California free, tougher Fugitive Slave Act) → Uncle Tom\'s Cabin 1852 → Kansas-Nebraska Act 1854 (popular sovereignty, Bleeding Kansas, Republican Party forms) → Dred Scott 1857 → Harpers Ferry 1859 → Lincoln elected **1860**, South Carolina secedes → Fort Sumter April **1861**.',
+        'Union: population, industry, railroads, navy. Confederacy: defensive war, Lee. Antietam 1862 (bloodiest day) opened the door to the **Emancipation Proclamation, Jan 1 1863** — freed enslaved people in Confederate-held areas only; made ending slavery a war aim, allowed Black soldiers, kept Europe out.',
+        '**Gettysburg and Vicksburg, July 1863**: the turning points. Gettysburg Address in November. Grant takes command, Sherman\'s March, Lee surrenders at **Appomattox, April 1865**. Lincoln assassinated days later.',
+        '13th (1865) abolished slavery. 14th (1868) citizenship, due process, equal protection. 15th (1870) vote cannot be denied by race.',
+        'Reconstruction: Freedmen\'s Bureau, Radical Republicans vs. Andrew Johnson (impeached 1868, not removed). Limits: Black Codes, sharecropping, Klan violence. Ends with the Compromise of 1877; Jim Crow follows.' ] },
+      { h: '1865–1898 · Gilded Age', q: 4, pts: [
+        'Transcontinental railroad 1869. Carnegie (steel), Rockefeller (Standard Oil), J.P. Morgan (finance). Monopoly/trust = one company or group controls an industry. Sherman Antitrust Act 1890.',
+        'Labor: Knights of Labor, AFL (Gompers). Strikes: Great Railroad 1877, Homestead 1892, Pullman 1894.',
+        '"New immigrants" from southern and eastern Europe via Ellis Island. Chinese Exclusion Act 1882. Tenements, political machines (Tammany Hall). "Gilded Age" is Twain\'s term. Pendleton Act → civil service.',
+        'The West: Homestead Act, mining, cattle. Native displacement: reservations, Little Bighorn 1876, Dawes Act 1887, Wounded Knee 1890. Bison nearly gone.',
+        'Populism: farmers squeezed by debt and railroad rates; People\'s Party; free silver; Bryan\'s "Cross of Gold" 1896. Plessy v. Ferguson 1896: "separate but equal."' ] },
+      { h: '1890–1945 · Reform, empire, wars', q: 6, pts: [
+        'Progressives: muckrakers (Sinclair\'s The Jungle → Meat Inspection, Pure Food and Drug Acts). T. Roosevelt: Square Deal, trust-busting, conservation. Amendments: 16th income tax, 17th direct Senate election, 18th Prohibition, **19th women\'s suffrage 1920**. Wilson: Federal Reserve.',
+        'Spanish-American War 1898: USS Maine, yellow journalism. Gains Puerto Rico, Guam, Philippines; Hawaii annexed. Panama Canal; "big stick."',
+        'WWI: neutral until **1917**; entered over unrestricted submarine warfare and the Zimmermann Telegram. Fourteen Points, League of Nations; Senate rejected Versailles.',
+        '1920s: autos (Ford), Jazz Age, Harlem Renaissance, Prohibition, Red Scare, immigration quotas, Scopes Trial. Crash October **1929** → Depression: bank failures, 25% unemployment, Dust Bowl.',
+        'New Deal (FDR, 1932): relief, recovery, reform. CCC, WPA, TVA, FDIC, SEC, Social Security Act 1935, Wagner Act. Federal role expanded for good.',
+        'WWII: isolationism → Lend-Lease → **Pearl Harbor Dec 7 1941**. Home front: production, women in factories, Japanese American internment. Midway 1942, Stalingrad, **D-Day June 6 1944**. Germany surrenders May 1945; Truman drops atomic bombs on Hiroshima and Nagasaki, August 1945.' ] },
+      { h: '1945–1980 · Cold War & change', q: 5, pts: [
+        'Containment: Truman Doctrine, Marshall Plan, Berlin Airlift, NATO 1949. Korean War 1950–53, armistice at the 38th parallel. Red Scare, McCarthyism.',
+        'Eisenhower: interstate highways, Sputnik 1957. Kennedy: Cuban Missile Crisis 1962, assassinated 1963.',
+        'Civil rights, in order: Brown v. Board **1954** → Montgomery Bus Boycott 1955–56 (Parks, King) → Little Rock 1957 → sit-ins 1960 → March on Washington / "I Have a Dream" 1963 → **Civil Rights Act 1964** → **Voting Rights Act 1965**. King assassinated 1968.',
+        'Great Society (Johnson): Medicare, Medicaid, War on Poverty. Vietnam: Gulf of Tonkin 1964, Tet 1968, Kent State, withdrawal 1973, Saigon falls 1975.',
+        'Nixon: opened China, détente. Watergate: break-in 1972, cover-up, resigns August **1974**; Ford pardons. Social change: suburbs, counterculture, women\'s movement, Silent Spring, Earth Day 1970 and the EPA, Moon landing 1969.' ] },
+      { h: '1980–present', q: 2, pts: [
+        'Reagan era (elected 1980): tax cuts, deregulation, military buildup, conservative resurgence. Berlin Wall falls **1989**; USSR dissolves 1991.',
+        'Globalization: NAFTA 1994, the internet, offshoring. **September 11, 2001** → Afghanistan 2001, Patriot Act, Homeland Security, Iraq 2003. 2008 crisis; Obama elected 2008; polarization.' ] },
+      { h: 'Visual & source prep', q: 10, pts: [
+        'Territorial expansion: 1783 original (Atlantic–Mississippi) · 1803 Louisiana (Mississippi–Rockies, the middle third) · 1819 Florida from Spain · 1845 Texas · 1846 Oregon from Britain · 1848 Mexican Cession (California + Southwest) · 1853 Gadsden (southern strip of AZ/NM).',
+        '13 colonies: New England = MA, NH, CT, RI. Middle = NY, NJ, PA, DE. South = MD, VA, NC, SC, GA.',
+        'Civil War map: 11 Confederate states SC, MS, FL, AL, GA, LA, TX, VA, AR, TN, NC. Border slave states that stayed: MO, KY, MD, DE.',
+        'Portraits: Washington (powdered hair, the dollar) · Jefferson (high collar, the nickel) · Lincoln (beard, no mustache) · T. Roosevelt (round glasses, mustache, grin) · FDR (rimless glasses, cigarette holder) · JFK (young, 1960s) · MLK (podium or march) · Reagan (swept-back hair, 1980s color).',
+        'Sources: "When in the Course of human events" / "We hold these truths" → Declaration · "We the People" → Constitution (Preamble) · "Congress shall make no law" → 1st Amendment · "thenceforward, and forever free" → Emancipation Proclamation · "I have a dream" → King 1963 · "Injustice anywhere" → Letter from Birmingham Jail.',
+        'Cartoons/posters: "Join, or Die" snake → colonial unity (Franklin) · octopus over buildings → trusts · Roosevelt\'s big stick → imperialism · Uncle Sam "I Want You" → WWI recruiting · "We Can Do It!" → WWII home front.' ] },
+    ],
+    astro: [
+      { h: 'A · Night sky & observation', q: 8, pts: [
+        'Celestial sphere: the imaginary dome. Horizon where sky meets ground; **zenith** straight overhead. Altitude 0–90° above the horizon; azimuth N 0°, E 90°, S 180°, W 270°.',
+        'Earth rotates west→east, so the sky appears to move east→west. **Polaris** sits above the north pole, barely moves, tip of the Little Dipper\'s handle, not the brightest star; its altitude = your latitude. Circumpolar stars never set (Big Dipper, Cassiopeia).',
+        'Seasons come from the 23.5° tilt, not distance. June solstice longest day; December shortest; equinoxes March/September, Sun rises due east. Different constellations each season because Earth\'s night side faces a different direction as it orbits.',
+        'Ecliptic: the Sun\'s yearly path, the plane of Earth\'s orbit; Moon and planets stay near it; the zodiac lies along it.',
+        'Moon phases (29.5 days). Waxing grows, lit on the RIGHT in the north; waning shrinks, lit on the LEFT. New → waxing crescent → first quarter (right half) → waxing gibbous → full → waning gibbous → third quarter (left half) → waning crescent.',
+        'Solar eclipse: Moon between Sun and Earth, only at NEW moon, narrow path. Lunar eclipse: Earth between Sun and Moon, only at FULL moon, whole night side sees it, Moon turns red. Not monthly because the Moon\'s orbit tilts ~5°. Diagram order Sun–Moon–Earth = solar; Sun–Earth–Moon = lunar.' ] },
+      { h: 'Required sky recognition', q: 0, pts: [
+        'Big Dipper (asterism in Ursa Major): bowl of four + bent handle of three; pointer stars aim at Polaris. Little Dipper: fainter, handle curves the other way, Polaris at the tip. Cassiopeia: a W/M of five, opposite the Dipper across Polaris.',
+        'Orion (winter): hourglass, three belt stars; Betelgeuse red at the shoulder, Rigel blue-white at the foot, Orion Nebula in the sword. The belt points down-left to Sirius in Canis Major (brightest night star) and up-right to Aldebaran in Taurus (V-shaped face; Pleiades on the shoulder).',
+        'Summer: Scorpius (J/fishhook, red Antares at the heart), Sagittarius (the Teapot, toward the Milky Way\'s center), Lyra (small parallelogram under Vega), Cygnus (the Northern Cross, a swan along the Milky Way, Deneb at the tail), Aquila (Altair flanked by two stars). Summer Triangle = Vega, Deneb, Altair.',
+        'Autumn: Great Square of Pegasus (four stars, empty square); Andromeda\'s two curving chains leave one corner, with M31 above the chain.',
+        'Bright stars: Polaris (Ursa Minor) · Sirius (Canis Major, brightest) · Betelgeuse & Rigel (Orion) · Vega (Lyra) · Deneb (Cygnus) · Altair (Aquila) · Arcturus (Boötes, "arc to Arcturus" off the Dipper\'s handle) · Antares (Scorpius, "rival of Mars") · Aldebaran (Taurus) · Capella (Auriga, winter) · Fomalhaut (Piscis Austrinus, lone autumn star).',
+        'Deep-sky: Andromeda Galaxy M31 = spiral GALAXY, 2.5 million ly, tilted oval glow. Pleiades M45 = open STAR CLUSTER in Taurus, tight blue-white bunch. Orion Nebula M42 = NEBULA, pink gas cloud where stars form.' ] },
+      { h: 'B · Solar system', q: 8, pts: [
+        'The Sun is a star with 99%+ of the mass, powered by fusion. Order: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune ("My Very Educated Mother Just Served Us Nachos").',
+        'Terrestrial (small, rocky): Mercury (gray, cratered, no moons) · Venus (featureless cream clouds, hottest, brightest) · Earth · Mars (rust red, white polar caps, Phobos & Deimos, Olympus Mons). Gas giants: Jupiter (bands, Great Red Spot, largest, Io/Europa/Ganymede/Callisto) · Saturn (pale gold, bright rings, Titan). Ice giants: Uranus (smooth pale cyan, rotates on its side) · Neptune (deeper blue, strongest winds, Triton).',
+        'Dwarf planet: round, orbits the Sun, has NOT cleared its orbit. Pluto reclassified 2006 (moon Charon); also Ceres, Eris.',
+        'Asteroid belt between Mars and Jupiter (4th and 5th orbits), rocky. Kuiper Belt beyond Neptune, icy, Pluto lives there, short-period comets. Oort Cloud: distant spherical shell, long-period comets, inferred.',
+        'Comets are icy and grow a coma and tails near the Sun (tails point away from the Sun); asteroids are rock or metal with no tail.',
+        'Orbits: forward motion + the Sun\'s pull = an ellipse; closer planets move faster. Formation 4.6 billion years ago: a collapsing solar nebula flattened into a disk; rock condensed near the Sun, ices farther out — hence rocky inner, giant outer, all orbiting one way in one plane.' ] },
+      { h: 'C · Stars & stellar evolution', q: 8, pts: [
+        'Gravity collapses part of a nebula into a protostar; fusion begins when the core is hot enough. Fusion: hydrogen → helium + energy; its outward pressure balances gravity.',
+        '**Light-year = distance** light travels in a year (~6 trillion miles), not time. Sunlight takes ~8 minutes; the nearest other star is ~4 light-years.',
+        'Apparent brightness is how bright it LOOKS (depends on distance); luminosity is the energy it actually emits. Two stars equally bright, one farther away → the farther one is more luminous.',
+        'Color = temperature: blue hottest → white → yellow → orange → red coolest.',
+        'Main sequence: the long stable hydrogen-fusing stage. The Sun is halfway through ~10 billion years. **Mass controls everything**: massive stars are hotter, bluer, brighter and die much sooner.',
+        'Sun-like: nebula → main sequence → red giant → planetary nebula → **white dwarf** (Earth-sized, no fusion, cooling). High-mass: nebula → main sequence → red supergiant → **supernova** → neutron star (city-sized) or, for the most massive, black hole. The Sun will never go supernova.' ] },
+      { h: 'D · Galaxies & universe', q: 8, pts: [
+        'Milky Way: our barred spiral, hundreds of billions of stars, ~100,000 ly across; the hazy band is our edge-on view of the disk. The Sun sits in a spiral arm about halfway out (~26,000 ly), NOT at the center; the center lies toward Sagittarius and holds a supermassive black hole.',
+        'Andromeda M31: nearest large galaxy, spiral, 2.5 million ly, farthest naked-eye object. **Local Group**: the Milky Way and Andromeda (the two largest) plus dozens of small galaxies.',
+        'Galaxy types: spiral (disk, arms, bulge, young blue stars in arms), elliptical (smooth ball/oval, old red stars, little gas), irregular (no shape).',
+        'Nebula = gas and dust cloud. Star cluster = stars born together, bound by gravity, inside a galaxy. Galaxy = billions of stars plus gas and dust. Size ladder: planet, star, solar system, cluster/nebula, galaxy, group, universe.',
+        'Expansion: space itself stretches; the farther the galaxy the faster it recedes; no center. **Redshift**: light from a receding galaxy is stretched to longer, redder wavelengths — more redshift, farther and faster.',
+        'Big Bang ~13.8 billion years ago, hot and dense, expanding and cooling since. Evidence: expansion, cosmic microwave background, hydrogen/helium amounts. Observable universe = what light has had time to reach us from; not the whole thing.' ] },
+      { h: 'E · Discovery & exploration', q: 8, pts: [
+        '**Copernicus 1543**: heliocentric model. **Galileo 1609–10**: first telescope observations — four moons of Jupiter, phases of Venus, lunar craters, sunspots, Milky Way stars — evidence for Copernicus. **Kepler**: planets move on ellipses, faster when nearer the Sun, outer planets take longer. **Newton 1687**: universal gravitation explains WHY Kepler\'s laws work. **Hubble 1920s**: Andromeda is a separate galaxy; galaxies recede → expanding universe.',
+        '**Apollo 11, July 1969**: Armstrong and Aldrin walk on the Moon. Six landings through 1972, twelve people on the surface.',
+        'Hubble Space Telescope: launched 1990, Earth orbit, above the atmosphere, mainly visible and ultraviolet. **James Webb**: launched December 2021, **infrared**, gold segmented mirror, sunshield, far from Earth; sees through dust to the earliest galaxies.',
+        'Robotic missions go where people cannot, longer and cheaper: flybys, orbiters, landers, rovers. Voyager 1 and 2 (outer planets, now interstellar), Mars rovers, Cassini at Saturn, New Horizons at Pluto.' ] },
+    ],
+    animals: [
+      { h: 'A · Classification & major groups', q: 10, pts: [
+        'Hierarchy, broad → narrow: Kingdom, Phylum, Class, **Order**, Family, Genus, Species ("King Philip Came Over For Good Soup"). Scientific name = Genus + species. Vertebrates have a backbone; invertebrates are the vast majority of species.',
+        'Mammals: hair, lungs, endotherm, milk, mostly live birth. Birds: feathers, lungs, endotherm, hard-shelled eggs. Reptiles: dry scales, lungs, ectotherm, amniotic eggs on land. Amphibians: moist thin skin, gills as larvae then lungs and skin, ectotherm, jelly eggs in water, metamorphosis. Fish: scales and fins, gills, mostly ectotherm; sharks and rays have cartilage skeletons.',
+        'Three kinds of mammals: monotremes LAY EGGS (platypus, echidna); marsupials bear undeveloped young that finish in a pouch (kangaroo, koala); placentals develop longer inside (most). Whales and dolphins are mammals; bats are the only mammals with true flight.',
+        'Arthropods (largest phylum): exoskeleton, jointed legs, segments. Insects 6 legs, 3 body parts, antennae, usually wings. Arachnids 8 legs, 2 body parts, no antennae. Crustaceans mostly aquatic, two pairs of antennae (crab, lobster, shrimp).',
+        'Mollusks: soft body, usually a shell, muscular foot (snail, slug, clam, squid, octopus). Annelids: segmented worms (earthworm, leech). Cnidarians: stinging cells, radial symmetry (jellyfish, coral, anemone). Echinoderms: spiny skin, FIVE-part radial symmetry, tube feet, marine only (sea star, urchin, sand dollar).',
+        'Centipede: one pair of legs per segment, flat, fast, venomous predator. Millipede: two pairs per segment, rounded, slow, eats decaying plants.' ] },
+      { h: 'B · Anatomy, physiology & adaptations', q: 8, pts: [
+        'Endotherm makes its own heat (mammals, birds); ectotherm follows the environment (reptiles, amphibians, fish, invertebrates). Lungs take oxygen from air, gills from water — whales have lungs and must surface.',
+        'Body plans: internal skeleton vs. exoskeleton vs. soft body. Bilateral symmetry vs. radial (jellyfish, sea star).',
+        'Metamorphosis. Complete: egg → larva → pupa → adult (butterfly, beetle, bee, ant). Incomplete: egg → nymph → adult (grasshopper, dragonfly). Amphibian: egg → tadpole with gills → adult with lungs.',
+        '**Camouflage** hides (chameleon, octopus, polar bear). **Mimicry** resembles another organism or object (harmless copying dangerous). **Warning coloration** advertises danger (poison dart frog) — not camouflage, not mimicry.',
+        '**Venom** is injected by bite, sting or spine (cobra, rattlesnake, scorpion, jellyfish). **Poison** harms when touched or eaten (poison dart frog). Echolocation: bats and toothed whales such as dolphins.',
+        'Flight: birds (feathers, hollow bones), bats (skin over finger bones), insects; hummingbirds hover and fly backward. Insulation: fur, feathers, blubber. Feeding: hooked beak (eagle), nectar bill (hummingbird), filter bill (flamingo), baleen (blue and humpback whales), elephant trunk, giraffe neck.',
+        'Reproduction: eggs vs. live birth; many young with no care (fish, insects) vs. few with heavy care (elephants, apes); male seahorses carry the young. Scales and shelled eggs free reptiles from water; amphibians stay tied to it.' ] },
+      { h: 'C · Evolution & behavior', q: 7, pts: [
+        'Natural selection: individuals vary, traits are inherited, more are born than survive, those with helpful traits leave more offspring; populations change over generations — individuals do not evolve, and traits do not appear because they are needed.',
+        'Adaptation: an inherited trait that improves survival or reproduction. Common ancestry: human arm, bat wing and whale flipper share a bone layout; fossils; DNA; birds descend from dinosaurs. Convergent evolution: shark and dolphin shapes, bird and bat wings.',
+        'Sexual selection: traits that win mates at a survival cost — peacock tail, antlers.',
+        'Migration: seasonal long-distance movement (caribou, humpbacks, sea turtles, birds). Hibernation: winter dormancy with lowered temperature and metabolism (bats, some bears). Territoriality: wolf scent marking, birdsong.',
+        'Social groups: lion pride, wolf pack, dolphin/orca pod, elephant herd led by a matriarch, gorilla troop led by a silverback, ant and bee colonies. Communication: whale song, wolf howls, ant pheromones, peacock display, honeybee waggle dance.',
+        'Cooperation: pack hunting, alarm calls; clownfish and anemone (mutualism). Predator–prey shape each other (cheetah and gazelle). Parental care high in mammals and birds; crocodilians guard nests; most fish, amphibians and invertebrates give none.' ] },
+      { h: 'D · Habitats, ecosystems & biogeography', q: 7, pts: [
+        'Food chain: producer → primary consumer (herbivore) → secondary consumer → top predator; a web is many chains. Producers photosynthesize; consumers eat; decomposers (fungi, bacteria) recycle. Only ~10% of energy passes up a level, so top predators are few.',
+        '**Keystone species**: outsized effect for its numbers (wolves, sea otters, elephants). **Invasive species**: non-native, spreads and harms, usually with no predators. Biodiversity highest in rainforests and coral reefs.',
+        'Extinction causes: habitat loss, overhunting, invasives, pollution, climate change. Dodo and passenger pigeon lost to humans; non-avian dinosaurs 66 million years ago. Recoveries: bald eagle, bison, giant panda, humpback. Still endangered: tigers, rhinos, orangutans, gorillas, sea turtles.',
+        'Biomes: rainforest (hot, wet, layered canopy — toucan, sloth, dart frog, apes) · savanna/grassland (grass with scattered trees — lion, cheetah, giraffe, zebra, African elephant, ostrich; bison on prairie) · desert (camel, rattlesnake, scorpion) · temperate forest (four seasons — red fox, owl, brown bear, salamander) · tundra (cold, treeless — caribou, polar bear) · freshwater (hippo, alligator, dragonfly) · marine (whales, sharks, sea turtle, clownfish, coral).',
+        'Map geography: sub-Saharan Africa (lion, African elephant, giraffe, zebra, hippo, cheetah, gorilla, chimp, ostrich, rhino) · Asia (tiger, Asian elephant, giant panda, orangutan, cobra, peacock) · Australia (kangaroo, koala, platypus, echidna) · Central/South America (sloth, toucan, dart frog, iguana) · North America (bison, moose, grizzly, bald eagle, rattlesnake, alligator) · Arctic (polar bear, caribou) · Antarctica (penguins — polar bears and penguins never meet).' ] },
+      { h: 'E · Species, records & identification', q: 8, pts: [
+        'Records, exactly: blue whale largest animal · African elephant largest land animal · giraffe tallest · cheetah fastest on land · peregrine falcon fastest in a dive · ostrich largest and fastest-running bird · hummingbird hovers and flies backward · bat the only flying mammal · platypus and echidna egg-laying mammals · coral reefs built by animals (polyps), not plants.',
+        'Look-alikes: African elephant huge ears, swayed back vs. Asian small ears, rounded back, two-domed head · cheetah solid spots and tear lines vs. leopard rosettes, stockier, in trees · crocodile V snout, lower teeth show vs. alligator U snout · bald eagle white head and tail vs. golden eagle all brown · sea turtle flippers vs. tortoise domed shell on land.',
+        'More pairs: sea lion has ear flaps and walks on flippers vs. seal ear holes, wriggles · gorilla massive black vs. chimp smaller with big ears vs. orangutan long orange hair · moose dark with flat antlers and drooping nose vs. reindeer branching antlers, pale neck, herds · grizzly brown with a shoulder hump vs. polar bear white, long neck.',
+        'Butterfly clubbed antennae, wings up, by day vs. moth feathery antennae, wings flat, by night · octopus round head and eight arms vs. squid torpedo body, fins, eight arms plus two tentacles · manta huge, open water, head flaps vs. stingray on the bottom with a barbed tail · great white pointed snout vs. hammerhead flat head · dolphin gray with a beak vs. orca black and white with a tall fin vs. humpback long flippers, knobby head · cobra hood vs. rattlesnake rattle vs. python heavy constrictor.',
+        'One-liners: giant panda bamboo bear from China · koala eucalyptus marsupial, not a bear · kangaroo joey · camel humps store fat · bison shoulder hump · tiger largest cat, striped, solitary · lion only cat in prides · gray wolf ancestor of dogs · peregrine slate back with dark helmet · owl forward eyes, silent flight · penguin Southern Hemisphere · flamingo pink from diet, feeds upside down · chameleon independent eyes · iguana spiny crest · clownfish lives in anemones · seahorse is a fish · sea star regrows arms · spider spins silk, scorpion stinging tail · earthworm annelid · snail mollusk.' ] },
+    ],
+  },
+};
+
+// ---- flashcards: front / back, by subject. Fill-ins on the exam look like these. ----
+QFK.cards = [
+  ['hist','First permanent English settlement in North America, 1607','Jamestown (Virginia); saved by tobacco'],
+  ['hist','The 1777 victory that brought France into the war','Saratoga'],
+  ['hist','Document that opens "We the People of the United States"','The Constitution (its Preamble)'],
+  ['hist','Document that opens "When in the Course of human events" / "We hold these truths"','Declaration of Independence, 1776, Jefferson'],
+  ['hist','First ten amendments, ratified 1791','Bill of Rights'],
+  ['hist','Those who opposed ratifying the Constitution and demanded a bill of rights','Anti-Federalists'],
+  ['hist','"Father of the Constitution"','James Madison'],
+  ['hist','Weak first government: no power to tax, no executive','Articles of Confederation'],
+  ['hist','The 1803 purchase from France that doubled the country','Louisiana Purchase ($15 million, Napoleon)'],
+  ['hist','Case that established judicial review (1803)','Marbury v. Madison (John Marshall)'],
+  ['hist','1823 doctrine: Europe stay out of the Western Hemisphere','Monroe Doctrine'],
+  ['hist','Machine that made cotton profitable and expanded slavery','Cotton gin (Eli Whitney)'],
+  ['hist','1820 deal: Missouri slave, Maine free, 36°30′ line','Missouri Compromise'],
+  ['hist','Forced removal of the Cherokee, 1838','Trail of Tears (Indian Removal Act 1830)'],
+  ['hist','1848 women\'s rights convention in New York','Seneca Falls (Elizabeth Cady Stanton)'],
+  ['hist','Belief the U.S. was destined to span the continent','Manifest Destiny'],
+  ['hist','Treaty ending the Mexican-American War, 1848','Treaty of Guadalupe Hidalgo → Mexican Cession'],
+  ['hist','1854 act that let settlers vote on slavery where it had been barred','Kansas-Nebraska Act (popular sovereignty; "Bleeding Kansas")'],
+  ['hist','1857 ruling: Black Americans not citizens, Congress cannot ban slavery in territories','Dred Scott decision'],
+  ['hist','Where the Civil War began, April 1861','Fort Sumter'],
+  ['hist','Bloodiest single day; opened the door to emancipation (1862)','Antietam'],
+  ['hist','Jan 1 1863 order freeing enslaved people in Confederate-held areas','Emancipation Proclamation'],
+  ['hist','The two July 1863 turning points','Gettysburg and Vicksburg'],
+  ['hist','Where Lee surrendered, April 1865','Appomattox Court House'],
+  ['hist','13th / 14th / 15th Amendments, in one line each','13th abolished slavery (1865); 14th citizenship + equal protection (1868); 15th vote regardless of race (1870)'],
+  ['hist','Deal that ended Reconstruction','Compromise of 1877'],
+  ['hist','One company\'s exclusive control of an industry (Standard Oil)','Monopoly (or trust); Sherman Antitrust Act 1890'],
+  ['hist','1896 case upholding "separate but equal"','Plessy v. Ferguson'],
+  ['hist','1890s movement of indebted farmers; "Cross of Gold"','Populism (People\'s Party; William Jennings Bryan 1896)'],
+  ['hist','Journalists who exposed abuses; The Jungle','Muckrakers (Upton Sinclair → Meat Inspection, Pure Food and Drug Acts)'],
+  ['hist','Amendment giving women the vote, 1920','19th Amendment'],
+  ['hist','1898 war; USS Maine; Puerto Rico, Guam, Philippines','Spanish-American War'],
+  ['hist','Why the U.S. entered WWI in 1917','Unrestricted German submarine warfare + the Zimmermann Telegram'],
+  ['hist','Wilson\'s peace plan and the body the Senate rejected','Fourteen Points; League of Nations (Treaty of Versailles rejected)'],
+  ['hist','Month and year of the stock market crash','October 1929'],
+  ['hist','1935 law creating old-age pensions','Social Security Act (New Deal)'],
+  ['hist','Date of Pearl Harbor','December 7, 1941'],
+  ['hist','Allied invasion of Normandy, June 6 1944','D-Day (Operation Overlord)'],
+  ['hist','Policy of stopping the spread of communism','Containment (Truman Doctrine, Marshall Plan, NATO 1949)'],
+  ['hist','1954 case overturning school segregation','Brown v. Board of Education'],
+  ['hist','1963 mass demonstration where King spoke','March on Washington ("I Have a Dream")'],
+  ['hist','Civil Rights Act vs. Voting Rights Act — years','1964 and 1965'],
+  ['hist','Johnson\'s domestic program: Medicare, Medicaid, War on Poverty','Great Society'],
+  ['hist','1964 resolution that escalated Vietnam; 1968 offensive that turned opinion','Gulf of Tonkin Resolution; Tet Offensive'],
+  ['hist','Scandal that made Nixon resign, August 1974','Watergate'],
+  ['hist','Year the Berlin Wall fell; year the USSR dissolved','1989; 1991'],
+  ['hist','Who drew "Join, or Die" and what it meant','Benjamin Franklin, 1754 — unite or be destroyed'],
+  ['hist','Uncle Sam "I Want You" (1917) recruited for which war','World War I'],
+  ['hist','"We Can Do It!" poster figure and meaning','Rosie the Riveter — WWII home front, women in factories'],
+  ['hist','Border slave states that stayed in the Union','Missouri, Kentucky, Maryland, Delaware'],
+  ['hist','Road to war, in order (7 steps)','Compromise of 1850 → Uncle Tom\'s Cabin 1852 → Kansas-Nebraska 1854 → Dred Scott 1857 → Harpers Ferry 1859 → Lincoln elected 1860 → Fort Sumter 1861'],
+  ['hist','Civil rights movement, in order (7 steps)','Brown 1954 → Montgomery 1955 → Little Rock 1957 → sit-ins 1960 → March on Washington 1963 → Civil Rights Act 1964 → Voting Rights Act 1965'],
+  ['astro','Point directly overhead','Zenith'],
+  ['astro','Compass direction along the horizon, N=0°, E=90°','Azimuth (altitude is the angle above the horizon)'],
+  ['astro','Why the sky appears to move east to west','Earth rotates west to east'],
+  ['astro','Why different constellations each season','Earth\'s night side faces a different direction as it orbits the Sun'],
+  ['astro','The Sun\'s apparent yearly path; plane of Earth\'s orbit','Ecliptic'],
+  ['astro','What causes the seasons','Earth\'s 23.5° axial tilt — not distance from the Sun'],
+  ['astro','Star almost directly above Earth\'s north pole','Polaris (tip of the Little Dipper\'s handle; altitude = your latitude)'],
+  ['astro','Stars that never set, circling the pole','Circumpolar'],
+  ['astro','Eight moon phases in order','New, waxing crescent, first quarter, waxing gibbous, full, waning gibbous, third quarter, waning crescent'],
+  ['astro','Lit on the right vs. lit on the left (Northern Hemisphere)','Right = waxing (growing); left = waning'],
+  ['astro','Eclipse with order Sun–Moon–Earth; only at which phase','Solar eclipse; new moon'],
+  ['astro','Eclipse with order Sun–Earth–Moon; only at which phase','Lunar eclipse; full moon (Moon turns red)'],
+  ['astro','Why not an eclipse every month','The Moon\'s orbit is tilted about 5° to the ecliptic'],
+  ['astro','The three stars of the Summer Triangle and their constellations','Vega (Lyra), Deneb (Cygnus), Altair (Aquila)'],
+  ['astro','Brightest star in the night sky and its constellation','Sirius, Canis Major'],
+  ['astro','Red supergiant at Orion\'s shoulder; blue-white at the foot','Betelgeuse; Rigel'],
+  ['astro','Red heart of Scorpius','Antares ("rival of Mars")'],
+  ['astro','Orange eye of Taurus; the cluster on its shoulder','Aldebaran; Pleiades (M45)'],
+  ['astro','"Arc to ___" off the Big Dipper\'s handle; constellation','Arcturus, Boötes'],
+  ['astro','The W-shaped constellation','Cassiopeia'],
+  ['astro','The Teapot asterism marks which constellation and direction','Sagittarius; the center of the Milky Way'],
+  ['astro','The Northern Cross is which constellation; its tail star','Cygnus; Deneb'],
+  ['astro','M31, M45, M42 — what type of object is each','M31 Andromeda = spiral galaxy; M45 Pleiades = open star cluster; M42 Orion = nebula'],
+  ['astro','Planets in order','Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune'],
+  ['astro','Terrestrial / gas giant / ice giant — which planets','Terrestrial: Mercury–Mars. Gas giants: Jupiter, Saturn. Ice giants: Uranus, Neptune'],
+  ['astro','Hottest planet and why','Venus — runaway greenhouse effect'],
+  ['astro','Planet that rotates on its side','Uranus'],
+  ['astro','Why Pluto is a dwarf planet','It has not cleared its orbit of other bodies (reclassified 2006; moon Charon)'],
+  ['astro','Where the asteroid belt is; where the Kuiper Belt is','Between Mars and Jupiter; beyond Neptune'],
+  ['astro','Source of long-period comets','Oort Cloud (short-period: Kuiper Belt)'],
+  ['astro','Comet vs. asteroid','Comet icy, grows a coma and tails near the Sun (tail points away from the Sun); asteroid rocky/metallic, no tail'],
+  ['astro','Jupiter\'s four Galilean moons','Io, Europa, Ganymede, Callisto'],
+  ['astro','How old is the solar system; what did it form from','About 4.6 billion years; a collapsing solar nebula that flattened into a disk'],
+  ['astro','A light-year is a unit of ___','Distance (about 6 trillion miles)'],
+  ['astro','Apparent brightness vs. luminosity','How bright it looks from Earth (depends on distance) vs. total energy it emits'],
+  ['astro','Star colors from hottest to coolest','Blue, white, yellow, orange, red'],
+  ['astro','What powers a star; what balances gravity','Nuclear fusion of hydrogen into helium; the outward pressure from fusion'],
+  ['astro','What controls how a star evolves and how long it lives','Its mass — more massive, shorter life'],
+  ['astro','Sun-like star life cycle','Nebula → main sequence → red giant → planetary nebula → white dwarf'],
+  ['astro','High-mass star life cycle','Nebula → main sequence → red supergiant → supernova → neutron star or black hole'],
+  ['astro','What the Sun will end as','A white dwarf (never a supernova)'],
+  ['astro','Where the Sun sits in the Milky Way','In a spiral arm about halfway out (~26,000 ly), not the center; center toward Sagittarius'],
+  ['astro','The galaxy group containing the Milky Way and Andromeda','The Local Group'],
+  ['astro','Three galaxy shapes','Spiral, elliptical, irregular'],
+  ['astro','What redshift tells us','The galaxy is moving away; more redshift = farther and faster — space is expanding'],
+  ['astro','Age of the universe; evidence for the Big Bang','13.8 billion years; expansion, cosmic microwave background, hydrogen/helium abundances'],
+  ['astro','Copernicus / Galileo / Kepler / Newton / Hubble — one line each','Copernicus 1543 Sun-centered; Galileo 1609–10 telescope (Jupiter\'s moons, Venus phases); Kepler ellipses & planetary motion; Newton 1687 gravity explains why; Hubble 1920s other galaxies, expansion'],
+  ['astro','First Moon landing — mission, date, crew on the surface','Apollo 11, July 1969, Armstrong and Aldrin (six landings, twelve walkers through 1972)'],
+  ['astro','Hubble Space Telescope vs. James Webb','Hubble 1990, Earth orbit, visible/UV. Webb December 2021, infrared, gold mirror, far from Earth'],
+  ['astro','Four robotic missions worth naming','Voyager 1 & 2, Mars rovers, Cassini (Saturn), New Horizons (Pluto)'],
+  ['animals','Taxonomic ranks, broad to narrow','Kingdom, Phylum, Class, Order, Family, Genus, Species'],
+  ['animals','Rank between class and family','Order'],
+  ['animals','Egg-laying mammals','Monotremes — platypus, echidna'],
+  ['animals','Mammals whose young finish developing in a pouch','Marsupials — kangaroo, koala'],
+  ['animals','Only mammals capable of true sustained flight','Bats'],
+  ['animals','Animals that make their own body heat','Endotherms (mammals, birds); ectotherms follow the environment'],
+  ['animals','Insect vs. arachnid vs. crustacean','6 legs/3 parts/antennae · 8 legs/2 parts/no antennae · aquatic shell, two pairs of antennae'],
+  ['animals','Largest animal phylum','Arthropods'],
+  ['animals','Phylum with five-part radial symmetry and tube feet','Echinoderms (sea star, urchin, sand dollar)'],
+  ['animals','Jellyfish and coral belong to which group','Cnidarians (stinging cells, radial symmetry)'],
+  ['animals','Snails, clams, squid, octopus','Mollusks'],
+  ['animals','Segmented worms','Annelids (earthworm, leech)'],
+  ['animals','Centipede vs. millipede','One pair of legs per segment, fast, venomous vs. two pairs, slow, eats decaying plants'],
+  ['animals','Salamander belongs to which vertebrate class, and why not reptile','Amphibian — moist skin, no scales'],
+  ['animals','Sharks and rays differ from bony fish how','Skeleton of cartilage'],
+  ['animals','Complete vs. incomplete metamorphosis','Egg–larva–pupa–adult (butterfly, beetle) vs. egg–nymph–adult (grasshopper, dragonfly)'],
+  ['animals','Camouflage vs. mimicry vs. warning coloration','Hide · resemble another organism/object · advertise danger (poison dart frog)'],
+  ['animals','Venomous vs. poisonous','Venom delivered by bite, sting or spine; poison harms when touched or eaten'],
+  ['animals','Animals that echolocate','Bats and toothed whales such as dolphins'],
+  ['animals','Baleen is used by which whales, for what','Blue and humpback whales, filtering krill'],
+  ['animals','Which parent carries seahorse young','The male'],
+  ['animals','Natural selection in one sentence','Inherited traits suited to the environment lead to more offspring, so populations change over generations'],
+  ['animals','Classic misconception about natural selection','That individuals develop traits because they need them'],
+  ['animals','Peacock\'s tail is an example of','Sexual selection'],
+  ['animals','Shark and dolphin body shape: what kind of evolution','Convergent evolution'],
+  ['animals','Seasonal long-distance movement; winter dormancy','Migration; hibernation'],
+  ['animals','Elephant herds and gorilla troops are led by','A matriarch; a silverback'],
+  ['animals','Honeybee communication','The waggle dance'],
+  ['animals','Clownfish and sea anemone relationship','Mutualism'],
+  ['animals','Food chain order','Producer → primary consumer → secondary consumer → top predator'],
+  ['animals','Organisms that recycle dead matter','Decomposers (fungi, bacteria)'],
+  ['animals','How much energy passes to the next level','About 10%'],
+  ['animals','Species with an effect far larger than its numbers','Keystone species (wolves, sea otters)'],
+  ['animals','Non-native species that spreads and harms','Invasive species'],
+  ['animals','Where biodiversity is highest','Rainforests and coral reefs'],
+  ['animals','Biome: grass with scattered trees','Savanna / grassland'],
+  ['animals','Biome: cold, treeless, frozen ground','Tundra'],
+  ['animals','Kangaroos and koalas are native to','Australia'],
+  ['animals','Polar bears vs. penguins — where','Arctic vs. Antarctica/Southern Hemisphere; they never meet'],
+  ['animals','Giant panda and tiger are native to','Asia (panda: China)'],
+  ['animals','Largest animal / largest land animal / tallest','Blue whale / African elephant / giraffe'],
+  ['animals','Fastest land animal / fastest in a dive','Cheetah / peregrine falcon'],
+  ['animals','Largest and fastest-running bird','Ostrich'],
+  ['animals','Bird that hovers and flies backward','Hummingbird'],
+  ['animals','Coral reefs are built by','Colonial animals — coral polyps — not plants'],
+  ['animals','African vs. Asian elephant','Huge ears, swayed back vs. small ears, rounded back, two-domed head'],
+  ['animals','Cheetah vs. leopard','Solid spots + tear lines, lean vs. rosettes, stockier, in trees'],
+  ['animals','Crocodile vs. alligator','V-shaped snout, lower teeth show vs. U-shaped snout'],
+  ['animals','Sea lion vs. seal','Ear flaps, walks on flippers vs. ear holes, wriggles'],
+  ['animals','Butterfly vs. moth','Clubbed antennae, wings up, day vs. feathery antennae, wings flat, night'],
+  ['animals','Octopus vs. squid','Round head, 8 arms vs. torpedo body with fins, 8 arms + 2 tentacles'],
+  ['animals','Humpback whale field marks','Very long flippers, knobby head, throat grooves'],
+  ['animals','Koala is a ___, not a bear','Marsupial (eats eucalyptus)'],
+  ['animals','Camel humps store','Fat, not water'],
+  ['animals','Only cat that lives in prides; largest cat','Lion; tiger'],
+  ['animals','Flamingos are pink because','Of their diet; they filter-feed with the head upside down'],
+];
+// ---- multiple choice pool: [subject, question, [4 options], correct index, note] ----
+QFK.mc = [
+  ['hist','Leading cause of the sharp decline in Native American populations after European contact?',['Warfare with Spanish armies','Epidemic diseases such as smallpox','Forced migration to Europe','The collapse of maize farming'],1,'Disease caused the population collapse.'],
+  ['hist','How did the New England colonies differ from the Chesapeake in the 1600s?',['New England relied on tobacco plantations','New England had no self-government','New England depended on enslaved labor far more','New England was settled by families in towns; the Chesapeake centered on cash-crop plantations'],3,''],
+  ['hist','Anti-Federalists opposed ratifying the Constitution chiefly because they:',['Wanted to restore British rule','Believed it left the states with too much power','Feared a strong central government with no bill of rights','Opposed any national legislature'],2,'The Bill of Rights answered this.'],
+  ['hist','Most direct effect of the cotton gin on the South?',['Made cotton far more profitable and expanded slavery','Shifted the economy toward manufacturing','Reduced demand for enslaved labor','Ended dependence on exports to Britain'],0,''],
+  ['hist','Why did the Kansas-Nebraska Act (1854) intensify sectional conflict?',['It admitted Kansas as a free state','It let settlers decide on slavery where it had been barred','It closed the western territories to settlement','It banned slavery in land acquired from Mexico'],1,'Popular sovereignty reopened closed land.'],
+  ['hist','The Populist movement of the 1890s drew support mainly from:',['Factory owners seeking tariffs','Recent immigrants in cities','Farmers hurt by debt and falling crop prices','Railroad executives'],2,''],
+  ['hist','Which development most directly led the U.S. into World War I in 1917?',["Japan's attack on a naval base","Germany's invasion of Poland",'The sinking of the USS Maine',"Germany's unrestricted submarine warfare"],3,'The others are Pearl Harbor, WWII and 1898.'],
+  ['hist',"Which was part of Lyndon Johnson's Great Society?",['Medicare','Social Security pensions','The Interstate Highway System','The Marshall Plan'],0,'Social Security is New Deal; highways Eisenhower; Marshall Plan Truman.'],
+  ['hist','Which cash crop saved the Jamestown colony?',['Rice','Tobacco','Indigo','Cotton'],1,'John Rolfe.'],
+  ['hist','Which battle convinced France to formally ally with the Americans?',['Trenton','Yorktown','Saratoga','Lexington and Concord'],2,'1777.'],
+  ['hist','A major weakness of the Articles of Confederation:',['The president had too much power','Congress could not levy taxes','The Supreme Court overturned state laws','Amendments needed only a simple majority'],1,''],
+  ['hist','Marbury v. Madison (1803) established:',['"Separate but equal"','Judicial review','Popular sovereignty','The right to a jury trial'],1,'John Marshall.'],
+  ['hist','Which came FIRST?',['Dred Scott decision','Kansas-Nebraska Act','Compromise of 1850',"John Brown's raid"],2,'1850 → 1854 → 1857 → 1859.'],
+  ['hist','In what year did the Berlin Wall fall?',['1981','1989','1991','2001'],1,'USSR dissolved 1991.'],
+  ['hist','The Emancipation Proclamation freed enslaved people:',['Everywhere in the United States','In the border states only','In Confederate-held areas only','Only after the 13th Amendment'],2,''],
+  ['hist','Which statement best describes the Columbian Exchange?',['A trade agreement between Spain and Portugal','The transfer of plants, animals, people and disease between hemispheres','The triangular trade in enslaved Africans','The spread of maize farming northward'],1,''],
+  ['hist','What did the Missouri Compromise (1820) do?',['Banned slavery in all new territories','Admitted Missouri slave and Maine free, with a 36°30′ line','Let settlers vote on slavery','Returned fugitive slaves to the South'],1,''],
+  ['hist','Which pair is correctly matched?',['Hamilton — states\' rights and farmers','Jefferson — national bank and tariffs','Washington — warned against political parties','Adams — Louisiana Purchase'],2,''],
+  ['hist','The turning point that ended Lee\'s invasion of the North and gave the Union the Mississippi came in:',['April 1861','September 1862','July 1863','April 1865'],2,'Gettysburg and Vicksburg.'],
+  ['hist','Plessy v. Ferguson (1896) was overturned for schools by:',['Marbury v. Madison','Dred Scott','Brown v. Board of Education','Worcester v. Georgia'],2,'1954.'],
+  ['hist','The Marshall Plan, Truman Doctrine and NATO were all part of:',['Reconstruction','The New Deal','Containment','The Great Society'],2,''],
+  ['hist','Which came LAST?',['Montgomery Bus Boycott','Brown v. Board of Education','Voting Rights Act','March on Washington'],2,'1965.'],
+  ['hist','The Progressive-era muckraker whose novel led to meat inspection laws:',['Mark Twain','Upton Sinclair','Jacob Riis','Ida Tarbell'],1,'The Jungle.'],
+  ['hist','Why did the Federalist Party collapse after the War of 1812?',['It opposed the popular war and was seen as disloyal','It lost the election of 1800','It supported the Alien and Sedition Acts','It backed the Hartford secession'],0,'Era of Good Feelings followed.'],
+  ['hist','The Dawes Act of 1887:',['Created the reservation system','Broke up tribal land into individual allotments','Ended the Indian wars','Granted citizenship to all Native Americans'],1,''],
+  ['astro','Main difference between comets and asteroids?',['Comets are icy and grow tails near the Sun; asteroids are rocky or metallic','Comets orbit planets; asteroids orbit the Sun','Comets are larger than planets','Comets are found only in the asteroid belt'],0,''],
+  ['astro','Two stars look equally bright but one is much farther away. The more distant star must:',['Have a cooler surface','Have a greater luminosity','Be much younger','Be much smaller'],1,''],
+  ['astro','Which star will have the shortest lifetime?',["Half the Sun's mass","The Sun's mass","Twice the Sun's mass","Twenty times the Sun's mass"],3,'Mass controls evolution.'],
+  ['astro','The redshift of distant galaxies indicates that:',['They rotate faster than the Milky Way','They contain mostly red giants','They are moving away as space expands','They are falling toward the Local Group'],2,''],
+  ['astro',"Which of Galileo's observations supported the Sun-centered model?",['Redshift of galaxies','Moons orbiting Jupiter and the phases of Venus','Elliptical orbits','Discovery of Neptune'],1,''],
+  ['astro','Which correctly describes Kepler and Newton?',['Kepler proposed the Sun-centered model; Newton confirmed it','Kepler discovered galaxies; Newton measured their motion','Kepler explained gravity; Newton described orbit shapes','Kepler described how planets move; Newton explained why, using gravity'],3,''],
+  ['astro','Why do different constellations dominate the evening sky in different seasons?',['The stars move around the Sun','Earth changes viewing direction as it orbits the Sun',"Earth's rotation speeds up in winter",'The Moon blocks different stars'],1,''],
+  ['astro','A solar eclipse can only happen at:',['Full moon','First quarter','New moon','Third quarter'],2,'Moon between Sun and Earth.'],
+  ['astro','What causes the seasons?',["Earth's changing distance from the Sun","Earth's 23.5° axial tilt",'The Moon\'s gravity','Sunspot cycles'],1,''],
+  ['astro','Polaris barely moves because it:',['Is the brightest star','Lies almost directly above Earth\'s north pole','Is the closest star','Lies on the ecliptic'],1,''],
+  ['astro','Which object is a star cluster?',['Andromeda (M31)','Orion Nebula (M42)','Pleiades (M45)','The Milky Way'],2,''],
+  ['astro','A light-year measures:',['Time','Distance','Brightness','Speed'],1,''],
+  ['astro','Which color star is hottest?',['Red','Orange','Yellow','Blue'],3,''],
+  ['astro','The Sun will end its life as a:',['Supernova','Neutron star','White dwarf','Black hole'],2,'Not massive enough to go supernova.'],
+  ['astro','Where is the Sun in the Milky Way?',['At the center','In a spiral arm about halfway out','At the far edge','In the halo above the disk'],1,''],
+  ['astro','Which planet class are Uranus and Neptune?',['Terrestrial','Gas giants','Ice giants','Dwarf planets'],2,''],
+  ['astro','The Kuiper Belt lies:',['Between Mars and Jupiter','Just inside Mercury','Beyond Neptune','Between Saturn and Uranus'],2,'Pluto lives there.'],
+  ['astro','Which is the correct size ladder, small to large?',['Galaxy, star cluster, solar system, planet','Planet, solar system, star cluster, galaxy','Star cluster, planet, galaxy, solar system','Solar system, galaxy, star cluster, planet'],1,''],
+  ['astro','Evidence for the Big Bang includes:',['Retrograde motion of Mars','The cosmic microwave background','Sunspots','Lunar craters'],1,''],
+  ['astro','The James Webb Space Telescope observes mainly in:',['X-ray','Ultraviolet','Visible','Infrared'],3,''],
+  ['astro','A lunar eclipse is visible from:',['A narrow path on Earth','The whole night side of Earth','Only the poles','Only the equator'],1,''],
+  ['astro','In the Northern Hemisphere a moon lit on the left is:',['Waxing','Waning','Always a crescent','Always gibbous'],1,''],
+  ['astro','Which planet has the strongest winds and the moon Triton?',['Uranus','Saturn','Neptune','Jupiter'],2,''],
+  ['astro','Why are the inner planets rocky and the outer ones giants?',['The Sun pulled rock outward','Rock and metal condensed near the Sun; ices farther out','Outer planets captured more comets','Random chance'],1,'Solar nebula model.'],
+  ['astro','Edwin Hubble showed that:',['The Sun is the center of the universe','Andromeda is a separate galaxy and galaxies are receding','Planets move on ellipses','Jupiter has moons'],1,''],
+  ['animals','Which trait distinguishes marsupials from placental mammals?',['Marsupials lay eggs','Marsupials are ectotherms','Marsupial young are born very undeveloped and finish growing in a pouch','Marsupials do not produce milk'],2,'Option A describes monotremes.'],
+  ['animals','A rattlesnake is venomous rather than poisonous because its toxin:',['Is delivered by a bite','Harms only when the snake is eaten','Is absorbed when its skin is touched','Comes from plants it eats'],0,''],
+  ['animals','Besides bats, which animals navigate and hunt using echolocation?',['Sea turtles','Owls','Great white sharks','Toothed whales such as dolphins'],3,''],
+  ['animals','Which best describes natural selection?',['Individuals develop traits because they need them','Individuals with inherited traits suited to their environment tend to leave more offspring','All members change the same way during their lifetimes','Species stop changing once the environment is stable'],1,'A is the classic misconception.'],
+  ['animals',"A peacock's large tail is a classic example of:",['Camouflage','Mimicry','Sexual selection','Territoriality'],2,''],
+  ['animals','What is a keystone species?',['One whose effect on its ecosystem is far larger than its numbers suggest','The most numerous species','A non-native species that spreads and causes harm','A species living in only one biome'],0,'C is an invasive species.'],
+  ['animals','Which trait best distinguishes arachnids from insects?',['Wings','Eight legs rather than six','Antennae','An exoskeleton'],1,''],
+  ['animals','A harmless species evolving to resemble a dangerous one is:',['Camouflage','Warning coloration','Mimicry','Convergent evolution'],2,''],
+  ['animals','Which animal is a mammal?',['Great white shark','Bottlenose dolphin','Sea turtle','Penguin'],1,''],
+  ['animals','Which group lays eggs?',['Monotremes','Marsupials','Placentals','All mammals'],0,'Platypus, echidna.'],
+  ['animals','Why are top predators few?',['They are hunted','Only about 10% of energy passes up each level of the food chain','They reproduce slowly','They need large territories'],1,''],
+  ['animals','Which is an amphibian?',['Iguana','Salamander','Tortoise','Chameleon'],1,'Moist skin, no scales.'],
+  ['animals','Which animal is NOT an arthropod?',['Crab','Scorpion','Earthworm','Dragonfly'],2,'Annelid.'],
+  ['animals','Coral reefs are built by:',['Marine plants','Colonial animals called polyps','Algae alone','Sea stars'],1,''],
+  ['animals','Which pair is a case of convergent evolution?',['Lion and tiger','Shark and dolphin body shape','Human arm and bat wing','Gorilla and chimpanzee'],1,'Human arm/bat wing is common ancestry.'],
+  ['animals','Kangaroos and koalas are native to:',['South America','Africa','Australia','Southeast Asia'],2,''],
+  ['animals','A biome with grass and scattered trees, wet and dry seasons:',['Tundra','Temperate forest','Savanna','Rainforest'],2,''],
+  ['animals','Which vertebrate class has feathers and lays hard-shelled eggs?',['Reptiles','Birds','Amphibians','Mammals'],1,''],
+  ['animals','Complete metamorphosis includes which stage that incomplete lacks?',['Egg','Nymph','Pupa','Adult'],2,'Butterflies, beetles, bees, ants.'],
+  ['animals','The waggle dance is used by:',['Ants','Honeybees','Wolves','Whales'],1,''],
+  ['animals','Which record is correct?',['Ostrich — largest living bird','Cheetah — fastest animal in a dive','Giraffe — largest land animal','Blue whale — largest fish'],0,''],
+  ['animals','Which has a U-shaped snout and hides its lower teeth?',['Crocodile','Alligator','Iguana','Chameleon'],1,''],
+  ['animals','Which pinniped has visible ear flaps and walks on its flippers?',['Seal','Sea lion','Walrus','Otter'],1,''],
+  ['animals','Decomposers in a food web are:',['Plants and algae','Herbivores','Fungi and bacteria','Top predators'],2,''],
+  ['animals','Which animal is a cnidarian?',['Sea star','Jellyfish','Octopus','Crab'],1,'Stinging cells.'],
+];
+// ---- fill-in pool: [subject, prompt, accepted answers (first is canonical), note] ----
+QFK.fill = [
+  ['hist','The first permanent English settlement in North America, founded in Virginia in 1607, was ____.',['Jamestown'],''],
+  ['hist','The 1777 American victory at ____ convinced France to ally with the United States.',['Saratoga'],''],
+  ['hist','The forced removal of the Cherokee in the 1830s is known as the Trail of ____.',['Tears'],''],
+  ['hist','The 1848 women\'s rights convention was held at ____, New York.',['Seneca Falls'],''],
+  ['hist','The ____ Amendment defined citizenship and guaranteed equal protection.',['Fourteenth','14th','14'],''],
+  ['hist','One company\'s exclusive control of an industry, like Standard Oil, is a ____.',['Monopoly','trust'],''],
+  ['hist','The Allied invasion of Normandy on June 6, 1944 is known as ____.',['D-Day','Operation Overlord','Normandy landings'],''],
+  ['hist','"We the People of the United States, in Order to form a more perfect Union..." opens the ____.',['Constitution','U.S. Constitution','Preamble'],''],
+  ['hist','On a Civil War map, the eleven seceded states formed the ____.',['Confederacy','Confederate States of America','CSA'],''],
+  ['hist','The 1917 Uncle Sam "I Want You" poster recruited for ____.',['World War I','WWI','First World War','Great War'],''],
+  ['hist','The 1963 demonstration in Washington where King spoke was the ____.',['March on Washington','I Have a Dream'],''],
+  ['hist','The president who served 1981–1989, in the last decade of the Cold War: ____.',['Ronald Reagan','Reagan'],''],
+  ['hist','The transfer of plants, animals, people and disease between hemispheres after 1492: the ____.',['Columbian Exchange'],''],
+  ['hist','The 1954 case that overturned "separate but equal" in schools: ____.',['Brown v. Board of Education','Brown v Board','Brown'],''],
+  ['hist','Thomas Paine\'s 1776 pamphlet arguing for independence: ____.',['Common Sense'],''],
+  ['hist','The 1830 law that forced southeastern Native nations west: the ____.',['Indian Removal Act'],''],
+  ['hist','The 1896 case that upheld "separate but equal": ____.',['Plessy v. Ferguson','Plessy'],''],
+  ['hist','The 1935 New Deal law creating old-age pensions: the ____.',['Social Security Act','Social Security'],''],
+  ['hist','The 1803 land purchase from France that doubled the country: the ____.',['Louisiana Purchase'],''],
+  ['hist','The "We Can Do It!" WWII poster figure: ____.',['Rosie the Riveter','Rosie'],''],
+  ['hist','Lincoln\'s January 1, 1863 order freeing enslaved people in rebel areas: the ____.',['Emancipation Proclamation'],''],
+  ['hist','The 1787 meeting in Philadelphia that wrote the Constitution: the ____.',['Constitutional Convention'],''],
+  ['hist','The 1823 policy telling Europe to stay out of the Western Hemisphere: the ____.',['Monroe Doctrine'],''],
+  ['hist','The 1890 law against monopolies: the ____ Antitrust Act.',['Sherman'],''],
+  ['hist','The December 7, 1941 attack that brought the U.S. into WWII: ____.',['Pearl Harbor'],''],
+  ['hist','Lee surrendered to Grant at ____ in April 1865.',['Appomattox','Appomattox Court House'],''],
+  ['hist','The scandal that forced Nixon to resign in 1974: ____.',['Watergate'],''],
+  ['hist','The 1964 law banning segregation and job discrimination: the ____.',['Civil Rights Act','Civil Rights Act of 1964'],''],
+  ['hist','Franklin\'s 1754 cartoon of a segmented snake was captioned "____."',['Join, or Die','Join or Die'],''],
+  ['hist','The 1848 treaty ending the Mexican-American War: the Treaty of ____.',['Guadalupe Hidalgo'],''],
+  ['astro','The point on the celestial sphere directly above an observer is the ____.',['Zenith'],''],
+  ['astro','Because it has not cleared its orbit, Pluto is classified as a ____ planet.',['Dwarf'],''],
+  ['astro','A light-year is a unit of ____.',['Distance','length'],''],
+  ['astro','The Milky Way and Andromeda are the two largest members of the ____ Group.',['Local'],''],
+  ['astro','The heliocentric model was proposed in 1543 by ____.',['Copernicus','Nicolaus Copernicus'],''],
+  ['astro','The James Webb Space Telescope observes mainly in ____ light.',['Infrared','IR'],''],
+  ['astro','The constellation whose brightest star, Deneb, is a corner of the Summer Triangle: ____.',['Cygnus','the Swan','Northern Cross'],''],
+  ['astro','A thin sliver lit on the left (Northern Hemisphere) is a ____ moon.',['Waning crescent'],'"Crescent" alone is not accepted.'],
+  ['astro','Sun–Earth–Moon in a line, Earth\'s shadow on the Moon: a ____ eclipse.',['Lunar eclipse','lunar'],''],
+  ['astro','The ring of rocky bodies between Mars and Jupiter: the ____.',['Asteroid belt'],''],
+  ['astro','The red planet with white polar caps: ____.',['Mars'],''],
+  ['astro','After the planetary nebula stage, a Sun-like star becomes a ____.',['White dwarf'],''],
+  ['astro','A flat disk galaxy with arms and a central bulge is classified as ____.',['Spiral'],''],
+  ['astro','The Pleiades (M45) is what type of object: ____.',['Star cluster','open cluster','open star cluster'],''],
+  ['astro','The three stars Vega, Deneb and Altair form the ____.',['Summer Triangle'],''],
+  ['astro','The closest large galaxy to the Milky Way is the ____ Galaxy.',['Andromeda','M31'],''],
+  ['astro','The brightest star in the night sky, in Canis Major: ____.',['Sirius'],''],
+  ['astro','The red supergiant at Orion\'s shoulder: ____.',['Betelgeuse'],''],
+  ['astro','The W-shaped constellation opposite the Big Dipper across Polaris: ____.',['Cassiopeia'],''],
+  ['astro','The Sun\'s apparent yearly path against the stars is the ____.',['Ecliptic'],''],
+  ['astro','The distant spherical shell of icy bodies that supplies long-period comets: the ____ Cloud.',['Oort'],''],
+  ['astro','The explosion of a massive star at the end of its life: a ____.',['Supernova'],''],
+  ['astro','The long stable stage when a star fuses hydrogen in its core: the ____.',['Main sequence'],''],
+  ['astro','The 1969 mission that first landed people on the Moon: ____.',['Apollo 11'],''],
+  ['astro','The planet that rotates on its side: ____.',['Uranus'],''],
+  ['astro','Stars close enough to the pole that they never set are called ____.',['Circumpolar'],''],
+  ['astro','The stretching of light from receding galaxies toward longer wavelengths: ____.',['Redshift'],''],
+  ['astro','The star at the tip of the Little Dipper\'s handle: ____.',['Polaris','North Star'],''],
+  ['astro','Jupiter\'s giant storm: the Great ____ Spot.',['Red'],''],
+  ['astro','The scientist whose 1687 law of gravitation explained why Kepler\'s laws work: ____.',['Newton','Isaac Newton'],''],
+  ['animals','In the taxonomic hierarchy, the rank between class and family is ____.',['Order'],''],
+  ['animals','Animals that generate their own body heat are called ____.',['Endotherms','endothermic','warm-blooded'],''],
+  ['animals','The regular seasonal long-distance movement of caribou and humpbacks is ____.',['Migration'],''],
+  ['animals','A winter state of dormancy with lowered body temperature and metabolism: ____.',['Hibernation'],''],
+  ['animals','The tallest living land animal: the ____.',['Giraffe'],''],
+  ['animals','Egg-laying mammals such as the platypus are called ____.',['Monotremes'],''],
+  ['animals','A salamander belongs to the vertebrate class ____.',['Amphibian','Amphibia','amphibians'],''],
+  ['animals','A crab belongs to the arthropod group ____.',['Crustacean','crustaceans','Crustacea'],''],
+  ['animals','A sea star belongs to the phylum ____.',['Echinoderm','echinoderms','Echinodermata'],''],
+  ['animals','Bright colors advertising toxicity are called ____.',['Warning coloration','aposematism','warning colors'],'Not camouflage, not mimicry.'],
+  ['animals','Grass with scattered trees in East Africa is the ____ biome.',['Savanna','grassland'],''],
+  ['animals','The whale with very long flippers and a knobby head: the ____.',['Humpback whale','humpback'],''],
+  ['animals','Animals with six legs and three body segments belong to the class ____.',['Insecta','insects','insect'],''],
+  ['animals','The largest known animal: the ____.',['Blue whale'],''],
+  ['animals','The fastest land animal: the ____.',['Cheetah'],''],
+  ['animals','The fastest animal in a dive: the ____.',['Peregrine falcon','peregrine'],''],
+  ['animals','The largest living bird: the ____.',['Ostrich'],''],
+  ['animals','The only mammals capable of true sustained flight: ____.',['Bats','bat'],''],
+  ['animals','Navigating by emitting sound and reading the echoes: ____.',['Echolocation'],''],
+  ['animals','A non-native species that spreads and harms an ecosystem: an ____ species.',['Invasive'],''],
+  ['animals','Fungi and bacteria that break down dead matter are ____.',['Decomposers'],''],
+  ['animals','Clownfish and sea anemones protecting each other is an example of ____.',['Mutualism','cooperation'],''],
+  ['animals','Jellyfish, coral and sea anemones belong to the group ____.',['Cnidarians','Cnidaria'],''],
+  ['animals','Snails, clams, squid and octopuses are ____.',['Mollusks','molluscs','Mollusca'],''],
+  ['animals','Egg → larva → pupa → adult is ____ metamorphosis.',['Complete'],''],
+  ['animals','The toxin of a poison dart frog harms when touched or eaten, so it is ____ rather than venomous.',['Poisonous','poison'],''],
+  ['animals','A species whose removal reshapes its whole ecosystem is a ____ species.',['Keystone'],''],
+  ['animals','Traits that evolve because they win mates, like the peacock\'s tail, come from ____ selection.',['Sexual'],''],
+  ['animals','Sharks and rays have skeletons made of ____.',['Cartilage'],''],
+  ['animals','An elephant herd is led by a ____.',['Matriarch'],''],
+  ['animals','The spiny-skinned, five-armed marine animal that can regrow arms: the sea ____.',['Star','starfish'],''],
+  ['animals','The continent where polar bears live: the ____ (penguins never meet them).',['Arctic'],''],
+];
+// ---- visual drills ----
+QFK.visual = {
+  // simplified star patterns on a 100×100 field (not to scale, orientation varies on the exam)
+  constellations: [
+    { name:'Big Dipper (Ursa Major)', key:'Pointer stars → Polaris', stars:[[20,25],[22,45],[42,48],[40,30],[58,28],[74,24],[92,14]], lines:[[0,1],[1,2],[2,3],[3,0],[3,4],[4,5],[5,6]], bright:0 },
+    { name:'Little Dipper (Ursa Minor)', key:'Polaris at the handle tip', stars:[[10,10],[25,25],[38,42],[50,55],[68,50],[74,68],[56,73]], lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,3]], bright:0 },
+    { name:'Cassiopeia', key:'The W (or M)', stars:[[10,40],[30,65],[50,40],[70,65],[90,35]], lines:[[0,1],[1,2],[2,3],[3,4]], bright:2 },
+    { name:'Orion', key:'Hourglass, three belt stars; Betelgeuse top-left, Rigel bottom-right', stars:[[30,15],[62,18],[40,50],[49,51],[58,52],[32,88],[66,85]], lines:[[0,1],[0,2],[1,4],[2,3],[3,4],[2,5],[4,6]], bright:0 },
+    { name:'Canis Major', key:'Sirius, brightest night star, below Orion\'s belt', stars:[[50,15],[28,25],[42,50],[58,52],[35,80],[62,82],[50,92]], lines:[[0,1],[0,2],[2,3],[2,4],[3,5],[5,6],[4,5]], bright:0 },
+    { name:'Taurus', key:'V-shaped face, Aldebaran the orange eye, Pleiades on the shoulder', stars:[[65,55],[52,45],[40,38],[12,12],[55,68],[45,78],[15,92],[82,18],[86,14],[84,22],[80,24],[88,19]], lines:[[0,1],[1,2],[2,3],[0,4],[4,5],[5,6]], bright:0 },
+    { name:'Scorpius', key:'Fishhook / J; red Antares at the heart', stars:[[15,10],[20,22],[18,34],[32,26],[42,32],[47,46],[52,60],[60,74],[70,86],[82,90],[91,80],[92,68]], lines:[[0,3],[1,3],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11]], bright:4 },
+    { name:'Sagittarius', key:'The Teapot; points to the Milky Way\'s center', stars:[[30,40],[55,38],[60,62],[32,65],[45,15],[12,45],[85,45],[80,72]], lines:[[0,1],[1,2],[2,3],[3,0],[4,0],[4,1],[5,0],[5,3],[6,1],[6,7],[7,2]], bright:1 },
+    { name:'Lyra', key:'Small parallelogram hanging from Vega', stars:[[50,10],[40,35],[60,38],[45,70],[65,73]], lines:[[0,1],[0,2],[1,2],[1,3],[2,4],[3,4]], bright:0 },
+    { name:'Cygnus (Northern Cross)', key:'A cross; Deneb at the tail, Albireo at the head', stars:[[50,10],[50,45],[50,95],[22,38],[80,55]], lines:[[0,1],[1,2],[3,1],[1,4]], bright:0 },
+    { name:'Aquila', key:'Altair flanked by two stars in a short line', stars:[[50,45],[44,33],[57,57],[78,18],[18,78],[62,70]], lines:[[1,0],[0,2],[0,3],[0,4],[2,5]], bright:0 },
+    { name:'Summer Triangle', key:'Vega, Deneb, Altair — an asterism from three constellations', stars:[[20,20],[62,10],[45,85]], lines:[[0,1],[1,2],[2,0]], bright:0 },
+    { name:'Great Square of Pegasus', key:'Four stars, big empty square', stars:[[20,25],[75,20],[78,75],[22,78]], lines:[[0,1],[1,2],[2,3],[3,0]], bright:1 },
+    { name:'Andromeda', key:'Two curving chains off one corner of the Great Square; M31 above', stars:[[10,80],[30,60],[55,42],[80,25],[35,75],[60,60]], lines:[[0,1],[1,2],[2,3],[1,4],[2,5]], bright:0 },
+  ],
+  phases: ['New','Waxing crescent','First quarter','Waxing gibbous','Full','Waning gibbous','Third quarter','Waning crescent'],
+  lifecycle: [
+    { seq:['Nebula','Main sequence','Red giant','Planetary nebula','?'], a:'White dwarf', label:'Sun-like star' },
+    { seq:['Nebula','Main sequence','Red supergiant','?','Neutron star or black hole'], a:'Supernova', label:'High-mass star' },
+    { seq:['Nebula','?','Red giant','Planetary nebula','White dwarf'], a:'Main sequence', label:'Sun-like star' },
+    { seq:['Nebula','Main sequence','?','Supernova','Neutron star or black hole'], a:'Red supergiant', label:'High-mass star' },
+  ],
+  // Wikipedia page titles: the lead image is the drill photo. Groups give the distractors.
+  photos: {
+    animals: ['African bush elephant','Asian elephant','Giraffe','Zebra','Lion','Tiger','Cheetah','Leopard','Wolf','Red fox','Grizzly bear','Polar bear','Giant panda','Gorilla','Chimpanzee','Orangutan','Kangaroo','Koala','Sloth','Hippopotamus','Rhinoceros','Camel','American bison','Moose','Reindeer','Blue whale','Humpback whale','Bottlenose dolphin','Orca','Sea lion','Harbor seal','Bat',
+      'Bald eagle','Golden eagle','Peregrine falcon','Owl','Penguin','Common ostrich','Flamingo','Peafowl','Hummingbird','Albatross','Toucan',
+      'Crocodile','Alligator','Sea turtle','Tortoise','Chameleon','Iguana','Cobra','Rattlesnake','Pythonidae','Poison dart frog','Salamander',
+      'Great white shark','Hammerhead shark','Manta ray','Stingray','Clownfish','Seahorse','Octopus','Squid','Jellyfish','Coral','Starfish','Crab','Lobster',
+      'Butterfly','Moth','Bee','Ant','Beetle','Dragonfly','Grasshopper','Spider','Scorpion','Centipede','Millipede','Earthworm','Snail'],
+    planets: ['Mercury (planet)','Venus','Earth','Mars','Jupiter','Saturn','Uranus','Neptune'],
+    deepsky: ['Andromeda Galaxy','Pleiades','Orion Nebula'],
+    portraits: ['George Washington','Thomas Jefferson','Abraham Lincoln','Theodore Roosevelt','Franklin D. Roosevelt','John F. Kennedy','Martin Luther King Jr.','Ronald Reagan'],
+    biomes: ['Savanna','Tropical rainforest','Desert','Tundra','Temperate forest','Coral reef'],
+  },
+  nice: { 'African bush elephant':'African elephant','Pythonidae':'Python','Peafowl':'Peacock','Common ostrich':'Ostrich','Harbor seal':'Seal','Mercury (planet)':'Mercury','Wolf':'Gray wolf','Starfish':'Sea star / starfish' },
+};
+
+// ---- the study hub itself ----
+// DB.study = { log:{day:1}, cards:{id:{box,due,t}}, tests:[{id,date,sub,n,score,ms,by}] }
+const STUDYV = { seg:'plan', sub:'all', gsub:'hist', queue:null, card:null, flipped:false, test:null, vis:'const', visQ:null, visScore:[0,0], photoGroup:'animals' };
+const STUDY_INTERVAL = [0, 1, 2, 4, 8, 16];           // days until a card in box n comes back
+const WIKI_CACHE = {};
+function studyDB(){ DB.study = DB.study || {}; DB.study.log = DB.study.log || {}; DB.study.cards = DB.study.cards || {}; DB.study.tests = DB.study.tests || []; return DB.study; }
+function studyDaysLeft(){ return daysBetween(today(), QFK.exam); }
+function studyTonight(){ return QFK.rotation[new Date().getDay()]; }
+function studyStreak(){
+  const L = studyDB().log; let n = 0; const d = new Date();
+  if(!L[dstr(d)]) d.setDate(d.getDate()-1);          // tonight may not have happened yet
+  while(L[dstr(d)]){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+function studyLogToday(){
+  const S = studyDB(), t = today();
+  if(S.log[t]) delete S.log[t]; else S.log[t] = Date.now();
+  save(); renderStudy(); renderTWY();
+  toast(S.log[t] ? 'Logged — ' + studyStreak() + ' night' + (studyStreak()===1?'':'s') + ' running' : 'Unlogged');
+}
+function studyWeek(){ const t = today(); return QFK.plan.findIndex(w => t >= w.from && t <= w.to); }
+function studyLast7(){ const L = studyDB().log; let n = 0; for(let i=0;i<7;i++){ const d=new Date(); d.setDate(d.getDate()-i); if(L[dstr(d)]) n++; } return n; }
+const subName = s => s==='test' ? 'a mixed practice test' : (QFK.subjects[s]||{}).name || s;
+const subColor = s => (QFK.subjects[s]||{}).color || 'var(--accent)';
+const mdb = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+const shuffle = a => { a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const pick = (a, n) => shuffle(a).slice(0, n);
+
+function studyHeadHTML(){
+  const left = studyDaysLeft(), S = studyDB(), t = today(), done = !!S.log[t], streak = studyStreak();
+  const tonight = studyTonight();
+  const wk = studyWeek(), w = QFK.plan[wk];
+  let h = '<div class="card" style="border-top:3px solid var(--accent)">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:20px">' +
+    (left > 1 ? left + ' days to the test' : left === 1 ? 'The test is tomorrow' : left === 0 ? 'Test day' : 'The test was ' + fmtDate(QFK.exam)) + '</b>' +
+    '<span style="font-size:12.5px;color:var(--muted)">' + fmtDate(QFK.exam) + ' · vs ' + esc(QFK.opponent) + '</span></div>';
+  if(left >= 0) h += '<div style="font-size:14px;color:var(--ink-2);margin-top:6px;line-height:1.5">Tonight: <b>' + esc(subName(tonight)) + '</b>' +
+    (w ? ' · ' + esc(w.title.replace(/^Week \d · /,'')) + (tonight!=='test' && w[tonight] ? ' — ' + esc(w[tonight]) : '') : '') + '</div>';
+  h += '<div style="display:flex;gap:8px;margin-top:12px;align-items:center">' +
+    '<button class="btn' + (done ? '' : ' secondary') + '" style="flex:1;margin:0" onclick="studyLogToday()">' + (done ? '✓ Studied tonight' : 'Done studying tonight') + '</button>' +
+    '<span style="font-size:12.5px;color:var(--muted);white-space:nowrap">' + streak + ' night' + (streak===1?'':'s') + ' running · ' + studyLast7() + ' of 7</span></div>';
+  h += '</div>';
+  return h;
+}
+function studySegHTML(){
+  const segs = [['plan','Plan'],['guide','Guide'],['cards','Cards'],['test','Test'],['visual','Visual'],['listen','Listen']];
+  return '<div class="mood-range" style="margin:14px 0 10px">' + segs.map(s =>
+    '<button class="' + (STUDYV.seg===s[0]?'on':'') + '" onclick="STUDYV.seg=\'' + s[0] + '\';renderStudy()">' + s[1] + '</button>').join('') + '</div>';
+}
+function subPillsHTML(cur, key, all){
+  const subs = (all ? [['all','All']] : []).concat(Object.keys(QFK.subjects).map(k => [k, QFK.subjects[k].short]));
+  return '<div class="mood-range" style="margin:0 0 10px">' + subs.map(s =>
+    '<button class="' + (cur===s[0]?'on':'') + '" onclick="STUDYV.' + key + '=\'' + s[0] + '\';' + (key==='sub' ? 'STUDYV.queue=null;' : '') + 'renderStudy()">' + s[1] + '</button>').join('') + '</div>';
+}
+function renderStudy(){
+  const el = $('studyBody'); if(!el) return;
+  if(currentView !== 'study') return;
+  let h = studyHeadHTML() + studySegHTML();
+  const seg = STUDYV.seg;
+  if(seg==='plan') h += studyPlanHTML();
+  else if(seg==='guide') h += studyGuideHTML();
+  else if(seg==='cards') h += studyCardsHTML();
+  else if(seg==='test') h += studyTestHTML();
+  else if(seg==='visual') h += studyVisualHTML();
+  else if(seg==='listen') h += studyListenHTML();
+  el.innerHTML = h;
+  if(seg==='visual' && STUDYV.vis==='photo') studyPhotoLoad();
+}
+// ---- plan ----
+function studyPlanHTML(){
+  const wk = studyWeek(), t = today();
+  let h = '';
+  QFK.plan.forEach((w, i) => {
+    const cur = i===wk, past = t > w.to;
+    h += '<div class="card" style="' + (cur ? 'border-left:3px solid var(--accent)' : past ? 'opacity:.6' : '') + '">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:17px">' + esc(w.title) + '</b><span style="font-size:12px;color:var(--muted)">' + fmtDate(w.from).slice(5) + ' – ' + fmtDate(w.to).slice(5) + (cur?' · now':'') + '</span></div>' +
+      '<div style="font-size:13.5px;line-height:1.6;color:var(--ink-2);margin-top:6px">' +
+      '<div><b style="color:' + subColor('hist') + '">History</b> — ' + esc(w.hist) + '</div>' +
+      '<div><b style="color:' + subColor('astro') + '">Astronomy</b> — ' + esc(w.astro) + '</div>' +
+      '<div><b style="color:' + subColor('animals') + '">Animals</b> — ' + esc(w.animals) + '</div>' +
+      '<div style="margin-top:6px;color:var(--ink)">' + esc(w.do) + '</div></div></div>';
+  });
+  h += '<div class="card"><b style="font-family:var(--serif);font-size:17px">The test</b><div style="font-size:13.5px;line-height:1.6;color:var(--ink-2);margin-top:6px">' +
+    '120 questions, 40 per subject, 120 minutes: a minute each. 41 are visual, 39 fill in, 40 multiple choice. Half foundational, a third applied, 15% hard. Answer what you know, mark the rest, come back. On visuals answer at the level the prompt asks. Fill-ins forgive spelling, not vagueness ("waning crescent", not "crescent"). ' +
+    'Nightly rotation: Sun Animals · Mon History · Tue Astronomy · Wed Animals · Thu History · Fri Astronomy · Sat a mixed test.</div>' +
+    '<a class="action" style="display:inline-block;margin-top:10px" href="' + QFK.notion + '" target="_blank" rel="noopener">Rule guide and full study guides in Notion →</a></div>';
+  const tests = studyDB().tests.slice(-6).reverse();
+  if(tests.length) h += '<div class="card"><b style="font-family:var(--serif);font-size:17px">Recent tests</b>' + tests.map(x =>
+    '<div class="mny-item"><span>' + esc(fmtDate(x.date).slice(5)) + ' · ' + esc(x.sub==='all'?'Mixed':QFK.subjects[x.sub].short) + ' · ' + x.n + ' Qs</span><b>' + Math.round(x.score/x.n*100) + '%</b></div>').join('') + '</div>';
+  return h;
+}
+// ---- guide ----
+function studyGuideHTML(){
+  let h = subPillsHTML(STUDYV.gsub, 'gsub', false);
+  const s = STUDYV.gsub;
+  h += '<div style="font-size:12.5px;color:var(--muted);margin:0 2px 8px">' + esc(QFK.subjects[s].mix) + '</div>';
+  QFK.guide[s].forEach((sec, i) => {
+    h += '<details class="card" style="padding:0"' + (i===0?' open':'') + '><summary style="padding:14px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline">' +
+      '<b style="font-family:var(--serif);font-size:16.5px">' + esc(sec.h) + '</b>' + (sec.q ? '<span style="font-size:12px;color:var(--muted)">' + sec.q + ' Qs</span>' : '') + '</summary>' +
+      '<div style="padding:0 16px 14px">' + sec.pts.map(p => '<div style="font-size:14px;line-height:1.6;color:var(--ink-2);padding:7px 0;border-top:1px solid var(--hairline)">' + mdb(p) + '</div>').join('') + '</div></details>';
+  });
+  return h;
+}
+// ---- cards (Leitner boxes) ----
+function cardId(i){ return 'c' + i; }
+function cardsDue(){
+  const S = studyDB(), t = today();
+  return QFK.cards.map((c, i) => ({ c, i })).filter(x => (STUDYV.sub==='all' || x.c[0]===STUDYV.sub))
+    .filter(x => { const st = S.cards[cardId(x.i)]; return !st || !st.due || st.due <= t; });
+}
+function studyCardsHTML(){
+  let h = subPillsHTML(STUDYV.sub, 'sub', true);
+  if(!STUDYV.queue){ STUDYV.queue = shuffle(cardsDue().map(x => x.i)); STUDYV.card = null; STUDYV.flipped = false; }
+  const S = studyDB();
+  const boxes = [0,0,0,0,0,0];
+  QFK.cards.forEach((c, i) => { if(STUDYV.sub!=='all' && c[0]!==STUDYV.sub) return; const st = S.cards[cardId(i)]; boxes[st ? Math.min(5, st.box||1) : 0]++; });
+  if(STUDYV.card==null && STUDYV.queue.length) STUDYV.card = STUDYV.queue[0];
+  if(STUDYV.card==null){
+    return h + '<div class="card" style="text-align:center;padding:28px 16px"><b style="font-family:var(--serif);font-size:18px">Nothing due' + (STUDYV.sub!=='all' ? ' in ' + esc(QFK.subjects[STUDYV.sub].short) : '') + '</b>' +
+      '<div style="font-size:13.5px;color:var(--muted);margin-top:6px;line-height:1.5">Cards come back on a schedule: a card you know waits 1, 2, 4, 8 then 16 days. ' + boxes[0] + ' new · ' + (boxes[1]+boxes[2]) + ' learning · ' + (boxes[3]+boxes[4]+boxes[5]) + ' solid.</div>' +
+      '<button class="btn secondary" style="margin-top:14px" onclick="studyCardsReset()">Drill everything anyway</button></div>';
+  }
+  const c = QFK.cards[STUDYV.card], st = S.cards[cardId(STUDYV.card)] || {};
+  h += '<div class="card" style="min-height:220px;display:flex;flex-direction:column;border-top:3px solid ' + subColor(c[0]) + '" onclick="if(!STUDYV.flipped){STUDYV.flipped=true;renderStudy()}">' +
+    '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span>' + esc(QFK.subjects[c[0]].short) + '</span><span>' + STUDYV.queue.length + ' left today · box ' + (st.box||'new') + '</span></div>' +
+    '<div style="font-family:var(--serif);font-size:19px;line-height:1.4;margin:18px 0;flex:1">' + esc(c[1]) + '</div>' +
+    (STUDYV.flipped ? '<div style="font-size:15.5px;line-height:1.5;color:var(--ink);border-top:1px solid var(--hairline);padding-top:12px">' + esc(c[2]) + '</div>' :
+      '<div style="font-size:13px;color:var(--muted);text-align:center">tap to show the answer</div>') + '</div>';
+  if(STUDYV.flipped) h += '<div style="display:flex;gap:10px"><button class="btn secondary" style="flex:1;margin:0" onclick="studyGrade(false)">Again</button><button class="btn" style="flex:1;margin:0" onclick="studyGrade(true)">Got it</button></div>';
+  h += '<div style="font-size:12px;color:var(--muted);margin:12px 2px 0">' + boxes[0] + ' new · ' + (boxes[1]+boxes[2]) + ' learning · ' + (boxes[3]+boxes[4]+boxes[5]) + ' solid</div>';
+  return h;
+}
+function studyGrade(ok){
+  const S = studyDB(), i = STUDYV.card, id = cardId(i), st = S.cards[id] || { box:0 };
+  const box = ok ? Math.min(5, (st.box||0) + 1) : 1;
+  const d = new Date(); d.setDate(d.getDate() + (ok ? STUDY_INTERVAL[box] : 0));
+  S.cards[id] = { box, due: dstr(d), t: Date.now() };
+  STUDYV.queue.shift(); if(!ok) STUDYV.queue.push(i);     // a miss comes back later this session
+  STUDYV.card = null; STUDYV.flipped = false;
+  if(!S.log[today()] && Object.values(S.cards).filter(x => x.t > Date.now()-3600000).length >= 15){ S.log[today()] = Date.now(); toast('15 cards — that counts as tonight'); }
+  save(); renderStudy();
+}
+function studyCardsReset(){ STUDYV.queue = shuffle(QFK.cards.map((c,i)=>i).filter(i => STUDYV.sub==='all' || QFK.cards[i][0]===STUDYV.sub)); STUDYV.card = null; STUDYV.flipped = false; renderStudy(); }
+// ---- practice tests ----
+function normAns(s){ return String(s||'').toLowerCase().replace(/^(the|a|an)\s+/,'').replace(/[^a-z0-9]+/g,' ').trim(); }
+function lev(a, b){ const m=a.length, n=b.length; if(!m) return n; if(!n) return m; let prev=[...Array(n+1).keys()];
+  for(let i=1;i<=m;i++){ const cur=[i]; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur; } return prev[n]; }
+function ansMatch(given, accepted){
+  const g = normAns(given); if(!g) return false;
+  return accepted.some(a => { const x = normAns(a);
+    if(g===x) return true;
+    if(x.length>=5 && g.includes(x)) return true;        // "battle of saratoga" covers "Saratoga"; "crescent" does not cover "waning crescent"
+
+    return lev(g, x) <= (x.length > 8 ? 2 : 1); });
+}
+function studyTestStart(sub, n){
+  const subs = sub==='all' ? Object.keys(QFK.subjects) : [sub];
+  const per = Math.ceil(n / subs.length);
+  let qs = [];
+  subs.forEach(s => {
+    const mc = QFK.mc.map((q,i)=>({ kind:'mc', s:q[0], q, i })).filter(x => x.s===s);
+    const fl = QFK.fill.map((q,i)=>({ kind:'fill', s:q[0], q, i })).filter(x => x.s===s);
+    const nm = Math.round(per/2);
+    qs = qs.concat(pick(mc, nm), pick(fl, per - nm));
+  });
+  qs = shuffle(qs).slice(0, n);
+  STUDYV.test = { sub, qs, at:0, answers:[], start:Date.now(), picked:null, typed:'', shown:false };
+  renderStudy();
+}
+function studyTestHTML(){
+  const T = STUDYV.test;
+  if(!T){
+    let h = subPillsHTML(STUDYV.sub, 'sub', true);
+    h += '<div class="card"><b style="font-family:var(--serif);font-size:17px">Practice test</b>' +
+      '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin-top:6px">Half multiple choice, half fill in, pulled at random from the pools (the baseline exam, the practice sets, and the guides). Fill-ins are checked the way the wives will check them: spelling forgiven, vagueness not. You can overrule the checker.</div>' +
+      '<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" style="flex:1;margin:0" onclick="studyTestStart(STUDYV.sub,20)">20 questions</button>' +
+      '<button class="btn secondary" style="flex:1;margin:0" onclick="studyTestStart(STUDYV.sub,' + (STUDYV.sub==='all'?60:40) + ')">' + (STUDYV.sub==='all'?'60, like the baseline':'40, a full section') + '</button></div></div>';
+    const tests = studyDB().tests.slice().reverse().slice(0, 10);
+    if(tests.length){
+      h += '<div class="card"><b style="font-family:var(--serif);font-size:17px">Scores</b>' + tests.map(x =>
+        '<div class="mny-item"><span>' + esc(fmtDate(x.date).slice(5)) + ' · ' + esc(x.sub==='all'?'Mixed':QFK.subjects[x.sub].short) + ' · ' + x.n + ' Qs · ' + Math.round(x.ms/60000) + ' min</span><b style="color:' + (x.score/x.n>=.85?'var(--good)':x.score/x.n>=.7?'var(--warning)':'var(--serious)') + '">' + x.score + '/' + x.n + '</b></div>').join('') +
+        '<div style="font-size:12px;color:var(--muted);margin-top:8px">85% and up is winning territory. Below 70% in a subject: back to that guide.</div></div>';
+    }
+    return h;
+  }
+  if(T.at >= T.qs.length) return studyTestResultHTML();
+  const x = T.qs[T.at], q = x.q;
+  let h = '<div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin:0 2px 8px"><span>' + (T.at+1) + ' of ' + T.qs.length + ' · ' + esc(QFK.subjects[x.s].short) + '</span><span>' + Math.round((Date.now()-T.start)/60000) + ' min</span></div>';
+  h += '<div class="card" style="border-top:3px solid ' + subColor(x.s) + '"><div style="font-family:var(--serif);font-size:18px;line-height:1.4">' + esc(q[1]) + '</div>';
+  if(x.kind==='mc'){
+    h += '<div style="margin-top:14px">' + q[2].map((o, i) => {
+      let style = ''; if(T.picked!=null){ if(i===q[3]) style = 'background:var(--good);color:#fff;border-color:var(--good)'; else if(i===T.picked) style = 'background:var(--serious);color:#fff;border-color:var(--serious)'; }
+      return '<div class="tac" style="' + style + ';border-radius:10px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--border)" onclick="studyPick(' + i + ')"><span class="tk">' + 'ABCD'[i] + '</span><span class="tl" style="font-size:14.5px">' + esc(o) + '</span></div>'; }).join('') + '</div>';
+    if(T.picked!=null) h += (q[4] ? '<div style="font-size:13px;color:var(--muted);margin-top:4px">' + esc(q[4]) + '</div>' : '') + '<button class="btn" style="margin-top:12px" onclick="studyNext()">Next</button>';
+  } else {
+    if(!T.shown) h += '<div class="field" style="margin-top:14px"><input id="studyAns" placeholder="Your answer" autocomplete="off" autocapitalize="off" value="' + esc(T.typed) + '" onkeydown="if(event.key===\'Enter\')studyCheck()"></div><button class="btn" style="margin-top:10px" onclick="studyCheck()">Check</button>';
+    else {
+      const ok = T.answers[T.at].ok;
+      h += '<div style="margin-top:14px;font-size:14px">You wrote: <b>' + esc(T.typed||'—') + '</b></div>' +
+        '<div style="margin-top:6px;padding:10px 12px;border-radius:10px;background:' + (ok?'var(--good)':'var(--serious)') + ';color:#fff;font-size:14.5px">' + (ok?'Right':'Not quite') + ' — <b>' + esc(q[2][0]) + '</b>' + (q[2].length>1 ? ' <span style="opacity:.85">(also: ' + esc(q[2].slice(1).join(', ')) + ')</span>' : '') + '</div>' +
+        (q[3] ? '<div style="font-size:13px;color:var(--muted);margin-top:6px">' + esc(q[3]) + '</div>' : '') +
+        '<div style="display:flex;gap:10px;margin-top:12px">' + (!ok ? '<button class="btn secondary" style="flex:1;margin:0" onclick="studyOverride()">I had it</button>' : '') + '<button class="btn" style="flex:1;margin:0" onclick="studyNext()">Next</button></div>';
+    }
+  }
+  h += '</div><div style="text-align:center"><span class="action" onclick="if(confirm(\'Quit this test?\')){STUDYV.test=null;renderStudy()}">quit</span></div>';
+  return h;
+}
+function studyPick(i){ const T = STUDYV.test; if(!T || T.picked!=null) return; const x = T.qs[T.at]; T.picked = i; T.answers[T.at] = { ok: i===x.q[3], s:x.s }; renderStudy(); }
+function studyCheck(){ const T = STUDYV.test; const inp = $('studyAns'); T.typed = inp ? inp.value : ''; const x = T.qs[T.at]; T.answers[T.at] = { ok: ansMatch(T.typed, x.q[2]), s:x.s }; T.shown = true; renderStudy(); }
+function studyOverride(){ const T = STUDYV.test; T.answers[T.at].ok = true; renderStudy(); }
+function studyNext(){
+  const T = STUDYV.test; T.at++; T.picked = null; T.typed = ''; T.shown = false;
+  if(T.at >= T.qs.length && !T.saved){
+    T.saved = true; const by = {}; T.answers.forEach(a => { by[a.s] = by[a.s] || [0,0]; by[a.s][1]++; if(a.ok) by[a.s][0]++; });
+    const S = studyDB(); S.tests.push({ id: uid(), date: today(), sub: T.sub, n: T.qs.length, score: T.answers.filter(a=>a.ok).length, ms: Date.now()-T.start, by });
+    S.log[today()] = S.log[today()] || Date.now(); save();
+  }
+  renderStudy();
+  setTimeout(() => { const i = $('studyAns'); if(i) i.focus(); }, 50);
+}
+function studyTestResultHTML(){
+  const T = STUDYV.test, score = T.answers.filter(a=>a.ok).length, n = T.qs.length, pct = Math.round(score/n*100);
+  const by = {}; T.answers.forEach(a => { by[a.s] = by[a.s] || [0,0]; by[a.s][1]++; if(a.ok) by[a.s][0]++; });
+  let h = '<div class="card" style="text-align:center"><div style="font-size:12.5px;color:var(--muted)">' + Math.round((Date.now()-T.start)/60000) + ' minutes</div>' +
+    '<div style="font-family:var(--serif);font-size:44px;color:' + (pct>=85?'var(--good)':pct>=70?'var(--warning)':'var(--serious)') + '">' + pct + '%</div><div style="font-size:14px">' + score + ' of ' + n + '</div>' +
+    '<div style="margin-top:12px">' + Object.keys(by).map(s => '<div class="mny-item"><span>' + esc(QFK.subjects[s].name) + '</span><b>' + by[s][0] + '/' + by[s][1] + '</b></div>').join('') + '</div>' +
+    '<button class="btn" style="margin-top:14px" onclick="STUDYV.test=null;renderStudy()">Done</button></div>';
+  const missed = T.qs.filter((x, i) => !T.answers[i].ok);
+  if(missed.length) h += '<div class="card"><b style="font-family:var(--serif);font-size:17px">Missed</b>' + missed.map(x => '<div style="font-size:13.5px;line-height:1.5;padding:8px 0;border-top:1px solid var(--hairline)"><div style="color:var(--ink-2)">' + esc(x.q[1]) + '</div><b>' + esc(x.kind==='mc' ? x.q[2][x.q[3]] : x.q[2][0]) + '</b></div>').join('') + '</div>';
+  return h;
+}
+// ---- visual drills ----
+function studyVisualHTML(){
+  const kinds = [['const','Constellations'],['moon','Moon'],['eclipse','Eclipses'],['solar','Solar system'],['life','Star life'],['galaxy','Galaxies'],['photo','Photos']];
+  let h = '<div class="mood-range" style="margin:0 0 10px">' + kinds.map(k => '<button class="' + (STUDYV.vis===k[0]?'on':'') + '" onclick="STUDYV.vis=\'' + k[0] + '\';STUDYV.visQ=null;renderStudy()">' + k[1] + '</button>').join('') + '</div>';
+  if(!STUDYV.visQ) STUDYV.visQ = studyVisMake(STUDYV.vis);
+  const Q = STUDYV.visQ;
+  if(STUDYV.vis==='photo') h += '<div class="mood-range" style="margin:0 0 10px">' + Object.keys(QFK.visual.photos).map(g => '<button class="' + (STUDYV.photoGroup===g?'on':'') + '" onclick="STUDYV.photoGroup=\'' + g + '\';STUDYV.visQ=null;renderStudy()">' + g[0].toUpperCase()+g.slice(1) + '</button>').join('') + '</div>';
+  h += '<div class="card" style="text-align:center"><div style="font-size:12.5px;color:var(--muted);text-align:left;margin-bottom:8px">' + esc(Q.prompt) + '</div>' + Q.svg +
+    '<div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">' + Q.options.map((o, i) => {
+      let style = ''; if(Q.picked!=null){ if(o===Q.answer) style = 'background:var(--good);color:#fff;border-color:var(--good)'; else if(i===Q.picked) style = 'background:var(--serious);color:#fff;border-color:var(--serious)'; }
+      return '<button class="btn secondary" style="margin:0;padding:10px 8px;font-size:13.5px;' + style + '" onclick="studyVisPick(' + i + ')">' + esc(o) + '</button>'; }).join('') + '</div>' +
+    (Q.picked!=null ? '<div style="font-size:13px;color:var(--ink-2);margin-top:10px;line-height:1.5">' + esc(Q.note||'') + '</div><button class="btn" style="margin-top:10px" onclick="STUDYV.visQ=null;renderStudy()">Next</button>' : '') +
+    '<div style="font-size:12px;color:var(--muted);margin-top:10px">' + STUDYV.visScore[0] + ' of ' + STUDYV.visScore[1] + ' this session</div></div>';
+  if(STUDYV.vis==='const') h += '<div class="notice">Simplified patterns, not to scale; the exam may rotate them. The bright ring marks the key star.</div>';
+  return h;
+}
+function studyVisPick(i){ const Q = STUDYV.visQ; if(Q.picked!=null) return; Q.picked = i; STUDYV.visScore[1]++; if(Q.options[i]===Q.answer) STUDYV.visScore[0]++; renderStudy(); }
+function svgWrap(inner, bg){ return '<svg viewBox="0 0 100 100" style="width:100%;max-width:300px;aspect-ratio:1;border-radius:12px;background:' + (bg||'#0b1026') + '">' + inner + '</svg>'; }
+function constSVG(c){
+  const L = c.lines.map(l => '<line x1="' + c.stars[l[0]][0] + '" y1="' + c.stars[l[0]][1] + '" x2="' + c.stars[l[1]][0] + '" y2="' + c.stars[l[1]][1] + '" stroke="#6b78c9" stroke-width=".6" opacity=".7"/>').join('');
+  const S = c.stars.map((s, i) => '<circle cx="' + s[0] + '" cy="' + s[1] + '" r="' + (i===c.bright?2.4:1.4) + '" fill="#fff"/>' + (i===c.bright ? '<circle cx="' + s[0] + '" cy="' + s[1] + '" r="4.5" fill="none" stroke="#f3c969" stroke-width=".7"/>' : '')).join('');
+  return svgWrap(L + S);
+}
+function moonSVG(p){ // p: 0 new … 7 waning crescent, Northern Hemisphere
+  const r = 36, rx = r*0.55, right = p>=1 && p<=3, cres = p===1||p===7;
+  let lit = '';
+  if(p===4) lit = '<circle cx="50" cy="50" r="' + r + '" fill="#efe9d6"/>';
+  else if(p!==0){
+    const half = right ? 'A ' + r + ' ' + r + ' 0 0 1 50 ' + (50+r) : 'A ' + r + ' ' + r + ' 0 0 0 50 ' + (50+r);
+    let back;
+    if(p===2||p===6) back = 'L 50 ' + (50-r);
+    else if(cres) back = 'A ' + rx + ' ' + r + ' 0 0 ' + (right?0:1) + ' 50 ' + (50-r);
+    else back = 'A ' + rx + ' ' + r + ' 0 0 ' + (right?1:0) + ' 50 ' + (50-r);
+    lit = '<path d="M 50 ' + (50-r) + ' ' + half + ' ' + back + ' Z" fill="#efe9d6"/>';
+  }
+  return svgWrap('<circle cx="50" cy="50" r="' + r + '" fill="#2a2f45"/>' + lit);
+}
+function eclipseSVG(lunar){
+  const mid = lunar ? '<circle cx="55" cy="50" r="7" fill="#3f7fd6"/><text x="55" y="68" font-size="5" fill="#cfd4e6" text-anchor="middle">Earth</text>' : '<circle cx="55" cy="50" r="3" fill="#b9b9b9"/><text x="55" y="64" font-size="5" fill="#cfd4e6" text-anchor="middle">Moon</text>';
+  const far = lunar ? '<circle cx="84" cy="50" r="3" fill="#b06a4a"/><text x="84" y="64" font-size="5" fill="#cfd4e6" text-anchor="middle">Moon</text>' : '<circle cx="84" cy="50" r="7" fill="#3f7fd6"/><text x="84" y="68" font-size="5" fill="#cfd4e6" text-anchor="middle">Earth</text>';
+  const shadow = lunar ? '<polygon points="62,44 95,48 95,52 62,56" fill="#000" opacity=".55"/>' : '<polygon points="58,48.5 78,49.5 78,50.5 58,51.5" fill="#000" opacity=".7"/>';
+  return svgWrap('<circle cx="16" cy="50" r="12" fill="#f7c948"/><text x="16" y="72" font-size="5" fill="#cfd4e6" text-anchor="middle">Sun</text><text x="36" y="40" font-size="4" fill="#f3c969">sunlight →</text>' + shadow + mid + far + '<text x="50" y="92" font-size="4" fill="#8a90a8" text-anchor="middle">not to scale</text>');
+}
+function solarSVG(k){ // k: 1..8 planet, 'belt', 'kuiper'
+  const radii = [6,10,14,18,27,33,39,44], cols = ['#b9b9b9','#e8d9a8','#3f7fd6','#c1440e','#d9b382','#e3cf9a','#9fe3e6','#3b63d6'];
+  let h = '<circle cx="50" cy="50" r="3.2" fill="#f7c948"/>';
+  radii.forEach((r, i) => { const a = (i*47)%360*Math.PI/180; h += '<circle cx="50" cy="50" r="' + r + '" fill="none" stroke="#3a4270" stroke-width=".4"/><circle cx="' + (50+r*Math.cos(a)).toFixed(1) + '" cy="' + (50+r*Math.sin(a)).toFixed(1) + '" r="' + (i>=4?1.6:1) + '" fill="' + cols[i] + '"/>'; });
+  for(let i=0;i<80;i++){ const a = i/80*2*Math.PI, r = 21.5 + (i%3)*0.9; h += '<circle cx="' + (50+r*Math.cos(a)).toFixed(1) + '" cy="' + (50+r*Math.sin(a)).toFixed(1) + '" r=".35" fill="#9a9a9a"/>'; }
+  for(let i=0;i<60;i++){ const a = i/60*2*Math.PI, r = 47 + (i%2)*1.2; h += '<circle cx="' + (50+r*Math.cos(a)).toFixed(1) + '" cy="' + (50+r*Math.sin(a)).toFixed(1) + '" r=".3" fill="#7fb6c9"/>'; }
+  let mx, my;
+  if(k==='belt'){ mx = 50+22*Math.cos(0.9); my = 50+22*Math.sin(0.9); }
+  else if(k==='kuiper'){ mx = 50+47.5*Math.cos(2.2); my = 50+47.5*Math.sin(2.2); }
+  else { const i = k-1, a = (i*47)%360*Math.PI/180; mx = 50+radii[i]*Math.cos(a); my = 50+radii[i]*Math.sin(a); }
+  h += '<circle cx="' + mx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="4" fill="none" stroke="#f3c969" stroke-width=".8"/>';
+  return svgWrap(h);
+}
+function galaxySVG(kind){
+  if(kind==='spiral'){ let p=''; for(let arm=0;arm<2;arm++){ let d=''; for(let t=0;t<=6;t+=0.15){ const r=3+t*5.5, a=t+arm*Math.PI; d += (d?' L ':'M ') + (50+r*Math.cos(a)).toFixed(1) + ' ' + (50+r*Math.sin(a)*0.75).toFixed(1); } p += '<path d="' + d + '" fill="none" stroke="#cfd6ff" stroke-width="4" stroke-linecap="round" opacity=".55"/>'; }
+    return svgWrap(p + '<ellipse cx="50" cy="50" rx="9" ry="6" fill="#fff3d6"/>'); }
+  if(kind==='elliptical') return svgWrap('<defs><radialGradient id="eg"><stop offset="0" stop-color="#fff3d6"/><stop offset="1" stop-color="#0b1026"/></radialGradient></defs><ellipse cx="50" cy="50" rx="34" ry="24" fill="url(#eg)"/>');
+  return svgWrap('<path d="M30 40 C 20 30, 45 18, 55 28 S 85 35, 72 52 S 70 80, 50 72 S 25 78, 28 60 S 22 48, 30 40 Z" fill="#cfd6ff" opacity=".6"/>' + [...Array(18)].map((_,i)=>'<circle cx="'+(30+(i*37)%45)+'" cy="'+(30+(i*53)%42)+'" r="1" fill="#fff"/>').join(''));
+}
+function lifeSVG(item){
+  return '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;padding:10px 0"><div style="width:100%;font-size:12px;color:var(--muted)">' + esc(item.label) + '</div>' +
+    item.seq.map((s, i) => '<span style="padding:7px 9px;border-radius:8px;border:1px solid var(--border);font-size:12.5px;background:' + (s==='?'?'var(--warning);color:#fff;font-weight:700':'var(--surface-2)') + '">' + esc(s) + '</span>' + (i<item.seq.length-1?'<span style="color:var(--muted)">→</span>':'')).join('') + '</div>';
+}
+function studyVisMake(kind){
+  const V = QFK.visual;
+  if(kind==='const'){ const c = pick(V.constellations,1)[0]; const others = pick(V.constellations.filter(x=>x!==c),3).map(x=>x.name);
+    return { prompt:'Name this star pattern.', svg:constSVG(c), options:shuffle([c.name,...others]), answer:c.name, note:c.key }; }
+  if(kind==='moon'){ const p = Math.floor(Math.random()*8); const others = pick(V.phases.filter((x,i)=>i!==p),3);
+    return { prompt:'Name this Moon phase (as seen from the Northern Hemisphere).', svg:moonSVG(p), options:shuffle([V.phases[p],...others]), answer:V.phases[p], note:p===0?'Dark: Moon between Earth and Sun.':p===4?'Fully lit: Earth between Sun and Moon.':(p<4?'Lit on the right → waxing.':'Lit on the left → waning.') + (p===2||p===6?' Half lit → quarter.':p===1||p===7?' Sliver → crescent.':' More than half → gibbous.') }; }
+  if(kind==='eclipse'){ const lunar = Math.random()<0.5;
+    return { prompt:'What does this alignment produce?', svg:eclipseSVG(lunar), options:shuffle(['Solar eclipse','Lunar eclipse','Equinox','Solstice']), answer:lunar?'Lunar eclipse':'Solar eclipse', note:lunar?'Sun–Earth–Moon: Earth\'s shadow on the Moon, only at full moon.':'Sun–Moon–Earth: the Moon\'s shadow on Earth, only at new moon.' }; }
+  if(kind==='solar'){ const names = ['Mercury','Venus','Earth','Mars','Jupiter','Saturn','Uranus','Neptune']; const keys = [1,2,3,4,5,6,7,8,'belt','kuiper']; const k = pick(keys,1)[0];
+    const ans = k==='belt'?'Asteroid belt':k==='kuiper'?'Kuiper Belt':names[k-1]; const pool = names.concat(['Asteroid belt','Kuiper Belt']).filter(x=>x!==ans);
+    return { prompt:'Name the ringed object or region.', svg:solarSVG(k), options:shuffle([ans,...pick(pool,3)]), answer:ans, note:k==='belt'?'Between the 4th and 5th orbits: Mars and Jupiter.':k==='kuiper'?'Beyond the 8th orbit, Neptune. Pluto lives here.':'Order from the Sun: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune.' }; }
+  if(kind==='life'){ const it = pick(V.lifecycle,1)[0]; const pool = ['Main sequence','Red giant','Red supergiant','Planetary nebula','White dwarf','Supernova','Neutron star','Black hole','Nebula'].filter(x=>x!==it.a);
+    return { prompt:'Which stage belongs in the box marked ?', svg:lifeSVG(it), options:shuffle([it.a,...pick(pool,3)]), answer:it.a, note:'Sun-like: nebula → main sequence → red giant → planetary nebula → white dwarf. High-mass: … → red supergiant → supernova → neutron star or black hole.' }; }
+  if(kind==='galaxy'){ const kinds = ['spiral','elliptical','irregular']; const k = pick(kinds,1)[0]; const cap = s => s[0].toUpperCase()+s.slice(1);
+    return { prompt:'Classify this galaxy by shape.', svg:galaxySVG(k), options:shuffle(kinds.map(cap).concat(['Nebula'])), answer:cap(k), note:'Spiral: disk, arms, bulge. Elliptical: smooth ball, old red stars. Irregular: no regular shape.' }; }
+  // photo
+  const g = STUDYV.photoGroup, list = V.photos[g], title = pick(list,1)[0];
+  const nice = t => V.nice[t] || t;
+  const others = pick(list.filter(x=>x!==title),3).map(nice);
+  return { prompt:g==='animals'?'Name the animal (common group name is fine on the exam when the species isn\'t listed).':g==='portraits'?'Name the president or leader.':g==='planets'?'Name the planet.':g==='biomes'?'Name the biome.':'Name the object and know its type.',
+    svg:'<div id="studyPhoto" style="width:100%;max-width:300px;aspect-ratio:1;margin:0 auto;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;overflow:hidden">loading…</div>',
+    options:shuffle([nice(title),...others]), answer:nice(title), title, note:g==='deepsky'?'M31 Andromeda = spiral galaxy · M45 Pleiades = open star cluster · M42 Orion = nebula.':'' };
+}
+async function studyPhotoLoad(){
+  const Q = STUDYV.visQ, box = $('studyPhoto'); if(!Q || !box || !Q.title) return;
+  try{
+    let url = WIKI_CACHE[Q.title];
+    if(!url){
+      const r = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(Q.title.replace(/ /g,'_')));
+      const j = await r.json(); url = (j.originalimage && j.thumbnail && j.thumbnail.source.replace(/\/\d+px-/, '/640px-')) || (j.thumbnail && j.thumbnail.source) || '';
+      if(url) WIKI_CACHE[Q.title] = url;
+    }
+    if(!url) throw new Error('no image');
+    if(STUDYV.visQ !== Q) return;
+    box.innerHTML = '<img src="' + esc(url) + '" alt="" style="width:100%;height:100%;object-fit:cover">';
+  }catch(e){ if(STUDYV.visQ === Q) box.textContent = 'No photo available offline — tap Next'; }
+}
+// ---- listening ----
+function studyListenHTML(){
+  let h = '<div class="notice" style="margin:0 2px 10px">Audio covers concepts and stories; 41 of 120 questions are pictures, so pair it with the Visual drills. Links open the show\'s page or a search, so nothing here goes stale.</div>';
+  Object.keys(QFK.subjects).forEach(s => {
+    h += '<div class="card"><b style="font-family:var(--serif);font-size:17px;color:' + subColor(s) + '">' + esc(QFK.subjects[s].name) + '</b>' +
+      QFK.listen.filter(l => l.s===s).map(l => '<a href="' + esc(l.url) + '" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;padding:9px 0;border-top:1px solid var(--hairline)"><b style="font-size:14.5px">' + esc(l.title) + ' ↗</b><div style="font-size:13px;color:var(--ink-2);line-height:1.45">' + esc(l.who) + '</div></a>').join('') + '</div>';
+  });
+  return h;
+}
+
 // ---------- push notifications ----------
 const VAPID_PUB='BHgSSYmn51dokFYyuoQFSTzrIDrxIofgRLZZhgp9D3gzm9IVfxk7s_fCmPuqSkP-CAqojISNE7P2Hy9Ac-sqA18';
 const PUSH_FN='https://vksoorkybevxsbdqhjhx.supabase.co/functions/v1/push-tick';
 let _swReg=null;
+// a tapped notification while the app is already open: the worker hands over its link
+if(navigator.serviceWorker) navigator.serviceWorker.addEventListener('message', e => {
+  const m=/[#&]go=([a-z]+)/.exec(String(e.data&&e.data.url||'')); if(m && VIEWS[m[1]]!=null) showView(m[1]); });
 async function regSW(){ if(!('serviceWorker' in navigator)) return null;
   try{ _swReg=await navigator.serviceWorker.register('sw.js'); return _swReg; }catch(e){ return null; } }
 function b64ToU8(b64){ const pad='='.repeat((4-b64.length%4)%4); const raw=atob((b64+pad).replace(/-/g,'+').replace(/_/g,'/'));
   return Uint8Array.from([...raw].map(c=>c.charCodeAt(0))); }
-function notifPrefs(){ return Object.assign({ journalOn:true, journalHour:21, birthdaysOn:true, reviewOn:true }, DB.settings.notifPrefs||{}); }
+function notifPrefs(){ return Object.assign({ journalOn:true, journalHour:21, birthdaysOn:true, reviewOn:true, studyOn:true }, DB.settings.notifPrefs||{}); }
 async function pushSubRow(){ if(!_swReg) return null; try{ return await _swReg.pushManager.getSubscription(); }catch(e){ return null; } }
 async function enablePush(){
   if(!SUPA||!SUPA.session){ toast('Log in first (Account & Sync)'); return; }
@@ -5060,7 +5994,8 @@ async function disablePush(){
 }
 async function savePushPrefs(){
   const p={ journalOn:$('npJournal').classList.contains('on'), journalHour:Number($('npHour').value),
-    birthdaysOn:$('npBday').classList.contains('on'), reviewOn:$('npReview').classList.contains('on') };
+    birthdaysOn:$('npBday').classList.contains('on'), reviewOn:$('npReview').classList.contains('on'),
+    studyOn:$('npStudy')?$('npStudy').classList.contains('on'):true };
   DB.settings.notifPrefs=p; save();
   const sub=await pushSubRow();
   if(sub && SUPA && SUPA.session)
@@ -5093,7 +6028,7 @@ async function renderNotifCard(){
     h+='<div class="notice" style="margin-top:0">On for this device.</div>'+
       '<div class="ck-label">Journal reminder</div><div class="toggle-row">'+tglBtn('npJournal',p.journalOn,'Remind me')+
       '<select id="npHour" class="tgl" style="appearance:auto">'+[19,20,21,22].map(hh=>'<option value="'+hh+'"'+(p.journalHour===hh?' selected':'')+'>'+(hh>12?hh-12:hh)+' PM</option>').join('')+'</select></div>'+
-      '<div class="ck-label">Also send</div><div class="toggle-row">'+tglBtn('npBday',p.birthdaysOn,'Birthdays')+tglBtn('npReview',p.reviewOn,'Sunday review')+'</div>'+
+      '<div class="ck-label">Also send</div><div class="toggle-row">'+tglBtn('npBday',p.birthdaysOn,'Birthdays')+tglBtn('npReview',p.reviewOn,'Sunday review')+tglBtn('npStudy',p.studyOn,'Study, 8 PM')+'</div>'+
       '<button class="btn" style="margin-top:14px" onclick="savePushPrefs()">Save settings</button>'+
       '<button class="btn secondary" style="margin-top:10px" onclick="testPush()">Send test notification</button>'+
       '<button class="btn danger" onclick="disablePush()">Turn off on this device</button>';

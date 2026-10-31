@@ -70,7 +70,9 @@ Deno.serve(async (req) => {
     const wantJournal = prefs.journalOn !== false && hour === jh;
     const wantBdays = prefs.birthdaysOn !== false && hour === 9;
     const wantReview = prefs.reviewOn !== false && hour === 18 && local.getUTCDay() === 0;
-    if (!wantJournal && !wantBdays && !wantReview) continue;   // nothing due: no data fetched at all
+    // Quest for Knowledge: 8pm every night until the test on 28 Nov 2026, skipped once he has logged the night
+    const wantStudy = prefs.studyOn !== false && hour === 20 && localDay >= "2026-11-01" && localDay <= "2026-11-28";
+    if (!wantJournal && !wantBdays && !wantReview && !wantStudy) continue;   // nothing due: no data fetched at all
 
     const key = s.user_id + "|" + localDay;
     if (!factCache.has(key)) {
@@ -102,13 +104,21 @@ Deno.serve(async (req) => {
       }
     }
     if (wantReview) due.push({ kind: "review", title: "Weekly Review", body: "Your week is ready to be read." });
+    if (wantStudy && !facts.studied) {
+      const left = Math.round((Date.parse("2026-11-28T12:00:00Z") - Date.parse(localDay + "T12:00:00Z")) / 86400000);
+      const rot = ["Animals", "U.S. History", "Astronomy", "Animals", "U.S. History", "Astronomy", "a mixed practice test"][local.getUTCDay()];
+      const body = left === 0 ? "Test day. Breathe. You did the work."
+        : left === 1 ? "Tomorrow. Twenty minutes of cards, then sleep."
+        : left + " days. Tonight: " + rot + ". Twenty minutes beats Brett.";
+      due.push({ kind: "study", title: "Quest for Knowledge", body, url: APP_URL + "#go=study" });
+    }
 
     for (const d of due) {
       const { error: dup } = await admin.from("push_log").insert({
         user_id: s.user_id, kind: d.kind, day: localDay, endpoint: s.endpoint,
       });
       if (dup) continue;
-      await send(s, { ...d, url: APP_URL });
+      await send(s, { url: APP_URL, ...d });
     }
   }
 
