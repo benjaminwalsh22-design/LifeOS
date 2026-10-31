@@ -524,6 +524,8 @@ nav.tabbar {
 .detail-block h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 5px; }
 .detail-block p { font-size: 14.5px; color: var(--ink-2); white-space: pre-wrap; }
 .notice { font-size: 12.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+.syncbanner { margin: 0 16px 10px; padding: 11px 14px; border-radius: 12px; background: var(--warning); color: #fff; font-size: 13.5px; line-height: 1.45; cursor: pointer; }
+.syncbanner b { font-weight: 700; }
 .notice a { color: var(--accent); }
 
 /* ---- macros ---- */
@@ -688,6 +690,7 @@ nav.tabbar {
     </button>
   </header>
   <div class="ptr" id="ptr"><span class="ptrspin"></span><span id="ptrTxt">Pull to sync</span></div>
+  <div class="syncbanner" id="syncBanner" hidden onclick="showView('settings')">Signed out of the cloud — new entries are waiting on this phone. <b>Tap to sign in again.</b></div>
   <main>
     <!-- ============ TODAY ============ -->
     <section class="view active" id="view-today">
@@ -855,7 +858,7 @@ nav.tabbar {
         <div id="acctBody"></div>
       </div>
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.3</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.4</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
       </div>
@@ -961,7 +964,8 @@ const saveLocal = () => { _statIdx = null; const o = Object.assign({}, DB); dele
 if(!DB._skin3){ DB.settings.theme='light'; DB._skin3=true; try{ save(); }catch(e){} }
 // numbers the watch, ring or scale supplies — the cloud is the source of truth
 // for these, never the phone's cached copy
-const HEALTH_KEYS = new Set(['sleep','steps','rhr','hrv','energy','weight','bodyfat','bmi','resp','temp','spo2','tdev','readiness','sleepscore','spend','budget']);
+const HEALTH_KEYS = new Set(['sleep','steps','rhr','hrv','energy','weight','bodyfat','bmi','resp','temp','spo2','tdev','readiness','sleepscore','spend','budget',
+  'deep','rem','effic','bed','wake','stress','actscore','workout','gym','meditate']);   // the Oct 31 ring detail
 // a night with no recorded sleep is missing data, not zero hours — an older
 // version of the health sync stored it as 0 and it drags every average down
 function scrubStats(){
@@ -1503,7 +1507,16 @@ function sprintDays(){            // where we are in the month
   const day=Math.min(total, Math.max(0, daysBetween(T.start, d)+1));   // 0 before it starts
   return { total, day, left:Math.max(0, daysBetween(d, T.end)), started:d>=T.start, over:d>T.end };
 }
-function sprintCount(g){ return g.type==='count' ? (g.log||[]).length : (g.done?1:0); }
+// days the ring saw a strength session inside the sprint (the gym goal counts itself)
+function sprintRingDays(g){
+  if(g.k!=='gym') return [];
+  const T=DB.twy, out=[];
+  for(const d in (DB.stats||{})){ if(d>=T.start && d<=T.end && d<=today() && Number((DB.stats[d]||{}).gym)>=15) out.push(d); }
+  return out.sort();
+}
+// one count per calendar day: a tap and a ring detection on the same day are one session
+function sprintDaysDone(g){ return [...new Set([...(g.log||[]), ...sprintRingDays(g)])].sort(); }
+function sprintCount(g){ return g.type==='count' ? sprintDaysDone(g).length : (g.done?1:0); }
 function sprintHit(g){ return g.type==='count' ? sprintCount(g)>=g.target : !!g.done; }
 // one line per goal: what to do about it today, or null when it needs nothing
 function sprintNudge(g, S){
@@ -1513,7 +1526,7 @@ function sprintNudge(g, S){
     const n=sprintCount(g), need=g.target-n;
     if(need>S.left+1) return {p:0, txt:g.label.split(',')[0]+': '+n+' of '+g.target+' — '+(S.left+1)+' days left, this one is slipping'};
     const pace=Math.ceil(g.target*S.day/S.total);     // where the count should be by today
-    const last=(g.log||[]).slice(-1)[0];
+    const last=sprintDaysDone(g).slice(-1)[0];
     if(n<pace) return {p:0, txt:g.label.split(',')[0]+' today — '+n+' of '+g.target+', pace says '+pace+(last?(' · last on '+fmtDate(last).slice(5)):'')};
     if(last && daysBetween(last,d)>=3) return {p:2, txt:g.label.split(',')[0]+': '+n+' of '+g.target+', on pace — '+daysBetween(last,d)+' days since the last one'};
     return null;
@@ -1780,6 +1793,14 @@ const TILES = [
   { key:'temp',   label:'Body temp',     unit:'°F',   dot:'var(--serious)', src:'health', carry:3,  hint:'Wrist temperature', ph:'e.g. 97.6' },
   { key:'tdev',   label:'Skin temp',     unit:'°C',   dot:'var(--serious)', src:'oura',   carry:3,  hint:'Deviation from your baseline', ph:'e.g. -0.2', fmt:'signed' },
   { key:'readiness', label:'Readiness',  unit:'',     dot:'var(--good)',    src:'oura',   carry:1,  hint:'Oura readiness score', ph:'e.g. 82', fmt:'int' },
+  { key:'bed',    label:'Bedtime',       unit:'',     dot:'var(--violet)',  src:'oura',   carry:1,  hint:'When you fell asleep', ph:'e.g. -0.5', fmt:'clock' },
+  { key:'deep',   label:'Deep sleep',    unit:'min',  dot:'var(--violet)',  src:'oura',   carry:1,  hint:'Deep sleep last night', ph:'e.g. 80', fmt:'int' },
+  { key:'rem',    label:'REM',           unit:'min',  dot:'var(--violet)',  src:'oura',   carry:1,  hint:'REM sleep last night', ph:'e.g. 110', fmt:'int' },
+  { key:'stress', label:'Stress',        unit:'min',  dot:'var(--warning)', src:'oura',   carry:0,  hint:'Minutes Oura scored as high stress', ph:'e.g. 40', fmt:'int' },
+  { key:'actscore', label:'Activity',    unit:'',     dot:'var(--aqua)',    src:'oura',   carry:0,  hint:'Oura activity score', ph:'e.g. 85', fmt:'int' },
+  { key:'workout', label:'Workout',      unit:'min',  dot:'var(--serious)', src:'oura',   carry:0,  hint:'Workout minutes today', ph:'e.g. 45', fmt:'int' },
+  { key:'gym',    label:'Gym',           unit:'min',  dot:'var(--serious)', src:'oura',   carry:0,  hint:'Strength work today', ph:'e.g. 45', fmt:'int' },
+  { key:'meditate', label:'Meditation',  unit:'min',  dot:'var(--gold)',    src:'oura',   carry:0,  hint:'Sessions logged in the Oura app', ph:'e.g. 15', fmt:'int' },
   { key:'spo2',   label:'Blood oxygen',  unit:'%',    dot:'var(--magenta)', src:'health', carry:3,  hint:'Blood oxygen (%)', ph:'e.g. 96', fmt:'int' },
   { key:'energy', label:'Active energy', unit:'kcal', dot:'var(--serious)', src:'health', carry:0,  hint:'Active energy (kcal)', ph:'e.g. 540', fmt:'int' },
   { key:'weight', label:'Weight',        unit:'lb',   dot:'var(--accent)',  src:'health', carry:30, hint:'Weight (lb)', ph:'e.g. 186.0' },
@@ -1821,6 +1842,7 @@ function tilesHTML(st, day){
     const disp = has ? (tl.fmt === 'int' ? Number(raw).toLocaleString()
       : tl.fmt === 'usd' ? '$' + Number(raw).toLocaleString(undefined,{maximumFractionDigits:0})
       : tl.fmt === 'signed' ? (Number(raw) > 0 ? '+' : '') + Number(raw).toFixed(2)
+      : tl.fmt === 'clock' ? clockOf(Number(raw))
       : esc(String(raw))) : null;
     const via = tl.src === 'health' ? 'via Apple Health' : tl.src === 'oura' ? 'via Oura' : tl.src === 'ynab' ? 'via YNAB' : tl.hint;
     const hint = stale ? stale : has ? via : (tl.src === 'manual' ? tl.hint : 'nothing yet today');
@@ -2510,7 +2532,7 @@ async function renderJournalList(){
   let _lastYr='';
   const rows = await Promise.all(cap.map(async j => {
     const u = await thumbURL(j.id);
-    const status = j.status === 'queued' ? '<span class="spinner"></span>In the cloud queue…'
+    const status = j.status === 'queued' ? (SUPA&&SUPA.expired ? '<span style="color:var(--warning)">Waiting on this phone — sign in to sync</span>' : '<span class="spinner"></span>In the cloud queue…')
       : j.status === 'analyzing' ? '<span class="spinner"></span>Analyzing…'
       : j.status === 'error' ? '<span style="color:var(--serious)">Not transcribed — tap to retry</span>'
       : esc(j.summary || j.transcription || j.note || 'Saved');
@@ -2699,7 +2721,7 @@ async function openEntry(id){
   openSheet('<h3 style="cursor:pointer" onclick="quickFixDate(\''+id+'\')">'+fmtDate(j.date)+' <span style="color:var(--accent);font-size:13px;font-weight:650">change</span></h3>' +
     (u ? '<img src="'+u+'" class="detail-photo">' : '') +
     (j.status === 'analyzing' ? '<div class="detail-block"><p><span class="spinner"></span>Analyzing…</p></div>' : '') +
-    (j.status === 'queued' ? '<div class="detail-block"><p><span class="spinner"></span>Waiting for cloud transcription… it runs even with the app closed.</p></div>' : '') +
+    (j.status === 'queued' ? (SUPA&&SUPA.expired ? '<div class="detail-block"><p style="color:var(--warning)">This entry is only on this phone. The cloud signed you out — sign in again in Settings and it will transcribe.</p></div>' : '<div class="detail-block"><p><span class="spinner"></span>Waiting for cloud transcription… it runs even with the app closed.</p></div>') : '') +
     (j.status === 'error' && j.refused ? '<div class="notice" style="margin-top:0">Claude declined to transcribe this page — retrying won\u2019t help. Tap Edit text to type it in yourself.</div>' : '') +
     (j.summary ? '<div class="detail-block"><h4>Summary</h4><p>'+esc(j.summary)+'</p></div>' : '') +
     scoreBlockHTML(j) +
@@ -4094,8 +4116,11 @@ function sprintTap(k, dir){
   const g=sprintGoal(k); if(!g) return;
   if(g.type==='count'){
     g.log=g.log||[];
-    if(dir>0){ if(g.log.length>=99) return; g.log.push(today()); }
-    else g.log.pop();
+    if(dir>0){
+      if(g.log.includes(today())){ toast('Already counted today — long-press to undo'); return; }
+      if(sprintRingDays(g).includes(today())){ toast('The ring already counted today'); return; }
+      g.log.push(today());
+    } else g.log.pop();
     g.mt=Date.now(); save(); renderTWY();
     const n=g.log.length;
     if(dir>0) toast(n>=g.target ? (g.label.split(',')[0]+' — '+g.target+' done ✓') : (n+' of '+g.target));
@@ -4120,8 +4145,8 @@ function renderSprint(el){
     if(g.type==='count'){
       const n=sprintCount(g), pace=S.started?Math.ceil(g.target*S.day/S.total):0;
       right=n+'/'+g.target;
-      const last=(g.log||[]).slice(-1)[0];
-      if(!hit && S.started) sub=(n>=pace?'on pace':('behind — pace is '+pace+' by today'))+(last?(' · last '+fmtDate(last).slice(5)):'')+' · tap to add one';
+      const last=sprintDaysDone(g).slice(-1)[0], ring=sprintRingDays(g).length;
+      if(!hit && S.started) sub=(n>=pace?'on pace':('behind — pace is '+pace+' by today'))+(last?(' · last '+fmtDate(last).slice(5)):'')+(ring?(' · '+ring+' from the ring'):' · tap to add one');
       bar='<div class="g-bar" style="margin:6px 0 2px"><i style="width:'+Math.min(100,Math.round(n/g.target*100))+'%'+(!hit&&n<pace?';background:var(--warning)':'')+'"></i></div>';
     } else {
       right=hit?'done':(g.due?(daysBetween(today(),g.due)>=0?(daysBetween(today(),g.due)+'d'):'past'):'—');
@@ -4463,6 +4488,16 @@ const TRENDS=[
   {key:'temp', kind:'stat', label:'Body temp', unit:'°F', color:'var(--serious)', goodUp:true, dp:1},
   {key:'readiness', kind:'stat', label:'Readiness', unit:'', color:'var(--good)', goodUp:true, dp:0},
   {key:'sleepscore', kind:'stat', label:'Sleep score', unit:'', color:'var(--violet)', goodUp:true, dp:0},
+  {key:'bed', kind:'stat', label:'Bedtime', unit:'', color:'var(--violet)', goodUp:false, dp:2, fmt:'clock'},
+  {key:'wake', kind:'stat', label:'Wake time', unit:'', color:'var(--violet)', goodUp:false, dp:2, fmt:'clock'},
+  {key:'deep', kind:'stat', label:'Deep sleep', unit:' min', color:'var(--violet)', goodUp:true, dp:0},
+  {key:'rem', kind:'stat', label:'REM sleep', unit:' min', color:'var(--violet)', goodUp:true, dp:0},
+  {key:'effic', kind:'stat', label:'Sleep efficiency', unit:'%', color:'var(--violet)', goodUp:true, dp:0},
+  {key:'stress', kind:'stat', label:'Stress', unit:' min', color:'var(--warning)', goodUp:false, dp:0},
+  {key:'actscore', kind:'stat', label:'Activity score', unit:'', color:'var(--aqua)', goodUp:true, dp:0},
+  {key:'workout', kind:'stat', label:'Workout', unit:' min', color:'var(--serious)', goodUp:true, dp:0, zero:true},
+  {key:'gym', kind:'stat', label:'Gym', unit:' min', color:'var(--serious)', goodUp:true, dp:0, zero:true},
+  {key:'meditate', kind:'stat', label:'Meditation', unit:' min', color:'var(--gold)', goodUp:true, dp:0, zero:true},
   {key:'spo2', kind:'stat', label:'Blood oxygen', unit:'%', color:'var(--magenta)', goodUp:true, dp:0},
   {key:'hap', kind:'checkin', label:'Happiness', unit:'/10', color:'var(--accent)', goodUp:true, dp:1},
   {key:'anx', kind:'checkin', label:'Anxiety', unit:'/10', color:'var(--warning)', goodUp:false, dp:1},
@@ -4527,9 +4562,15 @@ function trendPoints(key, range){
   const keys=Object.keys(by).sort().slice(-R.n);
   return keys.map(k=>({ k, label: range==='weeks' ? 'Week of '+fmtYM(k) : fmtYM(k), v:mean(by[k]), n:by[k].length }));
 }
+// hours from midnight (the ring's bed/wake keys: -0.5 is 11:30pm, 6.75 is 6:45am) as a clock time
+function clockOf(h){
+  if(h==null || isNaN(h)) return '—';
+  let m=Math.round(((h%24)+24)%24*60); const hh=Math.floor(m/60)%24, mm=m%60;
+  return ((hh%12)||12)+':'+pad(mm)+' '+(hh<12?'AM':'PM');
+}
 function trendFmt(m, v){
   if(v==null) return '—';
-  return m.fmt==='int' ? Math.round(v).toLocaleString() : m.fmt==='usd' ? '$'+Math.round(v).toLocaleString()
+  return m.fmt==='clock' ? clockOf(v) : m.fmt==='int' ? Math.round(v).toLocaleString() : m.fmt==='usd' ? '$'+Math.round(v).toLocaleString()
     : m.fmt==='signed' ? (v>0?'+':'')+v.toFixed(2) : (Math.round(v*Math.pow(10,m.dp==null?1:m.dp))/Math.pow(10,m.dp==null?1:m.dp)).toString();
 }
 function trendChart(pts, m){
@@ -4613,6 +4654,7 @@ function renderInsightsView(){
 // ---------- account sync (Supabase) ----------
 const SUPA_KEY='lifeos_supa_cfg';
 let SUPA=null; try{ SUPA=JSON.parse(store.getItem(SUPA_KEY)||'null'); }catch(e){}
+document.addEventListener('DOMContentLoaded', ()=>{ const b=$('syncBanner'); if(b && SUPA && SUPA.expired && SUPA.session) b.hidden=false; });
 function supaSave(){ try{ store.setItem(SUPA_KEY, JSON.stringify(SUPA)); }catch(e){} }
 async function supaAuth(path, body){
   const r=await fetch(SUPA.url+'/auth/v1/'+path,{ method:'POST',
@@ -4626,13 +4668,34 @@ async function supaRefresh(){
   try{ const d=await supaAuth('token?grant_type=refresh_token',{refresh_token:SUPA.session.refresh_token});
     SUPA.session=d; supaSave(); return true; }catch(e){ return false; }
 }
+// A refresh token that Supabase has revoked (it happened on Sep 28: two tabs
+// refreshed with the same token inside the reuse window) leaves the phone
+// silently writing to local storage while every cloud call 401s. The entries
+// looked "in the cloud queue" for a week. Now the first uncurable 401 flips
+// SUPA.expired and the app says so, in the header, on each waiting entry and
+// on the account card, until a sign-in succeeds.
+function sessionDead(){
+  if(!SUPA || SUPA.expired) return;
+  SUPA.expired=Date.now(); supaSave();
+  const b=$('syncBanner'); if(b) b.hidden=false;
+  try{ renderAcct(); renderJournal(); }catch(e){}
+}
+function sessionAlive(){
+  if(!SUPA || !SUPA.expired) { const b=$('syncBanner'); if(b) b.hidden=true; return; }
+  delete SUPA.expired; supaSave();
+  const b=$('syncBanner'); if(b) b.hidden=true;
+  try{ renderAcct(); renderJournal(); }catch(e){}
+}
 async function supaRest(path, opts){
   opts=opts||{};
   const mk=()=>{ const h={ 'apikey':SUPA.key, 'Authorization':'Bearer '+(SUPA.session?SUPA.session.access_token:SUPA.key), 'Content-Type':'application/json' };
     if(opts.prefer) h['Prefer']=opts.prefer; return h; };
   let r=await fetch(SUPA.url+'/rest/v1/'+path,{ method:opts.method||'GET', headers:mk(), body:opts.body!=null?JSON.stringify(opts.body):undefined });
-  if(r.status===401 && SUPA.session && await supaRefresh())
-    r=await fetch(SUPA.url+'/rest/v1/'+path,{ method:opts.method||'GET', headers:mk(), body:opts.body!=null?JSON.stringify(opts.body):undefined });
+  if(r.status===401 && SUPA.session){
+    if(await supaRefresh()){ sessionAlive();
+      r=await fetch(SUPA.url+'/rest/v1/'+path,{ method:opts.method||'GET', headers:mk(), body:opts.body!=null?JSON.stringify(opts.body):undefined });
+    } else sessionDead();
+  } else if(r.ok && SUPA.expired) sessionAlive();
   return r;
 }
 function buildPayload(){ const p=Object.assign({}, DB); return p; }
@@ -4760,17 +4823,18 @@ async function acctSubmit(mode){
     } else {
       SUPA.session=await supaAuth('token?grant_type=password',{ email, password:pw });
     }
-    supaSave(); renderAcct(); toast('Signed in — syncing…');
+    delete SUPA.expired; supaSave(); sessionAlive(); renderAcct(); toast('Signed in — syncing…');
     await syncPull(true);
     toast('Synced');
   }catch(e){ toast(String(e.message||e).slice(0,80)); }
 }
-function acctLogout(){ if(SUPA){ SUPA.session=null; supaSave(); } renderAcct(); toast('Logged out — data stays on this device'); }
+function acctLogout(){ if(SUPA){ SUPA.session=null; delete SUPA.expired; supaSave(); } const b=$('syncBanner'); if(b) b.hidden=true; renderAcct(); toast('Logged out — data stays on this device'); }
 function renderAcct(){
   const el=$('acctBody'); if(!el) return;
   if(SUPA && SUPA.session){
     const em=(SUPA.session.user&&SUPA.session.user.email)||'you';
-    el.innerHTML='<div class="kv"><span class="k">Signed in</span><span class="v">'+esc(em)+'</span></div>'+
+    el.innerHTML=(SUPA.expired?'<div class="notice" style="margin:0 0 10px;color:var(--warning)">The cloud signed this phone out on '+esc(new Date(SUPA.expired).toLocaleDateString())+'. Log out and log back in — nothing on the phone is lost, and the waiting entries sync straight after.</div>':'')+
+      '<div class="kv"><span class="k">Signed in</span><span class="v">'+esc(em)+'</span></div>'+
       '<div class="kv"><span class="k">Last synced</span><span class="v">'+(SUPA.lastSync?esc(new Date(SUPA.lastSync).toLocaleString()):'—')+(SUPA.dirty?' · pending':'')+'</span></div>'+
       (function(){ const ps=photoStats(); return '<div class="kv"><span class="k">Photos</span><span class="v">'+(_photoSyncing?'syncing…':(ps.synced+' of '+ps.total+' synced'))+'</span></div>'; })()+
       '<button class="btn secondary" style="margin-top:10px" onclick="syncPull(true)">Sync now</button>'+
@@ -4809,15 +4873,18 @@ async function renderOura(){
   const s=await photosRpc('oura_status');
   if(!s || !s.connected){
     el.innerHTML='<div class="ck-label">Oura ring</div>'+
-      '<div class="notice" style="margin-top:0">Connect the ring and sleep, HRV, resting heart rate, breathing, skin temperature, readiness, steps and blood oxygen arrive every morning without Apple Health in the middle.</div>'+
+      '<div class="notice" style="margin-top:0">Connect the ring and sleep (hours, stages, bedtime), HRV, resting heart rate, breathing, skin temperature, readiness, stress, steps, workouts and blood oxygen arrive every morning without Apple Health in the middle.</div>'+
       '<button class="btn secondary" style="margin-top:10px" onclick="ouraConnect()">Connect Oura</button>';
     return;
   }
+  const needsScopes=!/\bworkout\b/.test(String(s.scope||''));
   el.innerHTML='<div class="ck-label">Oura ring</div>'+
     '<div class="kv"><span class="k">Oura</span><span class="v">'+esc(s.email||'connected')+'</span></div>'+
     '<div class="kv"><span class="k">Data through</span><span class="v">'+(s.synced_through?esc(fmtDate(s.synced_through)):'—')+'</span></div>'+
     '<div class="kv"><span class="k">Last pull</span><span class="v">'+(s.last_sync?esc(new Date(s.last_sync).toLocaleString()):'not yet')+'</span></div>'+
-    (s.last_error?'<div class="notice" style="color:var(--serious)">'+esc(s.last_error)+'</div>':'')+
+    (s.last_error && !needsScopes?'<div class="notice" style="color:var(--serious)">'+esc(s.last_error)+'</div>':'')+
+    (needsScopes?'<div class="notice" style="margin-top:8px">This connection predates workouts. Reconnect once and the ring\u2019s gym sessions count toward the November goal, meditation sessions show up, and the last 90 days backfill on their own.</div>'+
+      '<button class="btn" style="margin-top:10px" onclick="ouraConnect()">Reconnect for workouts</button>':'')+
     '<button class="btn secondary" style="margin-top:10px" onclick="ouraDisconnect()">Disconnect Oura</button>';
 }
 async function ouraConnect(){

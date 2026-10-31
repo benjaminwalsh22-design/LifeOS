@@ -8,7 +8,9 @@ const APP_URL = "https://benjaminwalsh22-design.github.io/LifeOS/";
 const AUTHORIZE = "https://cloud.ouraring.com/oauth/authorize";
 const TOKEN = "https://api.ouraring.com/oauth/token";
 // daily: sleep, activity, readiness summaries · heartrate: lowest/avg HR series · spo2 · email for the status card
-const SCOPES = "email daily heartrate spo2";
+// workout + session arrived Oct 31 2026 (gym sessions count themselves, meditation
+// shows up); a connection made before then lacks them until the ring is reconnected
+const SCOPES = "email daily heartrate spo2 workout session";
 
 function redirectUri() {
   return Deno.env.get("SUPABASE_URL")! + "/functions/v1/oura-oauth/callback";
@@ -78,6 +80,7 @@ Deno.serve(async (req) => {
     await admin.from("oura_auth").upsert({
       user_id: st.user_id, access_token: tok.access_token, refresh_token: tok.refresh_token,
       expires_at: Date.now() + (tok.expires_in || 86400) * 1000, email,
+      scope: String(tok.scope || SCOPES),
       connected_at: new Date().toISOString(), last_error: null, synced_through: null,
     }, { onConflict: "user_id" });
     return page("The ring now feeds LifeOS directly. The first pull runs within the hour.", true);
