@@ -118,59 +118,69 @@ swap_range('    <section class="view" id="view-settings">', '    <!-- ==========
      '      <header class="lt"><h1 class="lt-title">Settings</h1></header>\n'
      '      <div id="settingsList"></div>\n'
      '    </section>\n'
-     '    <!-- each Settings row opens one of these; the controls and their ids are the old ones -->\n'
+     '    <!-- each Settings row opens one of these; every control keeps the id the app already listens to -->\n'
      '    <section class="view" id="view-set-profile">\n'
-     '      <div class="card">\n'
-     '        <div class="field"><label>Your name</label><input id="setName" placeholder="Benjamin"></div>\n'
-     '        <div class="field"><label>Theme</label>\n'
+     '      <div class="sec-body pane">\n'
+     '        <div class="field"><label for="setName">Your name</label><input id="setName" placeholder="Benjamin" autocomplete="given-name"></div>\n'
+     '        <div class="field"><label for="setTheme">Appearance</label>\n'
      '          <select id="setTheme"><option value="light">Light</option><option value="dark">Dark</option></select>\n'
      '        </div>\n'
      '      </div>\n'
      '    </section>\n'
      '    <section class="view" id="view-set-ai">\n'
-     '      <div class="card">\n'
-     '        <div class="field"><label>Anthropic API key (for journal AI analysis)</label>\n'
-     '          <input id="setApiKey" type="password" placeholder="sk-ant-...">\n'
+     '      <div class="sec-body pane">\n'
+     '        <div class="field"><label for="setApiKey">Anthropic API key</label>\n'
+     '          <input id="setApiKey" type="password" placeholder="sk-ant-..." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">\n'
      '        </div>\n'
-     '        <div class="notice">With a key, journal photos are transcribed, summarized and analyzed by Claude, directly from your phone to the Anthropic API — no other server involved. Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Leave blank to just store photos.</div>\n'
      '      </div>\n'
+     '      <div class="data-fresh pane-note">With a key, this phone asks Claude directly for the morning line, On this day, reviews, the people agent and Ask your journal. Pages you scan while signed in are read in your account instead, even with the app closed. Get a key at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>. Leave it blank to just keep the photos.</div>\n'
      '    </section>\n'
      '    <section class="view" id="view-set-data">\n'
-     '      <div class="card">\n'
-     '        <button class="btn secondary" id="exportBtn">Export data backup (JSON)</button>\n'
-     '        <button class="btn secondary" id="importBtn" style="margin-top:10px">Import backup</button>\n'
+     '      <div class="sec-body pane">\n'
+     '        <button class="btn secondary" id="exportBtn">Save a backup file</button>\n'
+     '        <button class="btn secondary" id="importBtn">Restore from a backup file</button>\n'
      '        <input type="file" id="importInput" accept="application/json" hidden>\n'
-     '        <div class="notice">Everything lives on this device. Export occasionally to keep a backup — it includes journal photos.</div>\n'
-     '        <button class="btn danger" id="wipeBtn">Erase all data</button>\n'
      '      </div>\n'
+     '      <div class="data-fresh pane-note">Your data is kept on this phone and, when you are signed in, in your account. A backup file is a second copy you hold yourself. For a large archive the file leaves the photos out; Journal has its own export for those.</div>\n'
+     '      <div class="sec-body pane" style="margin-top:var(--s8)"><button class="btn danger" id="wipeBtn">Erase everything on this phone</button></div>\n'
+     '      <div class="data-fresh pane-note">Removes LifeOS data from this phone only. Anything synced to your account comes back when you sign in again.</div>\n'
      '    </section>\n'
      '    <section class="view" id="view-set-health">\n'
-     '      <div class="card">\n'
-     '        <div style="font-size:15px;font-weight:650;margin-bottom:6px">Apple Health</div>\n'
-     '        <div class="notice" style="margin-top:0">Apple doesn’t let a web app read Health directly. Two ways in: a <b>Shortcut</b> that opens LifeOS with your numbers, or <b>live sync</b> — point the app at a private URL your Shortcut posts to, and it pulls the latest on its own.</div>\n'
-     '        <div class="field" style="margin-top:12px"><label>Live sync URL (optional)</label><input id="setSyncUrl" type="url" placeholder="https://…/health?key=…"></div>\n'
+     '      <div class="sec-body pane">\n'
+     '        <div class="field"><label for="setSyncUrl">Live sync address (optional)</label><input id="setSyncUrl" type="url" placeholder="https://…/health?key=…" autocapitalize="none" autocorrect="off" spellcheck="false"></div>\n'
      '        <button class="btn secondary" id="syncNowBtn">Sync now</button>\n'
      '        <div class="notice" id="syncStatus"></div>\n'
-     '        <button class="btn secondary" style="margin-top:6px" onclick="testHealthSync()">Test with sample data</button>\n'
-     '        <div class="notice">Ask Claude for the Shortcut recipe (opens-the-app) or the live-sync relay setup.</div>\n'
+     '        <button class="btn secondary" onclick="testHealthSync()">Try it with sample numbers</button>\n'
      '      </div>\n'
+     '      <div class="data-fresh pane-note">Apple doesn’t let a web app read Health directly. There are two ways in: a Shortcut that opens LifeOS with your numbers, or live sync, where the app pulls the latest from a private address your Shortcut posts to. Ask Claude for either recipe.</div>\n'
      '    </section>\n'
-     '    <section class="view" id="view-set-lock"><div class="card" id="lockCard"></div></section>\n'
-     '    <section class="view" id="view-set-notif"><div class="card" id="notifCard"></div></section>\n'
-     '    <section class="view" id="view-set-account">\n'
-     '      <div class="card">\n'
-     '        <div style="font-size:15px;font-weight:650;margin-bottom:6px">Account &amp; Sync</div>\n'
-     '        <div id="acctBody"></div>\n'
-     '      </div>\n'
-     '    </section>\n'
+     '    <section class="view" id="view-set-lock"><div class="sec-body pane" id="lockCard"></div></section>\n'
+     '    <section class="view" id="view-set-notif"><div class="sec-body pane" id="notifCard"></div></section>\n'
+     '    <section class="view" id="view-set-account"><div class="sec-body pane" id="acctBody"></div></section>\n'
      '    <section class="view" id="view-set-about">\n'
-     '      <div class="card" style="text-align:center">\n'
-     '        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">' + VERSION + '</b></div>\n'
-     '        <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>\n'
-     '        <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>\n'
-     '        <button class="btn secondary" style="margin-top:10px" onclick="showView(\'styleguide\')">Style guide</button>\n'
+     '      <div class="sec-body pane about">\n'
+     '        <div class="about-name">LifeOS</div>\n'
+     '        <div class="about-ver" id="appVer">' + VERSION + '</div>\n'
+     '        <button class="btn secondary" onclick="checkUpdate()">Check for updates</button>\n'
+     '        <button class="btn secondary" onclick="showView(\'styleguide\')">Style guide</button>\n'
      '      </div>\n'
+     '      <div class="data-fresh pane-note">Checking for updates fetches the newest version from your site and reloads. Your data is not touched.</div>\n'
      '    </section>\n\n')
+LOCK_IC = '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path stroke-linecap="round" d="M9 10v1.5M15 10v1.5M12 10v3.2h-1M9 15.5c.8.7 1.8 1 3 1s2.2-.3 3-1"/></svg>'
+swap_range('  <div class="lockscreen" id="lockscreen" style="display:none">', '  <!-- modals -->',
+     '  <div class="lockscreen" id="lockscreen" style="display:none">\n'
+     '    <div class="lock-inner">\n'
+     '      <div class="cover"><div class="cover-rule"></div><div class="cover-title">LifeOS</div><div class="cover-name" id="lockName"></div></div>\n'
+     '      <div class="lock-form">\n'
+     '        <button class="btn" id="lockFace" style="display:none" onclick="faceUnlock()">' + LOCK_IC + '<span>Unlock with Face ID</span></button>\n'
+     '        <div class="lock-or" id="lockOr" style="display:none">or enter your PIN</div>\n'
+     '        <input id="lockPin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" maxlength="8" aria-label="PIN">\n'
+     '        <button class="btn" id="lockPinBtn" onclick="tryUnlock()">Unlock</button>\n'
+     '        <div class="lock-forgot" onclick="lockForgot()">Forgot PIN?</div>\n'
+     '      </div>\n'
+     '    </div>\n'
+     '  </div>\n\n')
+
 # ---------------------------------------------------------------- behaviour of the chrome
 swap_range('function openSheet(html){', '// ---------- navigation ----------', piece('sheet.js') + '\n')
 swap_range('// ---------- navigation ----------', '// ---------- friends logic ----------', piece('nav.js'))
@@ -193,7 +203,7 @@ swap_range('function renderMacros(){', 'function twyWeekOf(dstr){', piece('macro
 swap('      <div class="section-head" style="margin-top:22px"><h2>Life goals</h2><button class="action" id="goalAdd">+ Add</button></div>\n      <div id="goalList"></div>\n',
      '      <section class="sec"><div class="sec-h"><h2>Life goals</h2><button class="link" id="goalAdd">Add</button></div><div id="goalList"></div></section>\n')
 swap_range('function renderSprint(el){', 'function renderGoals(){ renderTWY();', '')
-swap_range('function renderGoals(){ renderTWY();', 'function openGoal(id){', piece('goals.js'))
+swap_range('function renderGoals(){ renderTWY();', 'function toggleMilestone(gid, mid){', piece('goals.js'))
 swap_range('// ---- plan ----', 'function studyGrade(ok){', '')
 swap_range('function studyTestHTML(){', 'function studyPick(i){', '')
 swap_range('function studyTestResultHTML(){', '// ---- visual drills ----', '')
@@ -263,6 +273,10 @@ swap_range('function eventHTML(e){', 'function toggleEvent(id){', '')
 swap_range('function renderPlaces(){', 'function namePlace(key){', piece('misc.js'))
 swap("""    if($('reviewBody')) $('reviewBody').innerHTML='<div class="pagehead2"><div class="a-lead">Writing your review…</div></div><div class="brief" style="margin-top:8px"><p><span class="spinner"></span>Reading your '+NOUN[kind]+'…</p></div>';""",
      """    if($('reviewBody')) $('reviewBody').innerHTML='<div class="ai" aria-busy="true">'+aiLabel('Writing your review')+'<p class="ai-body">'+skelLines('w100','w100','w80','w60')+'</p><div class="data-fresh">Reading your '+NOUN[kind]+'.</div></div>';""")
+
+# ---------------------------------------------------------------- Settings pages that draw themselves
+swap_range('async function renderNotifCard(){', 'regSW().then(', '')
+swap_range('function renderLockCard(){', "document.addEventListener('visibilitychange', () => {", piece('settings2.js'))
 
 swap('// ---------- push notifications ----------', piece('guide.js') + piece('settings.js') + '// ---------- push notifications ----------')
 

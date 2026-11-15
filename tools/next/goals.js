@@ -110,3 +110,22 @@ function renderGoals(){ renderTWY();
       '<div class="row-sub goal-next">'+esc('Next: '+String(goalNext(g)).replace(/^Next:\s*/,''))+'</div></div>';
   }).join('')+'</div>';
 }
+function openGoal(id){
+  const g=(DB.goals||[]).find(x=>x.id===id); if(!g) return; const p=goalPct(g), m=goalMomentum(g);
+  let body='<h3>'+esc(g.name)+'</h3>';
+  if(g.why) body+='<div class="own goal-why"><div class="own-date">Your why</div><div class="own-text">'+esc(g.why)+'</div></div>';
+  body+='<div class="goal-top goal-state"><span class="data-line">'+esc(goalProgressText(g))+'</span><span class="status '+(m.cls==='low'?'watch':m.cls==='up'?'good':'')+'">'+m.label+'</span></div>';
+  body+='<div class="bar goal-bar"><i class="'+(m.cls==='low'?'watch':'')+'" style="width:'+Math.round(p*100)+'%"></i></div>';
+  body+='<div class="row-sub goal-next">'+esc('Next: '+String(goalNext(g)).replace(/^Next:\s*/,''))+'</div>';
+  if(g.kind==='milestones'){ body+='<div class="ck-label">Milestones</div>'+(g.milestones||[]).map(x=>'<div class="mile'+(x.done?' done':'')+'" onclick="toggleMilestone(\''+g.id+'\',\''+x.id+'\')"><span class="mk">'+CHECK+'</span><span class="mt">'+esc(x.text)+'</span></div>').join(''); }
+  else { body+='<button class="btn goal-log" onclick="logProgress(\''+g.id+'\')">Log progress</button>'; }
+  if(DB.settings.apiKey) body+='<button class="btn secondary" onclick="goalCoach(\''+g.id+'\')">Ask for a nudge</button><div id="coachOut"></div>';
+  body+='<button class="btn secondary" onclick="editGoal(\''+g.id+'\')">Edit goal</button>';
+  body+='<button class="btn danger" onclick="confirmDeleteGoal(\''+g.id+'\')">Delete goal</button>';
+  openSheet(body);
+}
+function confirmDeleteGoal(id){
+  const g=(DB.goals||[]).find(x=>x.id===id); if(!g) return;
+  openSheet('<h3>Delete this goal?</h3><p class="sheet-text">“'+esc(g.name)+'” and its progress history are removed from this phone and from your account.</p>'+
+    '<button class="btn destructive" onclick="deleteGoal(\''+id+'\')">Delete goal</button><button class="btn secondary" onclick="openGoal(\''+id+'\')">Keep it</button>');
+}

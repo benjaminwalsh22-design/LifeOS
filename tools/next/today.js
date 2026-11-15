@@ -152,4 +152,5 @@ function renderToday(){
     '<div class="sec-body">'+pw.map(pwRowHTML).join('')+'</div></section>' : '';
 
   $('todayMore').innerHTML = '';
+  const ln = $('lockName'); if(ln) ln.textContent = DB.profile.name || '';      // the name on the notebook's cover
 }
