@@ -3,7 +3,7 @@
 // is pushed onto the tab you are in, and Back (the button, or a swipe from the
 // left edge) returns to where you came from, at the scroll position you left.
 const VIEWS = { today:'Today', friends:'People', person:'', journal:'Journal', ask:'Ask Ben', memories:'52 Memories',
-  entry:'', insights:'Insights', mind:'Mind', body:'Body', money:'Money', firm:'The Firm', places:'Places', review:'Reviews', health:'Health',
+  entry:'', insights:'Insights', mind:'Mind', body:'Body', money:'Money', firm:'The Firm', places:'Places', review:'Reviews',
   schedule:'Schedule', goals:'Goals', study:'Quest for Knowledge', settings:'Settings', styleguide:'Style guide',
   'set-profile':'Profile', 'set-account':'Account and sync', 'set-notif':'Notifications', 'set-lock':'App lock',
   'set-ai':'Journal AI', 'set-health':'Apple Health', 'set-data':'Backup', 'set-about':'About' };
@@ -11,7 +11,7 @@ const VIEWS = { today:'Today', friends:'People', person:'', journal:'Journal', a
 const TAB_OF = { today:'today', schedule:'today', settings:'today', styleguide:'today',
   'set-profile':'today', 'set-account':'today', 'set-notif':'today', 'set-lock':'today', 'set-ai':'today', 'set-health':'today', 'set-data':'today', 'set-about':'today',
   goals:'goals', study:'goals', friends:'friends', person:'friends', journal:'journal', ask:'journal', memories:'journal', entry:'journal',
-  insights:'insights', mind:'insights', body:'insights', money:'insights', firm:'insights', places:'insights', health:'insights', review:'insights' };
+  insights:'insights', mind:'insights', body:'insights', money:'insights', firm:'insights', places:'insights', review:'insights' };
 const ROOTS = ['today','friends','journal','goals','insights'];
 let currentView = 'today';
 let currentPersonId = null;

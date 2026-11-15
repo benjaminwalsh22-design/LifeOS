@@ -51,14 +51,15 @@ for (let i = 0; i < 30; i++) { const d = new Date(Date.UTC(2026, 10, 15 - i)).to
   const gone = [...ids(OLD)].filter(id => !ids(html).has(id));
   // containers whose content now lives elsewhere. insightsExtra: its blocks render behind the doors; greetSub: a line under the
   // greeting that was always empty; jOnThisDay: Journal has a one-line door to On this day instead of repeating Today's block
-  const moved = ['insightsExtra', 'greetSub', 'jOnThisDay'];
+  // healthBody, assistantFeed: the two screens nothing linked to, retired with Benjamin's say-so (their content lives in Noticed, This week's people and Body)
+  const moved = ['insightsExtra', 'greetSub', 'jOnThisDay', 'healthBody', 'assistantFeed', 'view-health', 'view-assistant'];
   const really = gone.filter(id => moved.indexOf(id) < 0);
   ok(!really.length, 'every element id of the old build still exists (' + (really.join(', ') || 'none missing') + '; re-homed: ' + gone.filter(id => moved.indexOf(id) >= 0).join(', ') + ')');
   const targets = new Set([...html.matchAll(/showView\(\\?'([a-z-]+)\\?'/g)].map(m => m[1]));
   const dead = [...targets].filter(v => !$('view-' + v));
   ok(!dead.length, 'every showView target is a real screen (' + [...targets].length + ' targets' + (dead.length ? '; missing: ' + dead.join(', ') : '') + ')');
   ok(Object.keys(g('VIEWS')).every(v => $('view-' + v)) || true, 'titles table checked');
-  const untitled = [...w.document.querySelectorAll('.view')].map(e => e.id.replace('view-', '')).filter(v => g('VIEWS')[v] == null && v !== 'assistant');
+  const untitled = [...w.document.querySelectorAll('.view')].map(e => e.id.replace('view-', '')).filter(v => g('VIEWS')[v] == null);
   ok(!untitled.length, 'every screen has a title entry (' + (untitled.join(', ') || 'all') + ')');
 
   // ---- first paint

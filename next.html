@@ -1434,6 +1434,57 @@ a.row { text-decoration: none; color: inherit; }
 .life-to { display: inline-flex; color: var(--ink-muted); }
 .life-to svg { width: var(--s3); height: var(--s3); }
 
+/* ==========================================================================
+   Ask Ben: your question, then an essay
+   ========================================================================== */
+.ask-quote { margin: 0 0 var(--s4); padding: var(--s1) 0 var(--s1) var(--s4); border: 0; border-left: 2px solid var(--own-rule); border-radius: 0; background: none; }
+.ask-quote q { font-family: var(--serif); font-style: normal; font-size: var(--t-body); line-height: var(--lh-read); color: var(--ink); }
+.ask-quote .aq-meta { margin-top: var(--s2); font-family: var(--sans); font-size: var(--t-foot); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.ask-quote .aq-meta a, .ask-quote .aq-meta span[role=button] { color: var(--accent); font-weight: var(--w-semi); }
+.ask-box { padding: var(--s3) var(--s4) var(--s4); border: 0; border-radius: var(--r-lg); background: var(--surface); }
+.ask-box textarea { min-height: 5.5em; padding: var(--s1) 0; font-family: var(--serif); font-size: max(16px, var(--t-body)); line-height: var(--lh-body); }
+.ask-box textarea::placeholder { color: var(--ink-muted); font-family: var(--sans); }
+.ask-ctl { display: grid; grid-template-columns: 1fr; gap: var(--s2); margin-top: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--hairline); }
+.ask-ctl .segc { width: 100%; }
+.ask-go { display: flex; gap: var(--s2); margin: var(--s1) 0 0; }
+.ask-go .btn { flex: 1; width: auto; min-height: var(--ctl-lg); margin: 0; padding: 0 var(--s5); }
+.ask-start { margin: var(--s4) 0 var(--s1); }
+.ask-chips { margin-top: var(--s2); }
+.ask-chips button { flex: 0 0 auto; min-height: var(--ctl); padding: 0 var(--s3); border: 1px solid var(--hairline-strong); border-radius: var(--r-full); background: transparent; font-size: var(--t-foot); font-weight: var(--w-med); color: var(--ink-2); }
+.ask-chips button:active { background: var(--accent-soft); }
+.ask-thread { margin-top: var(--s6); }
+.ask-thread:empty { display: none; }
+.turn { margin-bottom: var(--s8); }
+.turn-q { margin: 0; padding-left: var(--s4); border-left: 2px solid var(--own-rule); font-family: var(--serif); font-size: var(--t-h3); line-height: var(--lh-snug); font-weight: var(--w-reg); color: var(--ink); -webkit-user-select: text; user-select: text; }
+.turn-meta { margin: var(--s2) 0 var(--s3); padding-left: calc(var(--s4) + 2px); font-family: var(--sans); font-size: var(--t-foot); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.turn-log { margin: 0 0 var(--s2); font-family: var(--sans); font-size: var(--t-foot); line-height: var(--lh-body); color: var(--ink-muted); opacity: 1; }
+.turn-log div::before { content: ""; display: inline-block; width: var(--s1); height: var(--s1); margin-right: var(--s2); border-radius: var(--r-full); background: var(--ai-ink); vertical-align: middle; opacity: .6; }
+.turn-a { padding: var(--s4); border-radius: var(--r-lg); background: var(--ai-wash); font-family: var(--serif); font-size: var(--t-body); line-height: var(--lh-read); color: var(--ink); -webkit-user-select: text; user-select: text; }
+.turn-a:empty { display: none; }
+.turn-a h2, .turn-a h2.h-record, .turn-a h2.h-future, .turn-a h2.h-sources { margin: var(--s6) 0 var(--s2); padding: var(--s4) 0 0; border: 0; border-top: 1px solid var(--hairline); font-family: var(--sans); font-size: var(--t-cap); font-weight: var(--w-semi); letter-spacing: .07em; text-transform: uppercase; color: var(--ai-ink); }
+.turn-a h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.turn-a p { margin: 0 0 var(--s3); max-width: 34em; }
+.turn-a p:last-child { margin-bottom: 0; }
+.turn-a blockquote { margin: var(--s3) 0 var(--s4); padding: 0 0 0 var(--s4); border-left: 2px solid var(--own-rule); font-family: var(--serif); font-style: normal; font-size: var(--t-body); line-height: var(--lh-read); color: var(--ink); }
+.turn-a .d { font-family: var(--sans); font-size: var(--t-foot); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.turn-a ul { margin: 0 0 var(--s3); padding-left: var(--s5); }
+.turn-a li { margin-bottom: var(--s1); }
+.turn-a .src { font-family: var(--sans); }
+.turn-a .src li { gap: var(--s3); padding: var(--s1) 0; font-size: var(--t-foot); color: var(--ink-2); }
+.turn-a .src a, .turn-a a { color: var(--accent); font-weight: var(--w-semi); }
+.turn-a .unv { font-family: var(--sans); font-size: var(--t-foot); color: var(--serious); }
+.turn-a .cursor { width: var(--s2); height: 1em; border-radius: 2px; background: var(--ai-ink); }
+.ask-sess { align-items: center; min-height: var(--hit); padding: var(--s3) 0; border-bottom: 0; }
+.ask-sess + .ask-sess { border-top: 1px solid var(--group-rule); }
+.ask-sess b { font-size: var(--t-sub); font-weight: var(--w-reg); }
+.ask-sess span { font-family: var(--sans); font-size: var(--t-foot); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+#askSessions .empty { padding: var(--s3) 0; }
+.ask-alt { margin-top: var(--s6); }
+/* results written by older sheets (ask your journal, entry tools) */
+.detail-block { margin-top: var(--s4); padding: var(--s4); border: 0; border-radius: var(--r-lg); background: var(--ai-wash); }
+.detail-block h4 { margin: 0 0 var(--s2); font-family: var(--sans); font-size: var(--t-cap); font-weight: var(--w-semi); letter-spacing: .07em; text-transform: uppercase; color: var(--ai-ink); }
+.detail-block p { font-family: var(--serif); font-size: var(--t-body); line-height: var(--lh-read); color: var(--ink); white-space: pre-wrap; }
+
 /* ---- style guide ---- */
 .sg-swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s3); }
 .sw { font-size: var(--t-cap); color: var(--ink-muted); line-height: var(--lh-snug); }
@@ -1542,36 +1593,27 @@ a.row { text-decoration: none; color: inherit; }
 
     <!-- ============ ASK BEN ============ -->
     <section class="view" id="view-ask">
-      <div class="backrow" onclick="showView('journal')">&lsaquo; Journal</div>
-      <div class="ask-wrap">
-        <div class="ask-mast">
-          <h1 class="ask-title">Ask Ben</h1>
-          <div class="ask-meta" id="askMeta">&nbsp;</div>
-        </div>
-        <div class="ask-quote" id="askQuote"></div>
-        <div class="ask-chips" id="askChips"></div>
-        <div class="ask-box">
-          <textarea id="askInput" rows="4" placeholder="What’s the situation? Be specific. Names, dates, what you’re tempted to do."></textarea>
-          <div class="ask-ctl">
-            <div class="seg" id="askVoice">
-              <button data-v="both" class="on">Both</button><button data-v="past">Past Ben</button><button data-v="future">Future Ben</button>
-            </div>
-            <div class="seg" id="askDepth">
-              <button data-d="deep" class="on">Deep</button><button data-d="quick">Quick</button>
-            </div>
-            <div class="ask-go">
-              <button class="btn" id="askGo" onclick="askBen()">Ask</button>
-              <button class="btn secondary" id="askStop" onclick="askStop()" style="display:none">Stop</button>
-            </div>
+      <header class="lt"><div class="lt-eyebrow" id="askMeta">&nbsp;</div><h1 class="lt-title">Ask Ben</h1></header>
+      <div class="ask-quote" id="askQuote"></div>
+      <div class="ask-box">
+        <textarea id="askInput" rows="4" placeholder="What’s the situation? Be specific. Names, dates, what you’re tempted to do."></textarea>
+        <div class="ask-ctl">
+          <div class="segc" id="askVoice"><button data-v="both" class="on">Both</button><button data-v="past">Past Ben</button><button data-v="future">Future Ben</button></div>
+          <div class="segc" id="askDepth"><button data-d="deep" class="on">Deep</button><button data-d="quick">Quick</button></div>
+          <div class="ask-go">
+            <button class="btn" id="askGo" onclick="askBen()">Ask</button>
+            <button class="btn secondary" id="askStop" onclick="askStop()" style="display:none">Stop</button>
           </div>
         </div>
-        <div class="ask-thread" id="askThread"></div>
-        <div class="ask-past">
-          <div class="section-head" style="margin-top:26px"><h2>Past conversations</h2>
-            <button class="action" onclick="askNewSession()">New</button></div>
-          <div id="askSessions"><div class="empty">Nothing yet.</div></div>
-        </div>
       </div>
+      <div class="group-h ask-start">Start from</div>
+      <div class="chips scroll ask-chips" id="askChips"></div>
+      <div class="ask-thread" id="askThread"></div>
+      <section class="sec ask-past">
+        <div class="sec-h"><h2>Past conversations</h2><button class="link" onclick="askNewSession()">New</button></div>
+        <div class="sec-body" id="askSessions"><div class="empty">Nothing yet.</div></div>
+      </section>
+      <div class="ask-alt" id="askAlt"></div>
     </section>
 
     <!-- ============ PLACES ============ -->
@@ -1643,17 +1685,6 @@ a.row { text-decoration: none; color: inherit; }
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
         <button class="btn secondary" style="margin-top:10px" onclick="showView('styleguide')">Style guide</button>
       </div>
-    </section>
-
-    <!-- ============ HEALTH (under Life) ============ -->
-    <section class="view" id="view-health">
-      <div class="backrow" onclick="backHome()">&lsaquo; Back</div>
-      <div id="healthBody"></div>
-    </section>
-
-    <!-- ============ ASSISTANT ============ -->
-    <section class="view" id="view-assistant">
-      <div id="assistantFeed"></div>
     </section>
 
     <!-- ============ STYLE GUIDE (redesign preview) ============ -->
@@ -1861,7 +1892,7 @@ $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) clo
 // is pushed onto the tab you are in, and Back (the button, or a swipe from the
 // left edge) returns to where you came from, at the scroll position you left.
 const VIEWS = { today:'Today', friends:'People', person:'', journal:'Journal', ask:'Ask Ben', memories:'52 Memories',
-  entry:'', insights:'Insights', mind:'Mind', body:'Body', money:'Money', firm:'The Firm', places:'Places', review:'Reviews', health:'Health',
+  entry:'', insights:'Insights', mind:'Mind', body:'Body', money:'Money', firm:'The Firm', places:'Places', review:'Reviews',
   schedule:'Schedule', goals:'Goals', study:'Quest for Knowledge', settings:'Settings', styleguide:'Style guide',
   'set-profile':'Profile', 'set-account':'Account and sync', 'set-notif':'Notifications', 'set-lock':'App lock',
   'set-ai':'Journal AI', 'set-health':'Apple Health', 'set-data':'Backup', 'set-about':'About' };
@@ -1869,7 +1900,7 @@ const VIEWS = { today:'Today', friends:'People', person:'', journal:'Journal', a
 const TAB_OF = { today:'today', schedule:'today', settings:'today', styleguide:'today',
   'set-profile':'today', 'set-account':'today', 'set-notif':'today', 'set-lock':'today', 'set-ai':'today', 'set-health':'today', 'set-data':'today', 'set-about':'today',
   goals:'goals', study:'goals', friends:'friends', person:'friends', journal:'journal', ask:'journal', memories:'journal', entry:'journal',
-  insights:'insights', mind:'insights', body:'insights', money:'insights', firm:'insights', places:'insights', health:'insights', review:'insights' };
+  insights:'insights', mind:'insights', body:'insights', money:'insights', firm:'insights', places:'insights', review:'insights' };
 const ROOTS = ['today','friends','journal','goals','insights'];
 let currentView = 'today';
 let currentPersonId = null;
@@ -4749,6 +4780,7 @@ function renderAsk(){
   }
   askQuote(false);
   askLoadSessions();
+  renderAskAlt();
 }
 function askPreset(t){ const el = $('askInput'); el.value = t; el.focus(); el.setSelectionRange(t.length, t.length); }
 function askNewSession(){ ASK.session = null; $('askThread').innerHTML = ''; $('askInput').value = ''; $('askInput').focus(); toast('New conversation'); }
@@ -4804,7 +4836,7 @@ function askTurnEl(q){
 async function askBen(){
   const q = ($('askInput').value || '').trim();
   if(!q) return;
-  if(!SUPA || !SUPA.session){ toast('Sign in first'); return; }
+  if(!SUPA || !SUPA.session){ openAsk(q); return; }     // signed out: the on-phone ask takes the question instead
   if(!DB.settings.apiKey){ toast('Add an API key in Settings'); return; }
   if(ASK.ctl) return;
   const el = askTurnEl(q), log = el.querySelector('.turn-log'), ans = el.querySelector('.turn-a');
@@ -4872,14 +4904,27 @@ async function askOpenSession(id){
   scroller().scrollTop = 0;
 }
 
-function openAsk(){
+// ---------- Ask your journal: the on-phone fallback, folded into Ask Ben ----------
+// Ask Ben reads the whole record from your account. This older, simpler ask runs
+// on the phone alone (your key, straight to the model) and also reads the 52
+// Memories, so it stays as the way to ask when signed out or about the memories.
+function openAsk(q){
   if(!DB.settings.apiKey){ toast('Add an API key in Settings to ask your journal'); return; }
   if(!DB.journal.length){ toast('No entries yet to ask about'); return; }
   openSheet('<h3>Ask your journal</h3>'+
-    '<div class="notice" style="margin-top:0">Ask in plain English — Claude reads your most relevant entries and answers, citing dates. Try &ldquo;When did I write about burnout?&rdquo;</div>'+
-    '<div class="field"><textarea id="askQ" placeholder="Ask anything about your journals…"></textarea></div>'+
+    '<p class="sheet-text">A quick ask that runs on this phone: Claude reads the entries and 52 Memories that best match your words and answers with dates. Try “When did I write about burnout?”</p>'+
+    '<div class="field"><textarea id="askQ" placeholder="Ask anything about your journals">'+esc(typeof q === 'string' ? q : '')+'</textarea></div>'+
     '<button class="btn" onclick="askJournal()">Ask</button><div id="askOut"></div>');
   setTimeout(()=>{ const el=$('askQ'); if(el) el.focus(); },60);
+}
+function renderAskAlt(){
+  const el = $('askAlt'); if(!el) return;
+  const signed = !!(SUPA && SUPA.session);
+  el.innerHTML = (signed ? '' : '<div class="banner static"><div class="row-main">Ask Ben reads your whole record from your account, and this phone is signed out. You can still ask your journal here.</div></div>')+
+    '<div class="sec-body">'+
+    '<div class="row nav" onclick="openAsk($(\'askInput\').value.trim())"><div class="row-main"><div class="row-title">Ask your journal on this phone</div><div class="row-sub">Quicker and shallower. Also reads your 52 Memories.</div></div><span class="row-chev">'+CHEV+'</span></div>'+
+    (signed ? '' : '<div class="row nav" onclick="showView(\'set-account\')"><div class="row-main"><div class="row-title">Sign in for Ask Ben</div></div><span class="row-chev">'+CHEV+'</span></div>')+
+    '</div>';
 }
 function scoreEntry(j, toks){ const t=entryText(j); let s=0; toks.forEach(k=>{ let idx=t.indexOf(k); while(idx>=0){ s++; idx=t.indexOf(k, idx+k.length); } }); return s; }
 function journalStatsBlock(){
@@ -4993,28 +5038,6 @@ function renderLife(){
     '<div style="height:12px"></div>'+
     areaRow('settings','',IC_GEAR,'Settings','Name, theme, API key, backups');
 }
-function renderHealthView(){
-  const el=$('healthBody'); if(!el) return; const st=DB.stats[today()]||{}; const hi=healthInsights();
-  el.innerHTML='<div class="pagehead2"><div class="a-lead">Health</div><div class="a-sub">Your numbers, read for you.</div></div>'+
-    '<div class="tiles">'+tilesHTML(st)+'</div>'+
-    '<div class="section-head" style="margin-top:20px"><h2>Signals</h2></div>'+
-    (hi.length? hi.map(insightCardHTML).join('') : '<div class="empty">Sync a few days from Apple Health and trends show up here.</div>');
-}
-function pwCardHTML(x){ const f=x.f, K=!!DB.settings.apiKey;
-  return '<div class="pw-card"><div class="avatar" style="background:'+avColor(f.name)+'">'+esc(f.name[0].toUpperCase())+'</div>'+
-    '<div class="pw-body"><div class="pw-name">'+esc(f.name)+'</div><div class="pw-reason">'+esc(x.reason)+'</div></div>'+
-    '<div class="pw-acts">'+(K?'<button class="pw-draft" onclick="draftMessage(\''+f.id+'\')">Draft</button>':'')+'<button class="pw-open" onclick="openPerson(\''+f.id+'\')">Open</button></div></div>';
-}
-function renderAssistant(){
-  const el=$('assistantFeed'); if(!el) return; const full=computeInsights(50); const pw=peopleThisWeek();
-  let html='<div class="pagehead2"><div class="a-lead">Seen, not searched.</div><div class="a-sub">What LifeOS notices across your life, ranked by what matters.</div></div>';
-  if(pw.length){ html+='<div class="ck-label" style="margin-top:2px">This week\u2019s people</div>'+pw.map(pwCardHTML).join('')+'<div style="height:8px"></div>'; }
-  html+= (full.length? full.map(insightCardHTML).join('')
-      : '<div class="insight-card"><span class="idot"></span><div class="ibody"><div class="itext">All calm.</div><div class="iwhy">Check in and sync Health, and the assistant starts surfacing patterns.</div></div></div>')+
-    '<div class="jbtns" style="margin-top:16px"><button id="asstAsk" onclick="openAsk()">Ask your journal</button><button onclick="openCheckin()">Daily check-in</button></div>';
-  el.innerHTML=html;
-}
-
 // ---------- Goals ----------
 const IC_GOAL='<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 21V4.5M6 4.5h11l-2.2 3.2L17 11H6"/></svg>';
 const CHECK='<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>';

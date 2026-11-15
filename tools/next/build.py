@@ -206,6 +206,38 @@ swap("""    svg:'<div id="studyPhoto" style="width:100%;max-width:300px;aspect-r
 swap("""    box.innerHTML = '<img src="' + esc(url) + '" alt="" style="width:100%;height:100%;object-fit:cover">';""", """    box.innerHTML = '<img src="' + esc(url) + '" alt="">';""")
 swap("""box.textContent = 'No photo available offline — tap Next'; }""", """box.textContent = 'No photo available offline. Tap Next.'; }""")
 
+# ---------------------------------------------------------------- Ask Ben, with the older ask folded in; the two unreachable screens retired
+swap_range('    <section class="view" id="view-ask">', '    <!-- ============ PLACES ============ -->',
+     '    <section class="view" id="view-ask">\n'
+     '      <header class="lt"><div class="lt-eyebrow" id="askMeta">&nbsp;</div><h1 class="lt-title">Ask Ben</h1></header>\n'
+     '      <div class="ask-quote" id="askQuote"></div>\n'
+     '      <div class="ask-box">\n'
+     '        <textarea id="askInput" rows="4" placeholder="What’s the situation? Be specific. Names, dates, what you’re tempted to do."></textarea>\n'
+     '        <div class="ask-ctl">\n'
+     '          <div class="segc" id="askVoice"><button data-v="both" class="on">Both</button><button data-v="past">Past Ben</button><button data-v="future">Future Ben</button></div>\n'
+     '          <div class="segc" id="askDepth"><button data-d="deep" class="on">Deep</button><button data-d="quick">Quick</button></div>\n'
+     '          <div class="ask-go">\n'
+     '            <button class="btn" id="askGo" onclick="askBen()">Ask</button>\n'
+     '            <button class="btn secondary" id="askStop" onclick="askStop()" style="display:none">Stop</button>\n'
+     '          </div>\n'
+     '        </div>\n'
+     '      </div>\n'
+     '      <div class="group-h ask-start">Start from</div>\n'
+     '      <div class="chips scroll ask-chips" id="askChips"></div>\n'
+     '      <div class="ask-thread" id="askThread"></div>\n'
+     '      <section class="sec ask-past">\n'
+     '        <div class="sec-h"><h2>Past conversations</h2><button class="link" onclick="askNewSession()">New</button></div>\n'
+     '        <div class="sec-body" id="askSessions"><div class="empty">Nothing yet.</div></div>\n'
+     '      </section>\n'
+     '      <div class="ask-alt" id="askAlt"></div>\n'
+     '    </section>\n\n')
+swap_range('function openAsk(){', 'function scoreEntry(j, toks){', piece('ask.js'))
+swap("  askQuote(false);\n  askLoadSessions();\n}", "  askQuote(false);\n  askLoadSessions();\n  renderAskAlt();\n}")
+swap("  if(!SUPA || !SUPA.session){ toast('Sign in first'); return; }\n  if(!DB.settings.apiKey){ toast('Add an API key in Settings'); return; }\n  if(ASK.ctl) return;",
+     "  if(!SUPA || !SUPA.session){ openAsk(q); return; }     // signed out: the on-phone ask takes the question instead\n  if(!DB.settings.apiKey){ toast('Add an API key in Settings'); return; }\n  if(ASK.ctl) return;")
+swap_range('    <!-- ============ HEALTH (under Life) ============ -->', '    <!-- ============ STYLE GUIDE (redesign preview) ============ -->', '')
+swap_range('function renderHealthView(){', '// ---------- Goals ----------', '')
+
 swap('// ---------- push notifications ----------', piece('guide.js') + piece('settings.js') + '// ---------- push notifications ----------')
 
 # ---------------------------------------------------------------- Insights hub
