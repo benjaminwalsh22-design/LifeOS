@@ -94,6 +94,10 @@ async function shot(browser, { name, theme, view, w = 393, h = 852, prep, steps,
   jobs.push({ name: 'p3-mem-sheet', theme: 'light', view: 'journal', steps: "MEMV.yr=" + MEMPICK + ".yr; showView('memories'); openMemory(" + MEMPICK + ".m.id)", wait: 700 });
   for (const th of ['light', 'dark']) jobs.push({ name: `p3-read-${th}`, theme: th, steps: "{const P=" + MEMPICK + "; memReadStart(P.yr, P.i);}", wait: 700 });
   jobs.push({ name: 'p3-read-end', theme: 'light', steps: "{const P=" + MEMPICK + "; memReadStart(P.yr, P.n-1);}", wait: 700 });
+  jobs.push({ name: 'p3-review', theme: 'light', view: ['insights', 'review'], h: 1700 });
+  jobs.push({ name: 'p3-places', theme: 'light', view: ['insights', 'places'], h: 1500 });
+  jobs.push({ name: 'p3-schedule', theme: 'light', view: 'schedule', steps: "DB.events.push({id:'x1',title:'Closing call',date:today(),time:'09:30',notes:'Bring the redline',done:false},{id:'x2',title:'Gym',date:today(),time:'17:00',notes:'',done:true}); DB.calEvents=[{title:'Dentist',date:today(),time:'14:00'}]; renderAll()" });
+  jobs.push({ name: 'p3-schedule-dark', theme: 'dark', view: 'schedule' });
   const only = process.env.LIFEOS_ONLY;
   for (const j of jobs) { if (only && !j.name.includes(only)) continue; const m = await shot(browser, j); console.log(j.name, JSON.stringify(m)); }
   await browser.close();

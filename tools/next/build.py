@@ -250,6 +250,20 @@ swap_range('function memReadStart(yr,i){', '// next-year collector', '')
 swap_range('function memCandHTML(){', 'function addMemCandSheet(){', '')
 swap_range('function renderMemories(){', 'function editMemory(id){', piece('memories.js'))
 
+# ---------------------------------------------------------------- Reviews, Places, Schedule
+swap_range('    <section class="view" id="view-schedule">', '    <!-- ============ FRIENDS ============ -->',
+     '    <section class="view" id="view-schedule">\n'
+     '      <div class="week" id="weekstrip"></div>\n'
+     '      <div class="sec-h sched-h"><h2 class="sched-day" id="schedDayLabel"></h2><button class="link" id="schedAddEvent">Add</button></div>\n'
+     '      <div id="schedEvents"></div>\n'
+     '    </section>\n\n')
+swap_range('function arrowHTML(cur, prior, goodUp){', 'function openReview(id){', '')
+swap_range('function renderSchedule(){', 'function shiftWeek(n){', '')
+swap_range('function eventHTML(e){', 'function toggleEvent(id){', '')
+swap_range('function renderPlaces(){', 'function namePlace(key){', piece('misc.js'))
+swap("""    if($('reviewBody')) $('reviewBody').innerHTML='<div class="pagehead2"><div class="a-lead">Writing your review…</div></div><div class="brief" style="margin-top:8px"><p><span class="spinner"></span>Reading your '+NOUN[kind]+'…</p></div>';""",
+     """    if($('reviewBody')) $('reviewBody').innerHTML='<div class="ai" aria-busy="true">'+aiLabel('Writing your review')+'<p class="ai-body">'+skelLines('w100','w100','w80','w60')+'</p><div class="data-fresh">Reading your '+NOUN[kind]+'.</div></div>';""")
+
 swap('// ---------- push notifications ----------', piece('guide.js') + piece('settings.js') + '// ---------- push notifications ----------')
 
 # ---------------------------------------------------------------- Insights hub
