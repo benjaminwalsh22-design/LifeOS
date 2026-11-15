@@ -1189,6 +1189,73 @@ input[type=range].slider::-moz-range-thumb { width: var(--thumb); height: var(--
 .set-group:first-child { margin-top: 0; }
 .group-h { margin: 0 var(--s4) var(--s2); font-size: var(--t-foot); font-weight: var(--w-reg); letter-spacing: .02em; text-transform: uppercase; color: var(--ink-muted); }
 
+/* ==========================================================================
+   Journal and Entry
+   ========================================================================== */
+.view .banner { margin: 0 0 var(--s3); }
+.banner.static { cursor: default; }
+.banner .spinner { flex: 0 0 auto; margin-top: 2px; }
+.jscan svg { width: var(--ic); height: var(--ic); }
+.jsecond { margin-top: var(--s2); }
+.jsecond .btn { min-height: var(--hit); font-size: var(--t-sub); }
+.note-card { margin-top: var(--s3); padding: var(--s4); border-radius: var(--r-lg); background: var(--surface); }
+.note-card[onclick] { cursor: pointer; }
+.note-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); font-size: var(--t-sub); }
+.note-top b { font-weight: var(--w-semi); }
+.note-top .meta { font-size: var(--t-foot); color: var(--ink-muted); }
+.note-text { margin-top: var(--s1); font-size: var(--t-foot); line-height: var(--lh-snug); color: var(--ink-muted); }
+.note-bar, .note-acts { margin-top: var(--s3); }
+.note-card > .btn { margin-top: var(--s3); }
+.shelf { margin-top: var(--s4); }
+.jtools { display: flex; gap: var(--s2); margin-bottom: var(--s3); }
+.search { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s2); height: var(--hit); padding: 0 var(--s3); border-radius: var(--r-md); background: var(--surface-sunken); color: var(--ink-muted); }
+.search svg { flex: 0 0 auto; width: var(--ic-sm); height: var(--ic-sm); }
+.search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--ink); font-family: inherit; font-size: max(16px, var(--t-body)); outline: 0; -webkit-appearance: none; appearance: none; }
+.search input::placeholder { color: var(--ink-muted); }
+.jtools select { flex: 0 0 auto; width: auto; max-width: 40%; height: var(--hit); padding: 0 var(--s3); border: 0; border-radius: var(--r-md); background: var(--surface-sunken); color: var(--ink); font-family: inherit; font-size: max(16px, var(--t-sub)); }
+.jyear { margin-top: var(--s5); }
+.jrow { display: flex; gap: var(--s3); padding: var(--s3) 0; cursor: pointer; transition: opacity var(--dur-1) var(--ease); }
+.jrow + .jrow { border-top: 1px solid var(--group-rule); }
+.jrow:active { opacity: .62; }
+.jthumb { flex: 0 0 var(--s12); width: var(--s12); height: calc(var(--s12) * 1.3); border-radius: var(--r-sm); object-fit: cover; background: var(--surface-sunken); }
+.jrow-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.jrow-date { font-size: var(--t-sub); font-weight: var(--w-semi); color: var(--ink); }
+.jrow-score { display: inline-flex; align-items: center; gap: var(--s1); font-size: var(--t-foot); color: var(--ink-muted); }
+.jrow-score i { width: 6px; height: 6px; margin-left: var(--s1); border-radius: var(--r-full); }
+.jrow-score em { margin-left: var(--s1); font-style: normal; }
+.jrow-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: 2px; font-family: var(--serif); font-size: var(--t-sub); line-height: var(--lh-snug); color: var(--ink-2); }
+.jrow-state { display: flex; align-items: center; gap: var(--s2); margin-top: 2px; font-size: var(--t-foot); color: var(--ink-muted); }
+.jrow-state.watch, .row-sub.watch { color: var(--watch); }
+.jrow-state.serious { color: var(--serious); }
+
+.entry-meta { margin-top: var(--s2); }
+.page { padding: var(--s6) var(--s5); border-radius: var(--r-lg); background: var(--surface); }
+.page-text { max-width: 34em; font-family: var(--serif); font-size: var(--t-body); line-height: var(--lh-read); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
+.page-note { margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--hairline); }
+.page-note .page-text { margin-top: var(--s1); }
+mark.unread { padding: 0 2px; border-radius: var(--s1); background: var(--watch-soft); color: var(--watch); font-family: var(--sans); font-size: var(--t-foot); font-weight: var(--w-semi); }
+.scan { margin: var(--s5) 0 0; }
+.scan img { display: block; width: 100%; border-radius: var(--r-lg); }
+.scan figcaption { margin-top: var(--s2); font-size: var(--t-foot); color: var(--ink-muted); }
+.scan-read { margin-top: var(--s2); }
+.scan-flags { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s2); }
+.scan-flags .status { height: auto; min-height: 22px; padding: 2px var(--s2); white-space: normal; }
+.ai-tags { margin-top: var(--s3); }
+.tag { display: inline-flex; align-items: center; min-height: var(--s6); padding: 0 var(--s2); border-radius: var(--r-sm); background: var(--surface); font-size: var(--t-foot); color: var(--ai-ink); }
+.chip.accent { border-color: transparent; background: var(--accent-soft); color: var(--accent); font-weight: var(--w-semi); }
+.score-row { display: grid; grid-template-columns: 6em 1fr auto; align-items: center; gap: var(--s3); min-height: var(--hit); }
+.score-row + .score-row { border-top: 1px solid var(--group-rule); }
+.score-l, .score-v { font-size: var(--t-sub); }
+.score-v { color: var(--ink-muted); }
+.score-v b { font-weight: var(--w-semi); color: var(--ink); }
+.score-by { padding: var(--s2) 0; }
+.row.act { cursor: pointer; transition: opacity var(--dur-1) var(--ease); }
+.row.act:active { opacity: .62; }
+.row.act .row-title { font-size: var(--t-body); font-weight: var(--w-reg); color: var(--accent); }
+.row.act.danger .row-title { color: var(--serious); }
+.btn.destructive { background: var(--serious); color: var(--bg); }
+.sheet-text { margin: 0 0 var(--s4); font-size: var(--t-sub); line-height: var(--lh-body); color: var(--ink-2); }
+
 /* ---- style guide ---- */
 .sg-swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s3); }
 .sw { font-size: var(--t-cap); color: var(--ink-muted); line-height: var(--lh-snug); }
@@ -1285,34 +1352,18 @@ input[type=range].slider::-moz-range-thumb { width: var(--thumb); height: var(--
       <header class="lt"><h1 class="lt-title">Journal</h1></header>
       <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="archiveInput" accept="image/*,application/pdf,.pdf" multiple hidden>
-      <div class="jgrid">
-        <div class="jbtn-big primary" id="jScan">
-          <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.8 7h-1A2.8 2.8 0 0 0 3 9.8v7.4A2.8 2.8 0 0 0 5.8 20h12.4a2.8 2.8 0 0 0 2.8-2.8V9.8A2.8 2.8 0 0 0 18.2 7h-1l-1.2-2.1A1.8 1.8 0 0 0 14.4 4H9.6a1.8 1.8 0 0 0-1.6.9L6.8 7Z"/><circle cx="12" cy="13" r="3.4"/></svg>
-          <div class="lbl">Scan Today’s Journal</div>
-        </div>
-        <div class="jbtn-big" id="jChat">
-          <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 12a7.5 7.5 0 0 1-10.9 6.7L4 20l1.3-4.4A7.5 7.5 0 1 1 20.5 12Z"/></svg>
-          <div class="lbl">Ask Ben</div>
-        </div>
-        <div class="jbtn-big" id="jBulk">
-          <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15V4m0 0-4 4m4-4 4 4M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>
-          <div class="lbl">Bulk Upload</div>
-        </div>
-        <div class="jbtn-big" id="jExportBtn">
-          <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
-          <div class="lbl">Export</div>
-        </div>
-      </div>
-      <div id="archiveProgress" style="margin-top:6px"></div>
+      <button class="btn jscan" id="jScan"><svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.8 7h-1A2.8 2.8 0 0 0 3 9.8v7.4A2.8 2.8 0 0 0 5.8 20h12.4a2.8 2.8 0 0 0 2.8-2.8V9.8A2.8 2.8 0 0 0 18.2 7h-1l-1.2-2.1A1.8 1.8 0 0 0 14.4 4H9.6a1.8 1.8 0 0 0-1.6.9L6.8 7Z"/><circle cx="12" cy="13" r="3.4"/></svg><span>Scan today’s page</span></button>
+      <div class="btn-row jsecond"><button class="btn secondary" id="jBulk">Bulk upload</button><button class="btn secondary" id="jExportBtn">Export</button></div>
+      <button id="jChat" hidden></button>
+      <div id="archiveProgress"></div>
       <div id="memCard"></div>
-      <div id="jOnThisDay"></div>
-      <div class="jtools">
-        <input id="jSearch" placeholder="Search your journal…">
-        <select id="jYear"></select>
-      </div>
-      <div class="section-head"><h2 id="journalCount">Entries</h2></div>
-      <div id="journalList"></div>
+      <section class="sec">
+        <div class="sec-h"><h2>Entries</h2><span class="meta num" id="journalCount"></span></div>
+        <div class="jtools"><label class="search"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="m16 16 4.5 4.5"/></svg><input id="jSearch" type="search" placeholder="Search your journal" autocomplete="off" autocorrect="off"></label><select id="jYear" aria-label="Year"></select></div>
+        <div id="journalList"></div>
+      </section>
     </section>
+    <section class="view" id="view-entry"><div id="entryBody"></div></section>
 
     <!-- ============ ASK BEN ============ -->
     <section class="view" id="view-ask">
@@ -1412,7 +1463,7 @@ input[type=range].slider::-moz-range-thumb { width: var(--thumb); height: var(--
     </section>
     <section class="view" id="view-set-about">
       <div class="card" style="text-align:center">
-        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v11.0 preview 2</b></div>
+        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v11.0 preview 3</b></div>
         <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>
         <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>
         <button class="btn secondary" style="margin-top:10px" onclick="showView('styleguide')">Style guide</button>
@@ -1636,14 +1687,14 @@ $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) clo
 // is pushed onto the tab you are in, and Back (the button, or a swipe from the
 // left edge) returns to where you came from, at the scroll position you left.
 const VIEWS = { today:'Today', friends:'People', person:'', journal:'Journal', ask:'Ask Ben', memories:'52 Memories',
-  insights:'Insights', mind:'Mind', body:'Body', money:'Money', firm:'The Firm', places:'Places', review:'Reviews', health:'Health',
+  entry:'', insights:'Insights', mind:'Mind', body:'Body', money:'Money', firm:'The Firm', places:'Places', review:'Reviews', health:'Health',
   schedule:'Schedule', goals:'Goals', study:'Quest for Knowledge', settings:'Settings', styleguide:'Style guide',
   'set-profile':'Profile', 'set-account':'Account and sync', 'set-notif':'Notifications', 'set-lock':'App lock',
   'set-ai':'Journal AI', 'set-health':'Apple Health', 'set-data':'Backup', 'set-about':'About' };
 // the tab a screen belongs to: where it opens when the app is launched straight into it
 const TAB_OF = { today:'today', schedule:'today', settings:'today', styleguide:'today',
   'set-profile':'today', 'set-account':'today', 'set-notif':'today', 'set-lock':'today', 'set-ai':'today', 'set-health':'today', 'set-data':'today', 'set-about':'today',
-  goals:'goals', study:'goals', friends:'friends', person:'friends', journal:'journal', ask:'journal', memories:'journal',
+  goals:'goals', study:'goals', friends:'friends', person:'friends', journal:'journal', ask:'journal', memories:'journal', entry:'journal',
   insights:'insights', mind:'insights', body:'insights', money:'insights', firm:'insights', places:'insights', health:'insights', review:'insights' };
 const ROOTS = ['today','friends','journal','goals','insights'];
 let currentView = 'today';
@@ -1692,6 +1743,7 @@ function showView(v, how){
     else if(at >= 0){ stack.length = at + 1; if(kind === 'none') kind = 'pop'; }
     else { stack.push({ v:v, y:0 }); if(kind === 'none') kind = 'push'; }
     if(v === 'person') navTop().pid = currentPersonId;
+    if(v === 'entry') navTop().eid = currentEntryId;
   }
   navApply(from, kind);
 }
@@ -1710,9 +1762,15 @@ function tabTap(v){
 }
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => tabTap(b.dataset.view)));
 
+// the bar title: fixed for most screens, the date for an entry, the name for a person
+function navTitle(v){
+  if(v === 'entry') return entryTitle();
+  if(v === 'person'){ const f = (DB.friends||[]).find(x => x.id === currentPersonId); return f ? f.name : ''; }
+  return VIEWS[v] || '';
+}
 function navChrome(){
   const app = document.querySelector('.app'), stack = navStack(), top = navTop(), el = viewEl(top.v);
-  $('topTitle').textContent = VIEWS[top.v] || '';
+  $('topTitle').textContent = navTitle(top.v);
   app.setAttribute('data-view', top.v);
   app.setAttribute('data-large', el && el.querySelector('header.lt') ? '1' : '0');
   const back = $('tbBack'), prev = stack.length > 1 ? stack[stack.length-2] : null;
@@ -1723,6 +1781,7 @@ function navApply(from, kind){
   const top = navTop(), v = top.v, toEl = viewEl(v), fromEl = viewEl(from.v), app = document.querySelector('.app');
   currentView = v;
   if(v === 'person' && top.pid != null) currentPersonId = top.pid;
+  if(v === 'entry' && top.eid != null) currentEntryId = top.eid;
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.view === NAV.tab));
   renderAll();
   if(v === 'styleguide') renderStyleGuide();
@@ -3373,40 +3432,175 @@ async function autoCleanAll(){
   for(const g of gs){ const keep=pickKeeper(g); const ids=g.filter(x=>x.id!==keep.id).map(x=>x.id); removed+=ids.length; await removeEntries(ids); }
   _dupMemo.key=''; closeSheet(); renderAll(); toast('Removed '+removed+' duplicate'+(removed===1?'':'s'));
 }
+// ---------- Journal (redesigned): one primary action, a short shelf, then the entries ----------
+const IC_CAMERA = '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.8 7h-1A2.8 2.8 0 0 0 3 9.8v7.4A2.8 2.8 0 0 0 5.8 20h12.4a2.8 2.8 0 0 0 2.8-2.8V9.8A2.8 2.8 0 0 0 18.2 7h-1l-1.2-2.1A1.8 1.8 0 0 0 14.4 4H9.6a1.8 1.8 0 0 0-1.6.9L6.8 7Z"/><circle cx="12" cy="13" r="3.4"/></svg>';
+const navRow = (fn, title, end, sub) => '<div class="row nav" onclick="'+fn+'"><div class="row-main"><div class="row-title">'+title+'</div>'+(sub ? '<div class="row-sub">'+sub+'</div>' : '')+'</div>'+
+  (end ? '<span class="row-end num">'+end+'</span>' : '')+'<span class="row-chev">'+CHEV+'</span></div>';
+const noteCard = (title, meta, text, extra, fn) => '<div class="note-card"'+(fn ? ' onclick="'+fn+'"' : '')+'><div class="note-top"><b>'+title+'</b>'+(meta ? '<span class="meta num">'+meta+'</span>' : '')+'</div>'+
+  (text ? '<div class="note-text">'+text+'</div>' : '')+(extra||'')+'</div>';
+
+// what is in flight: cloud queue, pages that need a human, failures, a bulk import
+function renderArchiveProgress(){
+  const el=$('archiveProgress'); if(!el) return;
+  if(!ARCHIVE){
+    const q=DB.journal.filter(j=>j.status==='queued').length;
+    const errs=DB.journal.filter(j=>j.status==='error' && !j.refused).length;
+    const refused=DB.journal.filter(j=>j.status==='error' && j.refused).length;
+    let h='';
+    if(q>0) h+=noteCard('Transcribing in the cloud', q+' remaining', 'Runs on its own, about '+Math.ceil(q/4)+' min left. Pull down to refresh; you will be notified when it is done.');
+    if(refused>0) h+=noteCard(refused+' page'+(refused===1?'':'s')+' need'+(refused===1?'s':'')+' a human', '',
+      'Claude declined to transcribe '+(refused===1?'this page':'these pages')+' (it occasionally does this with certain content). Open the entry and use Edit text to type it in, or ask in a Claude chat to transcribe it for you.', '', 'openFirstRefused()');
+    if(errs>0 && typeof SUPA!=='undefined' && SUPA && SUPA.session)
+      h+=noteCard(errs+' page'+(errs===1?'':'s')+' failed', '', 'Send them to the cloud queue to retry.', '<button class="btn secondary" onclick="retryFailedCloud()">Retry '+errs+' in cloud</button>');
+    el.innerHTML=h; return;
+  }
+  const n=ARCHIVE.files.length, i=ARCHIVE.i, pct=Math.round(i/n*100);
+  if(ARCHIVE.mode==='cloud'){
+    el.innerHTML=noteCard('Uploading to cloud', i+' / '+n, '', '<div class="bar note-bar"><i style="width:'+pct+'%"></i></div>'+
+      '<div class="note-text">'+ARCHIVE.ok+' uploaded'+(ARCHIVE.skip?' · '+ARCHIVE.skip+' duplicates skipped':'')+' · keep the app open just for this part</div>'+
+      '<div class="btn-row note-acts"><button class="btn secondary" onclick="cancelArchive()">Stop</button></div>');
+    return;
+  }
+  const spent=(i*0.02).toFixed(2);
+  el.innerHTML=noteCard('Transcribing archive', i+' / '+n, '', '<div class="bar note-bar"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="note-text">'+ARCHIVE.ok+' transcribed'+(ARCHIVE.fail?' · '+ARCHIVE.fail+' failed':'')+(ARCHIVE.skip?' · '+ARCHIVE.skip+' duplicates skipped':'')+' · ~$'+spent+' spent</div>'+
+    '<div class="btn-row note-acts">'+(ARCHIVE.running?'<button class="btn secondary" onclick="pauseArchive()">Pause</button>':'<button class="btn" onclick="resumeArchive()">Resume</button>')+
+    '<button class="btn secondary" onclick="cancelArchive()">Stop</button></div>');
+}
+// the shelf: three ways back into the archive, one line each
+function renderMemHome(){
+  const el=$('memCard'); if(!el) return;
+  const n=(DB.memories||[]).length, cand=(DB.memCand||[]).length, ys=memYears();
+  const otd=onThisDayEntries().length;
+  const q=DB.journal.filter(j=>j.status==='queued').length, rev=reviewList().length;
+  let rows='';
+  if(otd) rows+=navRow('openAllOnThisDay()', 'On this day', otd+(otd===1?' year':' years'));
+  if(n || cand) rows+=navRow('openMemories()', '52 Memories', ys.length+' years · '+n, cand ? 'Year '+memYearNum(annivNextYr())+' list: '+cand+' collected so far' : '');
+  if(rev>0 && q<10) rows+=navRow('openReviewQueue()', 'Worth a second look', rev+(rev===1?' page':' pages'));
+  el.innerHTML = rows ? '<div class="sec-body shelf">'+rows+'</div>' : '';
+}
+const pageFirstWords = (j, n) => clip(String(j.transcription||'').replace(/\[\?\]/g,'').replace(/^\s+/,''), n);
 async function renderJournalList(){
   const list = journalFiltered(); const total = DB.journal.length;
-  if ($('journalCount')) $('journalCount').textContent = (jState.q||jState.year) ? (list.length+' of '+total) : (total+(total===1?' entry':' entries'));
+  if ($('journalCount')) $('journalCount').textContent = (jState.q||jState.year||jState.review) ? (list.length.toLocaleString()+' of '+total.toLocaleString()) : total.toLocaleString();
   const _dg = total>1 ? dupGroups() : [];
   const _banner = (jState.review
-      ? '<div class="tl-doc" style="border-color:var(--warning)" onclick="jState.review=false;renderJournalList()"><div class="td-top"><b>Flagged pages only</b><span style="color:var(--accent);font-weight:600">Clear</span></div><div class="td-prev">Pages with reading gaps or a date that doesn’t match.</div></div>'
+      ? '<div class="banner" onclick="jState.review=false;renderJournalList()"><div class="row-main">Showing flagged pages only: reading gaps, or a date that doesn’t match.</div><b>Clear</b></div>'
       : '')
-    + (_dg.length && !jState.review ? '<div class="tl-doc" style="border-color:var(--warning)" onclick="openDupReview()"><div class="td-top"><b>'+_dg.length+' possible duplicate group'+(_dg.length>1?'s':'')+'</b><span style="color:var(--accent);font-weight:600">Review</span></div><div class="td-prev">Same page scanned twice, or re-run batches.</div></div>' : '');
-  if (!total){ $('journalList').innerHTML = '<div class="empty">No entries yet. Photograph today\u2019s page, or import your old journals in bulk.</div>'; return; }
-  if (!list.length){ $('journalList').innerHTML = '<div class="empty">No entries match that search.</div>'; return; }
+    + (_dg.length && !jState.review ? '<div class="banner" onclick="openDupReview()"><div class="row-main">'+_dg.length+' possible duplicate group'+(_dg.length>1?'s':'')+'. The same page scanned twice, or a batch run again.</div><b>Review</b></div>' : '');
+  if (!total){ $('journalList').innerHTML = '<div class="sec-body"><div class="empty-state"><div class="es-title">No entries yet</div><div class="es-text">Photograph today’s page, or bring in your old journals with Bulk upload.</div></div></div>'; renderEntry(); return; }
+  if (!list.length){ $('journalList').innerHTML = _banner+'<div class="sec-body"><div class="empty-state"><div class="es-title">Nothing matches</div><div class="es-text">Try fewer words, or another year.</div></div></div>'; renderEntry(); return; }
   const cap = list.slice(0, 150);
-  let _lastYr='';
   const rows = await Promise.all(cap.map(async j => {
     const u = await thumbURL(j.id);
-    const status = j.status === 'queued' ? (SUPA&&SUPA.expired ? '<span style="color:var(--warning)">Waiting on this phone — sign in to sync</span>' : '<span class="spinner"></span>In the cloud queue…')
-      : j.status === 'analyzing' ? '<span class="spinner"></span>Analyzing…'
-      : j.status === 'error' ? '<span style="color:var(--serious)">Not transcribed — tap to retry</span>'
-      : esc(j.summary || j.transcription || j.note || 'Saved');
+    const status = j.status === 'queued' ? (SUPA&&SUPA.expired ? '<span class="jrow-state watch">Waiting on this phone. Sign in to sync.</span>' : '<span class="jrow-state"><span class="spinner"></span>In the cloud queue</span>')
+      : j.status === 'analyzing' ? '<span class="jrow-state"><span class="spinner"></span>Analyzing</span>'
+      : j.status === 'error' ? '<span class="jrow-state serious">Not transcribed. Tap to retry.</span>'
+      : (j.transcription ? '<span class="jrow-text">'+esc(pageFirstWords(j, 150))+'</span>' : '<span class="jrow-state">'+esc(j.summary || j.note || 'Saved')+'</span>');
     const moodBits = [j.mood, ...(j.themes||[]).slice(0,3)].filter(Boolean);
     const flags = reviewFlags(j);
-    const yr=(j.date||'').slice(0,4); let div='';
-    if(yr && yr!==_lastYr){ if(_lastYr) div='<div class="ck-label" style="margin:14px 2px 8px">'+yr+'</div>'; _lastYr=yr; }
-    return div+'<div class="jentry" onclick="openEntry(\''+j.id+'\')">' +
-      (u ? '<img class="thumb" src="'+u+'" alt="">' : '<div class="thumb">—</div>') +
-      '<div class="body"><div class="jdate">'+fmtDateY(j.date)+'</div>' +
-      '<div class="jsum">'+status+'</div>' +
-      (flags.length ? '<div class="jmood" style="color:var(--warning)">⚑ '+esc(flags[0])+'</div>' : '') +
-      (moodBits.length ? '<div class="jmood">'+moodBits.map(esc).join(' · ')+'</div>' : '') +
-      (j.hap > 0 ? '<div class="sc-mini"><u><i style="background:'+SC_HAP+'"></i>'+j.hap+'</u>'+
-        '<u><i style="background:'+SC_ANX+'"></i>'+j.anx+'</u>'+
-        (j.hapMine ? '<span style="opacity:.7">yours</span>' : '')+'</div>' : '') +
-      '</div></div>';
+    return { yr:(j.date||'').slice(0,4), html:'<div class="jrow" onclick="openEntry(\''+j.id+'\')">' +
+      (u ? '<img class="jthumb" src="'+u+'" alt="">' : '<div class="jthumb"></div>') +
+      '<div class="row-main"><div class="jrow-top"><span class="jrow-date">'+fmtDate(j.date)+'</span>' +
+      (j.hap > 0 ? '<span class="jrow-score num" aria-label="happiness '+j.hap+', anxiety '+j.anx+'"><i style="background:'+SC_HAP+'"></i>'+j.hap+'<i style="background:'+SC_ANX+'"></i>'+j.anx+(j.hapMine ? '<em>yours</em>' : '')+'</span>' : '') + '</div>' +
+      status +
+      (flags.length ? '<div class="row-sub watch">'+esc(flags[0])+'</div>' : '') +
+      (moodBits.length ? '<div class="row-sub clip">'+moodBits.map(esc).join(' · ')+'</div>' : '') +
+      '</div></div>' };
   }));
-  $('journalList').innerHTML = _banner + rows.join('') + (list.length>150 ? '<div class="empty">Showing 150 of '+list.length+' — search to narrow.</div>' : '');
+  let h='', yr=null;
+  rows.forEach(r => { if(r.yr !== yr){ if(yr !== null) h+='</div>'; yr=r.yr; h+='<div class="group-h jyear">'+esc(yr||'Undated')+'</div><div class="sec-body">'; } h+=r.html; });
+  h+='</div>';
+  $('journalList').innerHTML = _banner + h + (list.length>150 ? '<div class="empty">Showing 150 of '+list.length+'. Search to narrow.</div>' : '');
+  renderEntry();
+}
+
+// ---------- Entry: a pushed screen that reads like a page ----------
+let currentEntryId = null;
+async function openEntry(id){
+  const j = DB.journal.find(x => x.id === id); if (!j) return;
+  if($('overlay').classList.contains('open')) closeSheet();
+  currentEntryId = id; showView('entry');
+}
+function entryScoreHTML(j){
+  const link = (t) => '<button class="link" onclick="openScoreEdit(\''+j.id+'\')">'+t+'</button>';
+  const row = (label, v, tone) => '<div class="score-row"><span class="score-l">'+label+'</span><span class="bar"><i class="'+tone+'" style="width:'+(v*10)+'%"></i></span><span class="score-v num"><b>'+v+'</b>/10</span></div>';
+  if(j.hap > 0)
+    return '<section class="sec"><div class="sec-h"><h2>How the day scored</h2>'+link(j.hapMine ? 'Change' : 'Disagree?')+'</div><div class="sec-body">'+
+      row('Happiness', j.hap, '')+row('Anxiety', j.anx, 'serious')+
+      '<div class="data-fresh score-by">'+(j.hapMine ? 'Your own scoring.' : 'Read from what you wrote, on the same scale as your check-ins.')+'</div></div></section>';
+  if(j.hap === 0 && j.anx === 0)
+    return '<section class="sec"><div class="sec-h"><h2>How the day scored</h2>'+link('Score it yourself')+'</div><div class="sec-body"><div class="data-fresh score-by">This page couldn’t be scored automatically.</div></div></section>';
+  if(j.status !== 'done' || !(j.transcription||'').trim()) return '';
+  return '<section class="sec"><div class="sec-h"><h2>How the day scored</h2>'+link('Score it now')+'</div><div class="sec-body"><div class="data-fresh score-by">Not scored yet. This runs hourly once the entry reaches the cloud.</div></div></section>';
+}
+function entryTitle(){ const j = DB.journal.find(x => x.id === currentEntryId); return j && j.date ? fmtDateY(j.date) : ''; }
+// re-rendered only when something about the entry has changed, so the page never jumps under the reader
+let _entrySig = '';
+function renderEntry(){
+  const el = $('entryBody'); if(!el || currentView !== 'entry') return;
+  const id = currentEntryId, j = DB.journal.find(x => x.id === id);
+  if(!j){ el.innerHTML=''; _entrySig=''; navBack(); return; }
+  const sig = [id, j.mt, j.status, j.date, j.hap, j.anx, j.hapMine, (j.transcription||'').length, (j.summary||'').length, (j.note||'').length,
+    mentionedFriends(j).map(f => f.id+(loggedFromJournal(f, id)?'+':'-')).join(','), !!(SUPA&&SUPA.session), !!(SUPA&&SUPA.expired), !!DB.settings.apiKey].join('|');
+  if(sig === _entrySig && el.firstChild) return;
+  _entrySig = sig;
+  const d = parseD(j.date), okDate = /^\d{4}-\d{2}-\d{2}$/.test(j.date||'');
+  const yrs = okDate ? Number(today().slice(0,4)) - d.getFullYear() : 0;
+  const act = (fn, label, tone) => '<div class="row act'+(tone ? ' '+tone : '')+'" onclick="'+fn+'"><div class="row-main"><div class="row-title">'+label+'</div></div></div>';
+  let h = '<header class="lt"><div class="lt-eyebrow">'+(okDate ? d.toLocaleDateString('en-US',{weekday:'long'}) : 'Undated')+(yrs>0 ? ' · '+yrs+(yrs===1?' year ago':' years ago') : '')+'</div>'+
+    '<h1 class="lt-title">'+(okDate ? d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : esc(j.date||''))+'</h1>'+
+    '<div class="entry-meta"><button class="link" onclick="quickFixDate(\''+id+'\')">Change date</button></div></header>';
+  // where the page is in its life
+  if(j.status === 'analyzing') h += '<div class="banner info static"><span class="spinner"></span><div class="row-main">Analyzing this page.</div></div>';
+  if(j.status === 'queued') h += (SUPA&&SUPA.expired
+    ? '<div class="banner static"><div class="row-main">This entry is only on this phone. The cloud signed you out; sign in again in Settings and it will transcribe.</div></div>'
+    : '<div class="banner info static"><span class="spinner"></span><div class="row-main">Waiting for cloud transcription. It runs even with the app closed.</div></div>');
+  if(j.status === 'error' && j.refused) h += '<div class="banner static"><div class="row-main">Claude declined to transcribe this page, and retrying won’t help. Use Edit text to type it in yourself.</div></div>';
+  // his words first, set like a page
+  if(j.transcription || j.note){
+    h += '<article class="page">'+
+      (j.transcription ? '<div class="page-text">'+esc(j.transcription).replace(/\[\?\]/g, '<mark class="unread">[?]</mark>')+'</div>' : '')+
+      (j.note ? '<div class="page-note"><div class="eyebrow">Your note</div><div class="page-text">'+esc(j.note)+'</div></div>' : '')+
+      '</article>';
+  }
+  h += '<figure class="scan" id="entryScan" hidden></figure>';
+  if(j.status === 'done' && j.transcription){
+    const fl = reviewFlags(j);
+    h += '<div class="scan-read"><div class="data-line"><b class="num">'+Math.round(confOf(j)*100)+'%</b> of the words were read without hesitation.</div>'+
+      '<div class="data-fresh">'+(String(j.dw||'').trim() ? 'Date written on the page: “'+esc(String(j.dw).trim())+'”' : 'No date written on this page; the date came from its place in the batch.')+'</div>'+
+      (fl.length ? '<div class="scan-flags">'+fl.map(f => '<span class="status watch">'+esc(f)+'</span>').join('')+'</div>' : '')+'</div>';
+  }
+  // what the model made of it
+  if(j.summary || j.insight || j.mood || (j.themes||[]).length){
+    h += '<section class="sec"><div class="ai">'+aiLabel('Read by Claude')+
+      (j.summary ? '<p class="ai-body lead">'+esc(j.summary)+'</p>' : '')+
+      (j.insight ? '<p class="ai-body">'+esc(j.insight)+'</p>' : '')+
+      ((j.mood || (j.themes||[]).length) ? '<div class="chips ai-tags">'+[j.mood, ...(j.themes||[])].filter(Boolean).map(x => '<span class="tag">'+esc(x)+'</span>').join('')+'</div>' : '')+
+      '</div></section>';
+  }
+  h += entryScoreHTML(j);
+  const mf = mentionedFriends(j);
+  if(mf.length) h += '<section class="sec"><div class="sec-h"><h2>People mentioned</h2></div><div class="chips">'+
+    mf.map(f => { const first = esc(f.name.split(/\s+/)[0]); return loggedFromJournal(f, j.id)
+      ? '<span class="status good">Logged to '+first+'</span>'
+      : '<button class="chip accent" onclick="logJournalToPerson(\''+f.id+'\',\''+j.id+'\')">Log to '+first+'</button>'; }).join('')+'</div></section>';
+  h += '<div id="entryPhotos"></div>';
+  h += '<section class="sec"><div class="sec-body">'+
+    (j.status !== 'done' && j.status !== 'analyzing' && j.status !== 'queued' ? act('analyzeEntry(\''+id+'\')', DB.settings.apiKey ? 'Analyze with Claude' : 'Analyze (needs an API key in Settings)') : '')+
+    act('editEntryText(\''+id+'\')', 'Edit text')+
+    (j.status==='done' && j.psync && typeof SUPA!=='undefined' && SUPA && SUPA.session ? act('requeueEntry(\''+id+'\')', 'Re-transcribe in the cloud') : '')+
+    ((j.summary||j.transcription) ? act('entryToMemCand(\''+id+'\')', 'Save as a 52 Memories candidate') : '')+
+    '</div></section>'+
+    '<section class="sec"><div class="sec-body">'+act('confirmDeleteEntry(\''+id+'\')', 'Delete entry', 'danger')+'</div></section>';
+  el.innerHTML = h;
+  thumbURL(id).then(u => { const f = $('entryScan'); if(u && f && currentEntryId === id){ f.innerHTML = '<img src="'+u+'" alt="The page as scanned"><figcaption>The page as scanned</figcaption>'; f.hidden = false; } });
+  if(okDate) setTimeout(() => { if(currentEntryId === id && $('entryPhotos')) loadPhotoStrip('entryPhotos', { day:j.date }); }, 30);
+}
+function confirmDeleteEntry(id){
+  const j = DB.journal.find(x => x.id === id); if(!j) return;
+  openSheet('<h3>Delete this entry?</h3><p class="sheet-text">'+esc(fmtDateY(j.date))+'. The page, its photo and what was read from it are removed from this phone and from your account.</p>'+
+    '<button class="btn destructive" onclick="deleteEntry(\''+id+'\')">Delete entry</button><button class="btn secondary" onclick="closeSheet()">Keep it</button>');
 }
 $('jScan').addEventListener('click', () => $('photoInput').click());
 $('photoInput').addEventListener('change', async e => {
@@ -3569,40 +3763,6 @@ function saveScore(id){
   toast('Saved \u2014 ' + j.hap + ' happiness, ' + j.anx + ' anxiety');
 }
 
-async function openEntry(id){
-  const j = DB.journal.find(x => x.id === id); if (!j) return;
-  if(/^\d{4}-\d{2}-\d{2}$/.test(j.date||'')) setTimeout(()=>loadPhotoStrip('entryPhotos', { day:j.date }), 30);
-  const u = await thumbURL(id);
-  openSheet('<h3 style="cursor:pointer" onclick="quickFixDate(\''+id+'\')">'+fmtDate(j.date)+' <span style="color:var(--accent);font-size:13px;font-weight:650">change</span></h3>' +
-    (u ? '<img src="'+u+'" class="detail-photo">' : '') +
-    (j.status === 'analyzing' ? '<div class="detail-block"><p><span class="spinner"></span>Analyzing…</p></div>' : '') +
-    (j.status === 'queued' ? (SUPA&&SUPA.expired ? '<div class="detail-block"><p style="color:var(--warning)">This entry is only on this phone. The cloud signed you out — sign in again in Settings and it will transcribe.</p></div>' : '<div class="detail-block"><p><span class="spinner"></span>Waiting for cloud transcription… it runs even with the app closed.</p></div>') : '') +
-    (j.status === 'error' && j.refused ? '<div class="notice" style="margin-top:0">Claude declined to transcribe this page — retrying won\u2019t help. Tap Edit text to type it in yourself.</div>' : '') +
-    (j.summary ? '<div class="detail-block"><h4>Summary</h4><p>'+esc(j.summary)+'</p></div>' : '') +
-    scoreBlockHTML(j) +
-    (j.mood || (j.themes||[]).length ? '<div class="detail-block"><h4>Mood &amp; themes</h4><div class="pill-row">' +
-      [j.mood, ...(j.themes||[])].filter(Boolean).map(x => '<span class="pill">'+esc(x)+'</span>').join('') + '</div></div>' : '') +
-    (j.insight ? '<div class="detail-block"><h4>Reflection</h4><p>'+esc(j.insight)+'</p></div>' : '') +
-    (j.transcription ? '<div class="detail-block"><h4>Transcription</h4><p>'+transHTML(j)+'</p></div>' : '') +
-    (j.status === 'done' && j.transcription ? '<div class="detail-block"><h4>Confidence</h4><p>' +
-      '<b>'+Math.round(confOf(j)*100)+'%</b> of the words were read without hesitation.' +
-      (reviewFlags(j).length ? '<br><span style="color:var(--warning)">⚑ '+esc(reviewFlags(j).join('; '))+'</span>' : '') +
-      '<br><span style="color:var(--muted);font-size:13px">' +
-      (String(j.dw||'').trim() ? 'Date written on the page: “'+esc(String(j.dw).trim())+'”' : 'No date written on this page — the date came from its place in the batch.') +
-      '</span></p></div>' : '') +
-    (j.note ? '<div class="detail-block"><h4>Your note</h4><p>'+esc(j.note)+'</p></div>' : '') +
-    '<div id="entryPhotos"></div>' +
-    (mentionedFriends(j).length ? '<div class="detail-block"><h4>People mentioned</h4><div class="pill-row">' +
-      mentionedFriends(j).map(f => loggedFromJournal(f, j.id)
-        ? '<span class="pill" style="opacity:.6">✓ '+esc(f.name.split(/\s+/)[0])+'</span>'
-        : '<span class="pill" style="cursor:pointer;background:var(--accent-soft);color:var(--accent)" onclick="logJournalToPerson(\''+f.id+'\',\''+j.id+'\')">+ Log to '+esc(f.name.split(/\s+/)[0])+'</span>').join('') +
-      '</div></div>' : '') +
-    (j.status !== 'done' && j.status !== 'analyzing' && j.status !== 'queued' ? '<button class="btn" onclick="analyzeEntry(\''+id+'\');closeSheet()">'+(DB.settings.apiKey ? 'Analyze with Claude' : 'Analyze (needs API key in Settings)')+'</button>' : '') +
-    '<button class="btn secondary" style="margin-top:10px" onclick="editEntryText(\''+id+'\')">Edit text</button>' +
-    (j.status==='done' && j.psync && typeof SUPA!=='undefined' && SUPA && SUPA.session ? '<button class="btn secondary" style="margin-top:10px" onclick="requeueEntry(\''+id+'\')">Re-transcribe in cloud</button>' : '') +
-    ((j.summary||j.transcription) ? '<button class="btn secondary" style="margin-top:10px" onclick="entryToMemCand(\''+id+'\')">&#9733; Save as 52-Memories candidate</button>' : '') +
-    '<button class="btn danger" onclick="deleteEntry(\''+id+'\')">Delete entry</button>');
-}
 async function requeueEntry(id){
   const j=DB.journal.find(x=>x.id===id); if(!j) return;
   j.status='queued'; j.mt=Date.now(); await putEntry(j); save();
@@ -4279,41 +4439,6 @@ async function runArchive(){
 function pauseArchive(){ if(ARCHIVE){ ARCHIVE.running=false; wakeOff(); renderArchiveProgress(); toast('Paused'); } }
 function resumeArchive(){ if(ARCHIVE && !ARCHIVE.running) runArchive(); }
 function cancelArchive(){ ARCHIVE=null; wakeOff(); renderArchiveProgress(); renderJournal(); toast('Stopped'); }
-function renderArchiveProgress(){
-  const el=$('archiveProgress'); if(!el) return;
-  if(!ARCHIVE){
-    const q=DB.journal.filter(j=>j.status==='queued').length;
-    const errs=DB.journal.filter(j=>j.status==='error' && !j.refused).length;
-    const refused=DB.journal.filter(j=>j.status==='error' && j.refused).length;
-    let h='';
-    if(q>0) h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Transcribing in the cloud</b><span style="font-size:13px;color:var(--muted)">'+q+' remaining</span></div>'+
-      '<div style="font-size:12.5px;color:var(--muted);margin-top:6px">Runs on its own — about '+Math.ceil(q/4)+' min left. Pull down to refresh; we\u2019ll notify you when it\u2019s done.</div></div>';
-    if(refused>0)
-      h+='<div class="card" onclick="openFirstRefused()" style="cursor:pointer"><b>'+refused+' page'+(refused===1?'':'s')+' need'+(refused===1?'s':'')+' a human</b><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Claude declined to transcribe '+(refused===1?'this page':'these pages')+' (it occasionally does this with certain content). Open the entry and use Edit text to type it in \u2014 or ask me in a Claude chat to transcribe it for you.</div></div>';
-    const rev=reviewList().length;
-    if(rev>0 && q<10)
-      h+='<div class="card" onclick="openReviewQueue()" style="cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>'+rev+' page'+(rev===1?'':'s')+' worth a second look</b><span style="font-size:13px;color:var(--accent);font-weight:600">Review</span></div><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Words Claude flagged as unreadable, or a date on the page that doesn’t match where it’s filed.</div></div>';
-    if(errs>0 && typeof SUPA!=='undefined' && SUPA && SUPA.session)
-      h+='<div class="card"><b>'+errs+' page'+(errs===1?'':'s')+' failed</b><div style="font-size:12.5px;color:var(--muted);margin-top:4px">Send them to the cloud queue to retry.</div>'+
-        '<button class="btn secondary" style="margin-top:10px" onclick="retryFailedCloud()">Retry '+errs+' in cloud</button></div>';
-    el.innerHTML=h; return;
-  }
-  if(ARCHIVE.mode==='cloud'){
-    const n=ARCHIVE.files.length, i=ARCHIVE.i, pct=Math.round(i/n*100);
-    el.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Uploading to cloud</b><span style="font-size:13px;color:var(--muted)">'+i+' / '+n+'</span></div>'+
-      '<div class="pbar"><i style="width:'+pct+'%"></i></div>'+
-      '<div style="font-size:12.5px;color:var(--muted);margin-top:8px">'+ARCHIVE.ok+' uploaded'+(ARCHIVE.skip?' · '+ARCHIVE.skip+' duplicates skipped':'')+' · keep the app open just for this part</div>'+
-      '<div style="display:flex;gap:8px;margin-top:12px"><button class="btn danger" style="margin:0;padding:13px" onclick="cancelArchive()">Stop</button></div></div>';
-    return;
-  }
-  const n=ARCHIVE.files.length, i=ARCHIVE.i, pct=Math.round(i/n*100), spent=(i*0.02).toFixed(2);
-  el.innerHTML='<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>Transcribing archive</b><span style="font-size:13px;color:var(--muted)">'+i+' / '+n+'</span></div>'+
-    '<div class="pbar"><i style="width:'+pct+'%"></i></div>'+
-    '<div style="font-size:12.5px;color:var(--muted);margin-top:8px">'+ARCHIVE.ok+' transcribed'+(ARCHIVE.fail?' · '+ARCHIVE.fail+' failed':'')+(ARCHIVE.skip?' · '+ARCHIVE.skip+' duplicates skipped':'')+' · ~$'+spent+' spent</div>'+
-    '<div style="display:flex;gap:8px;margin-top:12px">'+
-    (ARCHIVE.running?'<button class="btn secondary" style="margin:0" onclick="pauseArchive()">Pause</button>':'<button class="btn" style="margin:0" onclick="resumeArchive()">Resume</button>')+
-    '<button class="btn danger" style="margin:0;padding:13px" onclick="cancelArchive()">Stop</button></div></div>';
-}
 function openFirstRefused(){ const j=DB.journal.find(x=>x.status==='error'&&x.refused); if(j) openEntry(j.id); }
 async function retryFailedCloud(){
   if(!SUPA||!SUPA.session){ toast('Log in first'); return; }
@@ -4340,16 +4465,6 @@ function lastAnniv(){
   const thisYr=y+'-'+md; return thisYr<=t?thisYr:(y-1)+'-'+md;
 }
 function openMemories(yr){ if(yr) MEMV.yr=yr; if(!MEMV.yr){ const ys=memYears(); MEMV.yr=ys.length?ys[ys.length-1]:'next'; } showView('memories'); }
-function renderMemHome(){
-  const el=$('memCard'); if(!el) return;
-  const n=(DB.memories||[]).length, cand=(DB.memCand||[]).length;
-  if(!n && !cand){ el.innerHTML=''; return; }
-  const ys=memYears();
-  el.innerHTML='<div class="card" onclick="openMemories()" style="cursor:pointer;margin-top:10px">'+
-    '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:17px">52 Memories</b>'+
-    '<span style="font-size:13px;color:var(--muted)">'+ys.length+' years &middot; '+n+'</span></div>'+
-    '<div style="font-size:12.5px;color:var(--muted);margin-top:5px">'+(cand?('Year '+memYearNum(annivNextYr())+' list &mdash; '+cand+' collected so far'):'Browse the years, or open Reading Mode')+'</div></div>';
-}
 function memSearch(v){ MEMV.q=v; renderMemList(); }
 function renderMemories(){
   const el=$('memBody'); if(!el) return;
@@ -6004,7 +6119,7 @@ $('tlInput').addEventListener('change', async e => {
     setTimeout(()=>lookupPlaceNames(), 1200);
   } catch(err){ console.error(err); toast('Could not read that file'); }
 });
-function renderAll(){ renderMacros(); renderAsk(); renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderMemories(); renderCheckin(); renderPlaces(); renderGoals(); renderStudy(); renderPerson(); renderReview(); renderInsightsView(); }
+function renderAll(){ renderMacros(); renderAsk(); renderToday(); renderSchedule(); renderFriends(); renderJournal(); renderMemories(); renderCheckin(); renderPlaces(); renderGoals(); renderStudy(); renderPerson(); renderReview(); renderInsightsView(); renderEntry(); }
 document.addEventListener('visibilitychange', () => { if (document.hidden){ if(SUPA && SUPA.session && SUPA.dirty) syncPush(); return; } if (!document.hidden){ renderAll();
   if(SUPA && SUPA.session) syncPull();
   if((DB.settings.healthSyncUrl||'').trim() && (!DB.settings.healthLastSync || Date.now()-DB.settings.healthLastSync>3e5)) syncHealthNow(true); } });

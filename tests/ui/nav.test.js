@@ -49,7 +49,9 @@ for (let i = 0; i < 30; i++) { const d = new Date(Date.UTC(2026, 10, 15 - i)).to
   // ---- nothing the old screens relied on has gone missing
   const ids = (h) => new Set([...h.replace(/<script[\s\S]*?<\/script>/g, '').matchAll(/\sid="([^"]+)"/g)].map(m => m[1]));
   const gone = [...ids(OLD)].filter(id => !ids(html).has(id));
-  const moved = ['insightsExtra', 'greetSub'];   // insightsExtra: its blocks now render behind the doors; greetSub: a line under the greeting that was always empty
+  // containers whose content now lives elsewhere. insightsExtra: its blocks render behind the doors; greetSub: a line under the
+  // greeting that was always empty; jOnThisDay: Journal has a one-line door to On this day instead of repeating Today's block
+  const moved = ['insightsExtra', 'greetSub', 'jOnThisDay'];
   const really = gone.filter(id => moved.indexOf(id) < 0);
   ok(!really.length, 'every element id of the old build still exists (' + (really.join(', ') || 'none missing') + '; re-homed: ' + gone.filter(id => moved.indexOf(id) >= 0).join(', ') + ')');
   const targets = new Set([...html.matchAll(/showView\(\\?'([a-z-]+)\\?'/g)].map(m => m[1]));

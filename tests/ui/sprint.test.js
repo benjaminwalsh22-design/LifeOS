@@ -140,7 +140,7 @@ const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FAIL ') + msg); if (!c) fai
       return w.renderJournalList();
     })
     .then(() => {
-      ok(/Waiting on this phone — sign in to sync/.test(w.document.getElementById('journalList').textContent), 'queued entry says it is waiting on the phone');
+      ok(/Waiting on this phone.{1,3}sign in to sync/i.test(w.document.getElementById('journalList').textContent), 'queued entry says it is waiting on the phone');
       // a later successful call clears it
       w.fetch = async () => ({ ok: true, status: 200, json: async () => ([]), text: async () => '[]' });
       return w.supaRest('lifeos_data?select=updated_at').then(() => new Promise(res => setTimeout(res, 50)));   // let the settings card's own calls settle

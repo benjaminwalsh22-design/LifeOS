@@ -3,14 +3,14 @@
 // is pushed onto the tab you are in, and Back (the button, or a swipe from the
 // left edge) returns to where you came from, at the scroll position you left.
 const VIEWS = { today:'Today', friends:'People', person:'', journal:'Journal', ask:'Ask Ben', memories:'52 Memories',
-  insights:'Insights', mind:'Mind', body:'Body', money:'Money', firm:'The Firm', places:'Places', review:'Reviews', health:'Health',
+  entry:'', insights:'Insights', mind:'Mind', body:'Body', money:'Money', firm:'The Firm', places:'Places', review:'Reviews', health:'Health',
   schedule:'Schedule', goals:'Goals', study:'Quest for Knowledge', settings:'Settings', styleguide:'Style guide',
   'set-profile':'Profile', 'set-account':'Account and sync', 'set-notif':'Notifications', 'set-lock':'App lock',
   'set-ai':'Journal AI', 'set-health':'Apple Health', 'set-data':'Backup', 'set-about':'About' };
 // the tab a screen belongs to: where it opens when the app is launched straight into it
 const TAB_OF = { today:'today', schedule:'today', settings:'today', styleguide:'today',
   'set-profile':'today', 'set-account':'today', 'set-notif':'today', 'set-lock':'today', 'set-ai':'today', 'set-health':'today', 'set-data':'today', 'set-about':'today',
-  goals:'goals', study:'goals', friends:'friends', person:'friends', journal:'journal', ask:'journal', memories:'journal',
+  goals:'goals', study:'goals', friends:'friends', person:'friends', journal:'journal', ask:'journal', memories:'journal', entry:'journal',
   insights:'insights', mind:'insights', body:'insights', money:'insights', firm:'insights', places:'insights', health:'insights', review:'insights' };
 const ROOTS = ['today','friends','journal','goals','insights'];
 let currentView = 'today';
@@ -59,6 +59,7 @@ function showView(v, how){
     else if(at >= 0){ stack.length = at + 1; if(kind === 'none') kind = 'pop'; }
     else { stack.push({ v:v, y:0 }); if(kind === 'none') kind = 'push'; }
     if(v === 'person') navTop().pid = currentPersonId;
+    if(v === 'entry') navTop().eid = currentEntryId;
   }
   navApply(from, kind);
 }
@@ -77,9 +78,15 @@ function tabTap(v){
 }
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => tabTap(b.dataset.view)));
 
+// the bar title: fixed for most screens, the date for an entry, the name for a person
+function navTitle(v){
+  if(v === 'entry') return entryTitle();
+  if(v === 'person'){ const f = (DB.friends||[]).find(x => x.id === currentPersonId); return f ? f.name : ''; }
+  return VIEWS[v] || '';
+}
 function navChrome(){
   const app = document.querySelector('.app'), stack = navStack(), top = navTop(), el = viewEl(top.v);
-  $('topTitle').textContent = VIEWS[top.v] || '';
+  $('topTitle').textContent = navTitle(top.v);
   app.setAttribute('data-view', top.v);
   app.setAttribute('data-large', el && el.querySelector('header.lt') ? '1' : '0');
   const back = $('tbBack'), prev = stack.length > 1 ? stack[stack.length-2] : null;
@@ -90,6 +97,7 @@ function navApply(from, kind){
   const top = navTop(), v = top.v, toEl = viewEl(v), fromEl = viewEl(from.v), app = document.querySelector('.app');
   currentView = v;
   if(v === 'person' && top.pid != null) currentPersonId = top.pid;
+  if(v === 'entry' && top.eid != null) currentEntryId = top.eid;
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.view === NAV.tab));
   renderAll();
   if(v === 'styleguide') renderStyleGuide();

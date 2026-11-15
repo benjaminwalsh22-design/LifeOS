@@ -13,7 +13,7 @@ import re, sys, pathlib
 HERE = pathlib.Path(__file__).parent
 ROOT = HERE.parent.parent
 src = (ROOT / 'index.html').read_text()
-VERSION = 'v11.0 preview 2'
+VERSION = 'v11.0 preview 3'
 
 def piece(name):
     return (HERE / name).read_text().rstrip('\n') + '\n'
@@ -195,6 +195,32 @@ swap('// ---------- push notifications ----------', piece('guide.js') + piece('s
 
 # ---------------------------------------------------------------- Insights hub
 swap_range('function renderInsightsView(){', '// ---------- account sync (Supabase) ----------', piece('hub.js'))
+
+# ---------------------------------------------------------------- Journal and Entry
+SEARCH_IC = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="m16 16 4.5 4.5"/></svg>'
+CAMERA_IC = '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.8 7h-1A2.8 2.8 0 0 0 3 9.8v7.4A2.8 2.8 0 0 0 5.8 20h12.4a2.8 2.8 0 0 0 2.8-2.8V9.8A2.8 2.8 0 0 0 18.2 7h-1l-1.2-2.1A1.8 1.8 0 0 0 14.4 4H9.6a1.8 1.8 0 0 0-1.6.9L6.8 7Z"/><circle cx="12" cy="13" r="3.4"/></svg>'
+swap_range('    <section class="view" id="view-journal">', '    <!-- ============ ASK BEN ============ -->',
+     '    <section class="view" id="view-journal">\n'
+     '      <header class="lt"><h1 class="lt-title">Journal</h1></header>\n'
+     '      <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>\n'
+     '      <input type="file" id="archiveInput" accept="image/*,application/pdf,.pdf" multiple hidden>\n'
+     '      <button class="btn jscan" id="jScan">' + CAMERA_IC + '<span>Scan today’s page</span></button>\n'
+     '      <div class="btn-row jsecond"><button class="btn secondary" id="jBulk">Bulk upload</button><button class="btn secondary" id="jExportBtn">Export</button></div>\n'
+     '      <button id="jChat" hidden></button>\n'
+     '      <div id="archiveProgress"></div>\n'
+     '      <div id="memCard"></div>\n'
+     '      <section class="sec">\n'
+     '        <div class="sec-h"><h2>Entries</h2><span class="meta num" id="journalCount"></span></div>\n'
+     '        <div class="jtools"><label class="search">' + SEARCH_IC + '<input id="jSearch" type="search" placeholder="Search your journal" autocomplete="off" autocorrect="off"></label><select id="jYear" aria-label="Year"></select></div>\n'
+     '        <div id="journalList"></div>\n'
+     '      </section>\n'
+     '    </section>\n'
+     '    <section class="view" id="view-entry"><div id="entryBody"></div></section>\n\n')
+swap_range('function renderArchiveProgress(){', 'function openFirstRefused(){', '')
+swap_range('function renderMemHome(){', 'function memSearch(v){', '')
+swap_range('async function openEntry(id){', 'async function requeueEntry(id){', '')
+swap_range('async function renderJournalList(){', "$('jScan').addEventListener('click'", piece('journal.js'))
+swap('renderPerson(); renderReview(); renderInsightsView(); }', 'renderPerson(); renderReview(); renderInsightsView(); renderEntry(); }')
 
 # ---------------------------------------------------------------- the few places that reached for the old single scroller
 swap("    if (mainEl.scrollTop <= 0){ P.y = e.touches[0].clientY; P.active = true; P.pull = 0; }", "    if (scroller().scrollTop <= 0){ P.y = e.touches[0].clientY; P.active = true; P.pull = 0; }")

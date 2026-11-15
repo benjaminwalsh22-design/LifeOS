@@ -65,6 +65,12 @@ async function shot(browser, { name, theme, view, w = 393, h = 852, prep, steps,
   jobs.push({ name: 'scrolled-insights', theme: 'light', view: 'insights', steps: "document.getElementById('view-insights').scrollTop = 220" });
   for (const wd of [375, 430]) jobs.push({ name: `insights-${wd}`, theme: 'light', view: 'insights', w: wd });
   jobs.push({ name: 'insights-bigtext', theme: 'light', view: 'insights', w: 375, h: 1700, prep: "document.documentElement.style.fontSize='21px'; renderAll()" });
+  // phase 3 screens
+  const ENTRY = "openEntry(DB.journal.filter(j=>j.status==='done'&&j.transcription&&j.summary&&j.hap>0).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0].id)";
+  jobs.push({ name: 'p3-journal', theme: 'light', view: 'journal', h: 1700 });
+  jobs.push({ name: 'p3-journal-dark', theme: 'dark', view: 'journal' });
+  jobs.push({ name: 'p3-entry', theme: 'light', view: 'journal', steps: ENTRY, h: 2600 });
+  jobs.push({ name: 'p3-entry-dark', theme: 'dark', view: 'journal', steps: ENTRY });
   const only = process.env.LIFEOS_ONLY;
   for (const j of jobs) { if (only && !j.name.includes(only)) continue; const m = await shot(browser, j); console.log(j.name, JSON.stringify(m)); }
   await browser.close();
