@@ -147,7 +147,7 @@ for (let i = 0; i < 30; i++) { const d = new Date(Date.UTC(2026, 10, 15 - i)).to
   w.tabTap('today'); settle(); w.showView('settings'); settle();
   const rows = [...$('settingsList').querySelectorAll('.row')].map(r => r.querySelector('.row-title').textContent).join(', ');
   ok(rows === 'Profile, Account and sync, Notifications, App lock, Journal AI, Apple Health, Backup, About', 'Settings list: ' + rows);
-  ok(/Benjamin/.test($('settingsList').textContent) && /Not signed in/.test($('settingsList').textContent) && /preview/.test($('settingsList').textContent), 'rows carry their current state');
+  ok(/Benjamin/.test($('settingsList').textContent) && /Not signed in/.test($('settingsList').textContent) && /v11/.test($('settingsList').textContent), 'rows carry their current state');
   w.showView('set-profile'); settle();
   $('setName').value = 'Ben'; $('setName').dispatchEvent(new w.Event('change'));
   ok(g('DB').profile.name === 'Ben', 'the name field still saves');
