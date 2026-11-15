@@ -131,6 +131,11 @@ function navFinish(){
     if(t && t.id === 'view-'+currentView && !NAV.swiping) app.classList.toggle('scrolled', t.scrollTop > 36); }, { capture:true, passive:true });
 })();
 
+// say so when the phone is offline
+(function(){ const b = $('netBanner'); if(!b) return;
+  const set = () => { b.hidden = navigator.onLine !== false; };
+  window.addEventListener('online', set); window.addEventListener('offline', set); set(); })();
+
 // swipe from the left edge to go back; the screen follows the finger
 (function(){
   const main = document.querySelector('main'); if(!main) return;

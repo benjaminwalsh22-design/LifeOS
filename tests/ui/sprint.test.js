@@ -27,7 +27,7 @@ function boot(dateStr, seed) {
   w.addEventListener('error', (e) => errors.push(e.message));
   const sc = w.document.createElement('script'); sc.textContent = code + '\n;window.__g = (n) => eval(n);'; w.document.body.appendChild(sc);
   const g = (n) => { try { return w.__g(n); } catch (e) { return undefined; } };
-  for (const n of ['DB','isSprint','showView','renderTWY','twyFocusHTML','sprintNudges','sprintTap','sprintGoal','sprintHit','sprintCount','sprintDaysDone','mergeRemote','clockOf','sessionDead','sessionAlive','supaRest','renderJournalList','SUPA']) { if (typeof w[n] === 'undefined') Object.defineProperty(w, n, { get: () => g(n), configurable: true }); }
+  for (const n of ['DB','isSprint','showView','renderTWY','seasonHTML','sprintNudges','sprintTap','sprintGoal','sprintHit','sprintCount','sprintDaysDone','mergeRemote','clockOf','sessionDead','sessionAlive','supaRest','renderJournalList','SUPA']) { if (typeof w[n] === 'undefined') Object.defineProperty(w, n, { get: () => g(n), configurable: true }); }
   if (typeof w.showView !== 'function') errors.push('showView missing: ' + (w.__g ? 'script ran' : 'script did not finish'));
   return { w, errors, key };
 }
@@ -52,8 +52,8 @@ const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FAIL ') + msg); if (!c) fai
   const t = w.document.getElementById('twyBody').textContent;
   ok(/November sprint/.test(t) && /starts Sun, Nov 1/.test(t), 'goals card: shows "starts Sun, Nov 1" — ' + t.slice(0, 80).replace(/\s+/g, ' '));
   ok(/stopped at week 10/.test(t), 'goals card: Fall 2026 footer says stopped at week 10 — ' + (t.match(/Fall 2026[^.]*\./) || [''])[0]);
-  const brief = w.twyFocusHTML();
-  ok(/starts Sun, Nov 1/.test(brief), 'today brief before start: ' + brief.replace(/<[^>]+>/g, '').slice(0, 90));
+  const brief = w.seasonHTML();
+  ok(/starts Sun, Nov 1/i.test(brief), 'Today season slot before start: ' + brief.replace(/<[^>]+>/g, '').slice(0, 90));
 }
 // 2. mid-month, behind on the gym, test in 13 days
 {
@@ -104,7 +104,7 @@ const ok = (c, msg) => { console.log((c ? 'ok   ' : 'FAIL ') + msg); if (!c) fai
   const oldDev = JSON.parse(JSON.stringify(seed)); w.mergeRemote(oldDev);
   ok(w.DB.twy.id === 'nov2026', 'merge: a fall2026 payload from an old device does not replace November');
   // brief context line for the morning sentence
-  ok(/November sprint, day 15 of 30/.test(w.twyFocusHTML().replace(/<[^>]+>/g, '')) || /November, day 15 of 30/.test(w.twyFocusHTML().replace(/<[^>]+>/g, '')), 'brief header: ' + w.twyFocusHTML().replace(/<[^>]+>/g, '').slice(0, 70));
+  ok(/Day 15 of 30/.test(w.seasonHTML().replace(/<[^>]+>/g, ' ')) && /November sprint/.test(w.seasonHTML()), 'Today season slot header: ' + w.seasonHTML().replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 70));
 }
 // 4. test day and after the month
 {

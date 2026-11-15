@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
-"""Builds next.html (the redesign preview) from index.html (the live app).
+"""Builds the redesigned LifeOS from the last version before the redesign.
 
-The live file stays untouched until cut-over. Each phase adds to the pieces in
-this folder; this script swaps the old markup-building functions for the new
-ones and appends the design-system stylesheet. Nothing here touches storage,
-sync, prompts or scoring: every replaced function keeps its data logic.
+    python3 tools/next/build.py           writes next.html (the preview)
+    python3 tools/next/build.py --live    also writes index.html (the live app), labelled v11.0
 
-    python3 tools/next/build.py
+The starting point is rollback/index-v10.5.html, which never changes. This
+script swaps the old markup-building functions for the pieces in this folder
+and appends the design-system stylesheet. Nothing here touches storage, sync,
+prompts or scoring: every replaced function keeps its data logic, and
+tests/ui/parity.test.js holds the two builds to that.
 """
 import re, sys, pathlib
 
 HERE = pathlib.Path(__file__).parent
 ROOT = HERE.parent.parent
-src = (ROOT / 'index.html').read_text()
-VERSION = 'v11.0 preview 3'
+LIVE = '--live' in sys.argv
+src = (ROOT / 'rollback' / 'index-v10.5.html').read_text()
+VERSION = 'v11.0' if LIVE else 'v11.0 preview 4'
 
 def piece(name):
     return (HERE / name).read_text().rstrip('\n') + '\n'
@@ -89,7 +92,7 @@ swap('    <!-- ============ STUDY (Quest for Knowledge, under Goals) ===========
      '    <section class="view" id="view-styleguide"><div id="guideBody"></div></section>\n'
      '    <!-- ============ STUDY (Quest for Knowledge, under Goals) ============ -->')
 swap('      <span>Friends</span></button>', '      <span>People</span></button>')
-swap("""<div class="syncbanner" id="syncBanner" hidden onclick="showView('settings')">""", """<div class="syncbanner" id="syncBanner" hidden onclick="showView('set-account')">""")
+swap("""<div class="syncbanner" id="syncBanner" hidden onclick="showView('settings')">""", """<div class="netbanner" id="netBanner" hidden>You are offline. Everything you add is kept on this phone and syncs when you are back.</div>\n  <div class="syncbanner" id="syncBanner" hidden onclick="showView('set-account')">""")
 
 # ---------------------------------------------------------------- structure: Insights hub and doors, large titles, Settings pages
 swap_range('    <section class="view" id="view-insights">', '    <!-- ============ SCHEDULE ============ -->',
@@ -278,6 +281,21 @@ swap("""    if($('reviewBody')) $('reviewBody').innerHTML='<div class="pagehead2
 swap_range('async function renderNotifCard(){', 'regSW().then(', '')
 swap_range('function renderLockCard(){', "document.addEventListener('visibilitychange', () => {", piece('settings2.js'))
 
+# ---------------------------------------------------------------- polish: questions as sheets, no symbol glyphs in messages
+swap("  if (dupOf && !confirm('This photo looks identical to your '+fmtDate(dupOf.date)+' entry. Save anyway?')){ window._pendingPhoto=null; closeSheet(); return; }",
+     "  if (dupOf && !(await confirmSheet('Save it anyway?', 'This photo looks identical to your '+fmtDate(dupOf.date)+' entry.', 'Save anyway'))){ window._pendingPhoto=null; closeSheet(); return; }")
+swap("    if (!confirm('Erase everything? This cannot be undone.')) return;",
+     "    if (!(await confirmSheet('Erase everything on this phone?', 'This cannot be undone here. Anything synced to your account comes back when you sign in again.', 'Erase', true))) return;")
+swap("  if(!confirm('Disconnect the ring? Numbers already in LifeOS stay put.')) return;",
+     "  if(!(await confirmSheet('Disconnect the ring?', 'Numbers already in LifeOS stay put.', 'Disconnect'))) return;")
+swap("  if(!confirm('Disconnect OneDrive? Photos already copied into LifeOS stay put.')) return;",
+     "  if(!(await confirmSheet('Disconnect OneDrive?', 'Photos already copied into LifeOS stay put.', 'Disconnect'))) return;")
+swap("function lockForgot(){\n  if(confirm('Reset this device? Local data is erased; anything synced to your account returns after you log back in.')){",
+     "async function lockForgot(){\n  if(await confirmSheet('Reset this phone?', 'Local data is erased; anything synced to your account returns after you log back in.', 'Reset', true)){")
+swap("(g.label.split(',')[0]+' — '+g.target+' done ✓')", "(g.label.split(',')[0]+': '+g.target+' done')")
+swap("    if(g.done) toast(g.label+' ✓');", "    if(g.done) toast(g.label+': done');")
+swap("(j._mem?'&#10022; ':'')+fmtDate(j.date)", "(j._mem?'52 Memories · ':'')+fmtDate(j.date)")
+
 swap('// ---------- push notifications ----------', piece('guide.js') + piece('settings.js') + '// ---------- push notifications ----------')
 
 # ---------------------------------------------------------------- Insights hub
@@ -333,5 +351,77 @@ swap("    '<div class=\"turn-a\">' + askMd(t.answer_markdown || '') + '</div></d
 swap("  if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }", "  if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v, 'cold'); return true; }")
 swap("if(m && VIEWS[m[1]]!=null) showView(m[1]); });", "if(m && VIEWS[m[1]]!=null) showView(m[1], 'cold'); });")
 
+# ---------------------------------------------------------------- clear out: functions and styles nothing uses any more
+def drop_fn(name, until):
+    """Remove one function, from its declaration up to the line that starts with `until`."""
+    global src
+    m = re.search(r'\n(?:async )?function ' + re.escape(name) + r'\(', src)
+    if not m or len(re.findall(r'\n(?:async )?function ' + re.escape(name) + r'\(', src)) != 1:
+        sys.exit(f'build: cannot find exactly one function {name}')
+    j = src.find('\n' + until, m.start() + 1)
+    if j < 0 or j - m.start() > 9000:
+        sys.exit(f'build: end marker for {name} not found close by: {until!r}')
+    src = src[:m.start() + 1] + src[j + 1:]
+
+for name, until in [
+    ('insightCardHTML', '// ---------- mood over time'), ('moodChart', 'function fmtYM(ym){'), ('moodHover', '// ---------- body composition ----------'),
+    ('bodyChart', 'const QUOTES=['), ('twyFocusHTML', 'function openMemoriesGuard(){'), ('moneyPanelHTML', 'function workHTML(){'),
+    ('workHTML', 'function obsHTML(){'), ('obsHTML', 'async function refreshObs(){'), ('transHTML', 'function openReviewQueue(){'),
+    ('scoreBlockHTML', 'function openScoreEdit(id){'), ('sparkline', 'function trendCardHTML(m){'), ('trendCardHTML', '// ---------- one metric over time'),
+    ('trendChart', 'function trendHover(pts, m){'), ('trendHover', '// ---------- Insights: a hub and its doors ----------')]:
+    drop_fn(name, until)
+for name in ['insightCardHTML', 'moodChart', 'moodHover', 'bodyChart', 'twyFocusHTML', 'moneyPanelHTML', 'workHTML', 'obsHTML', 'transHTML', 'scoreBlockHTML', 'sparkline', 'trendCardHTML', 'trendChart', 'trendHover']:
+    if re.search(r'(?<![\w$])' + name + r'\s*\(', src):
+        sys.exit(f'build: {name} is still referenced after removal')
+
+# the first stylesheet is the old one. Keep only the rules whose classes and ids still appear
+# somewhere in the markup or the script; its colour tokens go too, since the design system defines them all.
+def prune_css(css, alive):
+    out, i, n = [], 0, len(css)
+    while i < n:
+        j = css.find('{', i)
+        if j < 0:
+            break
+        head = css[i:j]
+        depth, k = 1, j + 1
+        while k < n and depth:
+            c = css[k]
+            if c in '"\'':
+                k = css.index(c, k + 1)
+            elif c == '{': depth += 1
+            elif c == '}': depth -= 1
+            k += 1
+        body = css[j + 1:k - 1]
+        sel = re.sub(r'/\*.*?\*/', '', head, flags=re.S).strip()
+        if sel.startswith('@media') or sel.startswith('@supports'):
+            inner = prune_css(body, alive)
+            if inner.strip():
+                out.append(sel + ' {\n' + inner + '}\n')
+        elif sel.startswith('@'):
+            out.append(sel + ' {' + body + '}\n')
+        elif sel in (':root', ':root[data-theme="dark"]'):
+            pass
+        else:
+            keep = [x.strip() for x in sel.split(',')
+                    if all(t in alive for t in re.findall(r'[.#]([A-Za-z_][\w-]*)', re.sub(r'\[[^\]]*\]', '', x)))]
+            if keep:
+                out.append(', '.join(keep) + ' {' + body + '}\n')
+        i = k
+    return ''.join(out)
+
+m = re.search(r'<style>(.*?)</style>\n<style id="ds">', src, flags=re.S)
+if not m:
+    sys.exit('build: old stylesheet not found')
+rest = src[:m.start(1)] + src[m.end(1):]
+rest = re.sub(r'<style id="ds">.*?</style>', '', rest, flags=re.S)
+alive = set(re.findall(r'[A-Za-z_][\w-]*', rest))
+old_css = m.group(1)
+new_css = prune_css(old_css, alive)
+src = src[:m.start(1)] + '\n/* what is left of the old stylesheet: layout for parts the design system has not replaced */\n' + new_css + src[m.end(1):]
+print('old stylesheet:', len(old_css), '->', len(new_css), 'bytes')
+
 (ROOT / 'next.html').write_text(src)
+if LIVE:
+    (ROOT / 'index.html').write_text(src)
+    print('index.html written: the redesign is live once this is pushed')
 print('next.html written:', len(src), 'bytes,', src.count('\n'), 'lines')

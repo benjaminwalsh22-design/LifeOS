@@ -958,6 +958,25 @@ select.tgl { font-size: max(16px, var(--t-foot)); }
 .lock-forgot { margin-top: var(--s5); font-size: var(--t-foot); color: var(--cover-muted); cursor: pointer; }
 .lockscreen.shake .lock-inner input { border-color: var(--cover-ink); }
 
+/* ==========================================================================
+   Whole-app behaviour: taps, focus, text entry, offline
+   ========================================================================== */
+* { -webkit-tap-highlight-color: transparent; }
+button, .row[onclick], .chip, .tab, a.row { -webkit-user-select: none; user-select: none; }
+:focus { outline: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input, textarea, select { font-size: max(16px, 1em); }          /* below 16px iOS zooms the page on focus */
+.overlay { z-index: 240; }                                      /* above Reading Mode, so a photo or a question can open over it */
+.lockscreen { z-index: 300; }                                   /* the lock covers everything, sheets included */
+.overlay.top { z-index: 320; }
+.sheet .detail-photo { margin-bottom: var(--s4); }
+.netbanner { display: flex; margin: var(--s2) var(--gutter); padding: var(--s3) var(--s4); border-radius: var(--r-md); background: var(--surface-sunken); font-size: var(--t-foot); line-height: var(--lh-snug); color: var(--ink-2); }
+
+.lt-title, .row-title, .mr-title { overflow-wrap: anywhere; }
+/* compact controls keep their 32pt look and answer a 44pt touch */
+.chip, .segc button, .ask-chips button, .count-n, .tgl, .wk { position: relative; }
+.chip::after, .segc button::after, .ask-chips button::after, .count-n::after, .tgl::after, .wk::after { content: ""; position: absolute; inset: -6px 0; }
+
 /* ---- style guide ---- */
 .sg-swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s3); }
 .sw { font-size: var(--t-cap); color: var(--ink-muted); line-height: var(--lh-snug); }

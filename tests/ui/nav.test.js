@@ -62,6 +62,15 @@ for (let i = 0; i < 30; i++) { const d = new Date(Date.UTC(2026, 10, 15 - i)).to
   const untitled = [...w.document.querySelectorAll('.view')].map(e => e.id.replace('view-', '')).filter(v => g('VIEWS')[v] == null);
   ok(!untitled.length, 'every screen has a title entry (' + (untitled.join(', ') || 'all') + ')');
 
+  // ---- the soul rules that can be checked by machine: no emoji or pictograph glyphs, no browser dialogs
+  const visible = html.replace(/<style[\s\S]*?<\/style>/g, '');
+  const glyphs = [...new Set(visible.match(/[\u2600-\u27BF\u2B00-\u2BFF\u{1F000}-\u{1FAFF}]|&#(?:9[67]\d\d|10\d{3}|12[78]\d{3});/gu) || [])];
+  ok(!glyphs.length, 'no emoji or symbol glyphs in the app (' + (glyphs.join(' ') || 'none') + ')');
+  ok(!/[^\w.]confirm\(|[^\w.]alert\(|[^\w.]prompt\(/.test(visible.replace(/confirmSheet\(|confirmYes\(|confirmDelete\w*\(/g, '')), 'no browser confirm, alert or prompt dialogs');
+  const css = html.match(/<style[\s\S]*?<\/style>/g).join('');
+  const undef = [...new Set((html.match(/var\((--[\w-]+)/g) || []).map(x => x.slice(4)))].filter(v => !new RegExp(v + '\\s*:').test(css) && !new RegExp("'" + v + "'").test(html) && v !== '--c' && v !== '--stone');
+  ok(!undef.length, 'every colour and size variable used is defined (' + (undef.join(', ') || 'all') + ')');
+
   // ---- first paint
   ok(active() === 'today' && $('tbBack').hidden && w.document.querySelector('.app').getAttribute('data-large') === '1', 'starts on Today, no Back, large title');
 

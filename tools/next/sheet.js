@@ -1,5 +1,15 @@
 // ---------- sheet: grabber, swipe to dismiss, background held still ----------
-let _sheetClear=null;
+let _sheetClear=null, _confirmDone=null;
+// a yes/no question as a sheet instead of the browser's own dialog. Resolves true only on the confirming button.
+function confirmSheet(title, text, yes, danger){
+  return new Promise(resolve => {
+    openSheet('<h3>'+esc(title)+'</h3>'+(text ? '<p class="sheet-text">'+esc(text)+'</p>' : '')+
+      '<button class="btn'+(danger ? ' destructive' : '')+'" onclick="confirmYes()">'+esc(yes || 'OK')+'</button><button class="btn secondary" onclick="closeSheet()">Cancel</button>');
+    _confirmDone = resolve;
+    const lk = $('lockscreen'); if(lk && lk.style.display !== 'none') $('overlay').classList.add('top');    // the one question the lock screen itself asks
+  });
+}
+function confirmYes(){ const done=_confirmDone; _confirmDone=null; closeSheet(); if(done) done(true); }
 function openSheet(html){
   clearTimeout(_sheetClear);
   const s=$('sheet');
@@ -7,7 +17,8 @@ function openSheet(html){
   s.style.transform=''; s.scrollTop=0;
   $('overlay').classList.add('open'); document.body.classList.add('sheet-open'); }
 function closeSheet(){
-  $('overlay').classList.remove('open'); document.body.classList.remove('sheet-open');
+  if(_confirmDone){ const done=_confirmDone; _confirmDone=null; done(false); }     // a question that is dismissed is answered no
+  $('overlay').classList.remove('open','top'); document.body.classList.remove('sheet-open');
   const s=$('sheet'); s.classList.remove('dragging'); s.style.transform='';
   clearTimeout(_sheetClear);
   // the content stays for the length of the slide-out, then goes

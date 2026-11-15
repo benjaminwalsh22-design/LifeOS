@@ -1,5 +1,6 @@
 #!/bin/bash
 # Rebuild the preview and run every check. Usage: tests/ui/check.sh [quick]
+# Set LIFEOS_PAYLOAD (and LIFEOS_LIFE) to a copy of real app data to also run the layout test against it; never commit that file.
 cd "$(dirname "$0")/../.." || exit 1
 python3 tools/next/build.py || exit 1
 cd tests/ui
@@ -14,3 +15,6 @@ echo "study:   $(LIFEOS_FILE=$F node study.test.js | grep -v '^ok' | tr '\n' ' '
 echo "parity:  $(node parity.test.js | grep -v '^ok' | tr '\n' ' ')"
 echo "contrast: $(python3 contrast.py | tail -1)"
 [ "$1" = quick ] || echo "gesture: $(node gesture.test.js | grep -v '^ok' | tr '\n' ' ')"
+[ "$1" = quick ] || echo "smoke:   $(node smoke.test.js | grep -v '^ok' | tr '\n' ' ')"
+[ "$1" = quick ] || echo "layout:  $(node layout.test.js | tail -4 | tr '\n' ' ')"
+[ "$1" = quick ] || [ -z "$LIFEOS_PAYLOAD" ] || echo "layout (your data): $(node layout.test.js | tail -4 | tr '\n' ' ')"

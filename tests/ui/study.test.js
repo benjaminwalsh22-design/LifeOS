@@ -34,8 +34,8 @@ const seed = { settings: {}, stats: {}, journal: [], friends: [], events: [], go
   // the goals page shows the study card; the brief nudge points to study
   w.showView('goals');
   ok(/Quest for Knowledge.{1,3}25 days to the test.{0,4}tonight Astronomy/i.test(w.document.getElementById('twyBody').textContent), 'goals page: study card with days and tonight\'s subject');
-  const brief = w.twyFocusHTML();
-  ok(/25 days to the test — tonight is Astronomy/.test(brief.replace(/<[^>]+>/g,'')) && /showView\('study'\)/.test(brief), 'brief nudge names tonight\'s subject and opens the hub');
+  const brief = w.seasonHTML();
+  ok(/25/.test(brief) && /Tonight: Astronomy/.test(brief.replace(/<[^>]+>/g,'')) && /showView\('study'\)/.test(brief), 'Today names tonight\'s subject and opens the hub');
   // open the hub
   w.showView('study');
   const body = () => w.document.getElementById('studyBody').textContent;
@@ -43,7 +43,7 @@ const seed = { settings: {}, stats: {}, journal: [], friends: [], events: [], go
   // log tonight
   w.studyLogToday();
   ok(w.DB.study.log['2026-11-03'] && /Studied tonight/.test(body()) && !/Done studying tonight/.test(body()) && /1 night running/.test(body()), 'log tonight → streak 1');
-  ok(w.twyFocusHTML().indexOf('tonight is') < 0, 'brief stops nagging once tonight is logged');
+  ok(w.seasonHTML().indexOf('Tonight:') < 0 && /Studied tonight/.test(w.seasonHTML()), 'Today stops nagging once tonight is logged');
   // guide
   w.STUDYV.seg = 'guide'; w.renderStudy();
   ok(/1491–1607 · Contact/.test(body()) && /Columbian Exchange/.test(body()), 'guide renders history sections');

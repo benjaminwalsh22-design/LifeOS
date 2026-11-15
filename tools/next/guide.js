@@ -16,6 +16,7 @@ function dsChart(pts, o){
     d+=(pen?' L ':' M ')+X(i).toFixed(1)+' '+Y(p.v).toFixed(1); pen=true; });
   let last=pts.length-1; while(last>0 && pts[last].v==null) last--;
   const mean=vals.reduce((a,b)=>a+b,0)/vals.length, col=o.color||'var(--c1)';
+  if(_chartSeq % 40 === 0) Object.keys(CHARTS).forEach(k => { if(!document.getElementById(k)) delete CHARTS[k]; });   // forget charts that have left the page
   CHARTS[id]={ pts, X, Y, fmt, last, W };
   return '<div class="chart-wrap" id="'+id+'"><div class="chart-read"><span class="cr-l">'+esc(pts[last].label)+'</span><b class="cr-v">'+esc(fmt(pts[last].v))+'</b></div>'+
     '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.label||'Trend')+'" onpointerdown="chartScrub(event,\''+id+'\')" onpointermove="chartScrub(event,\''+id+'\')" onpointerup="chartScrub(null,\''+id+'\')" onpointerleave="chartScrub(null,\''+id+'\')">'+
@@ -63,7 +64,7 @@ function renderStyleGuide(){
   h+=sec('Three voices','<div class="sg-stack">'+
      '<div><span class="eyebrow">1 · My own words</span><div class="own" style="margin-top:var(--s2)"><div class="own-date">7 years ago <span>· Fri, Nov 15, 2019</span></div><div class="own-text">Up before the kids. Read for twenty minutes, then wrote this. The deal closes Friday and I keep noticing I am calmer on the days I walk first.</div></div></div>'+
      '<div><span class="eyebrow">2 · Measured</span><div class="stats" style="margin-top:var(--s2)"><div><div class="stat-label">Sleep</div><div class="stat-value">7.4<span class="unit">h</span></div><div class="stat-fresh">Oura · this morning</div></div>'+
-       '<div><div class="stat-label">HRV</div><div class="stat-value">59<span class="unit">ms</span> <span class="delta good">↑ 4</span></div><div class="stat-fresh stale">Oura · 3 days ago</div></div></div></div>'+
+       '<div><div class="stat-label">HRV</div><div class="stat-value">59<span class="unit">ms</span> <span class="delta good">up 4</span></div><div class="stat-fresh stale">Oura · 3 days ago</div></div></div></div>'+
      '<div><span class="eyebrow">3 · Written by the model</span><div class="ai" style="margin-top:var(--s2)">'+aiLabel('What stands out','toast(\'Reading it again\')','moderate')+'<p class="ai-body">On weeks with three or more workouts your evening anxiety scores run about a point lower. Eleven weeks support it; four do not.</p></div></div></div>');
   h+=sec('Buttons','<div class="sg-stack"><button class="btn" onclick="guideSheet()">Primary · open a sheet</button><button class="btn secondary" onclick="toast(\'Saved\')">Secondary · show a toast</button>'+
      '<div class="btn-row"><button class="btn quiet">Quiet</button><button class="btn danger">Destructive</button></div>'+
@@ -75,7 +76,7 @@ function renderStyleGuide(){
      '<div class="chips"><button class="chip on">All</button><button class="chip">History</button><button class="chip">Astronomy</button><button class="chip">Animals</button></div>'+
      '<div class="chips"><span class="status good">On pace</span><span class="status watch">38 days since contact</span><span class="status serious">Not transcribed</span><span class="status info">Queued</span><span class="status">Draft</span></div>'+
      '<div><div class="bar"><i style="width:62%"></i></div></div><div><div class="bar"><i class="good" style="width:100%"></i></div></div>'+
-     '<div class="sec-body"><div class="count-row hit"><span class="count-mark">✓</span><div class="row-main"><div class="row-title">Date night</div><div class="row-sub">Friday or Saturday</div></div><span class="count-n">1/1</span></div>'+
+     '<div class="sec-body"><div class="count-row hit"><span class="count-mark">'+IC_CHECK+'</span><div class="row-main"><div class="row-title">Date night</div><div class="row-sub">Friday or Saturday</div></div><span class="count-n">1/1</span></div>'+
        '<div class="count-row"><span class="count-mark">3</span><div class="row-main"><div class="row-title">Gym, 8 sessions</div><div class="row-sub">On pace · last Nov 12</div></div><span class="count-n">3/8</span></div></div>'+
      '<div class="row"><div class="row-main"><div class="row-title">Study reminder, 8 PM</div></div><button class="switch" role="switch" aria-checked="true" onclick="this.setAttribute(\'aria-checked\', this.getAttribute(\'aria-checked\')===\'true\'?\'false\':\'true\')"></button></div>'+
      '<div class="field"><label>Happiness this evening</label><input type="range" class="slider" min="0" max="10" value="7"></div>'+
