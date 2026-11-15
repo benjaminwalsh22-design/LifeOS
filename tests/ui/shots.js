@@ -88,6 +88,12 @@ async function shot(browser, { name, theme, view, w = 393, h = 852, prep, steps,
   jobs.push({ name: 'p3-ask', theme: 'light', view: 'ask', h: 1100 });
   jobs.push({ name: 'p3-ask-answer', theme: 'light', view: 'ask', steps: "window.ASKMD_=" + JSON.stringify(ASKMD) + ";" + ASKFILL, h: 2100 });
   jobs.push({ name: 'p3-ask-answer-dark', theme: 'dark', view: 'ask', steps: "window.ASKMD_=" + JSON.stringify(ASKMD) + ";" + ASKFILL + ";document.getElementById('view-ask').scrollTop=520" });
+  const MEMPICK = "(()=>{const m=DB.memories.filter(x=>x.text&&x.text.length>300&&x.text.length<700).sort((a,b)=>b.yr-a.yr)[0]||DB.memories[0]; const ms=DB.memories.filter(x=>x.yr===m.yr).sort((a,b)=>(a.n||0)-(b.n||0)); return {m, yr:m.yr, i:ms.indexOf(m), n:ms.length};})()";
+  jobs.push({ name: 'p3-mem', theme: 'light', view: 'journal', steps: "MEMV.yr=" + MEMPICK + ".yr; showView('memories')", h: 1300 });
+  jobs.push({ name: 'p3-mem-next', theme: 'light', view: 'journal', steps: "MEMV.yr='next'; showView('memories')" });
+  jobs.push({ name: 'p3-mem-sheet', theme: 'light', view: 'journal', steps: "MEMV.yr=" + MEMPICK + ".yr; showView('memories'); openMemory(" + MEMPICK + ".m.id)", wait: 700 });
+  for (const th of ['light', 'dark']) jobs.push({ name: `p3-read-${th}`, theme: th, steps: "{const P=" + MEMPICK + "; memReadStart(P.yr, P.i);}", wait: 700 });
+  jobs.push({ name: 'p3-read-end', theme: 'light', steps: "{const P=" + MEMPICK + "; memReadStart(P.yr, P.n-1);}", wait: 700 });
   const only = process.env.LIFEOS_ONLY;
   for (const j of jobs) { if (only && !j.name.includes(only)) continue; const m = await shot(browser, j); console.log(j.name, JSON.stringify(m)); }
   await browser.close();

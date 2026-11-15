@@ -238,6 +238,18 @@ swap("  if(!SUPA || !SUPA.session){ toast('Sign in first'); return; }\n  if(!DB.
 swap_range('    <!-- ============ HEALTH (under Life) ============ -->', '    <!-- ============ STYLE GUIDE (redesign preview) ============ -->', '')
 swap_range('function renderHealthView(){', '// ---------- Goals ----------', '')
 
+# ---------------------------------------------------------------- 52 Memories and Reading Mode
+swap_range('  <div class="memread" id="memRead">', '  <div class="lockscreen" id="lockscreen"',
+     '  <div class="memread" id="memRead" role="dialog" aria-label="Reading Mode">\n'
+     '    <div class="mr-prog"><i id="mrBar"></i></div>\n'
+     '    <div class="mr-top"><span class="mr-yr" id="mrYr"></span><button class="icon-btn" onclick="memReadClose()" aria-label="Close Reading Mode">&times;</button></div>\n'
+     '    <div class="mr-body" id="mrBody"></div>\n'
+     '    <div class="mr-nav"><button class="btn secondary" onclick="memReadPrev()" id="mrPrev">Back</button><button class="btn" onclick="memReadNext()" id="mrNext">Next</button></div>\n'
+     '  </div>\n\n')
+swap_range('function memReadStart(yr,i){', '// next-year collector', '')
+swap_range('function memCandHTML(){', 'function addMemCandSheet(){', '')
+swap_range('function renderMemories(){', 'function editMemory(id){', piece('memories.js'))
+
 swap('// ---------- push notifications ----------', piece('guide.js') + piece('settings.js') + '// ---------- push notifications ----------')
 
 # ---------------------------------------------------------------- Insights hub
