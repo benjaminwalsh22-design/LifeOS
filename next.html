@@ -1337,6 +1337,103 @@ mark.unread { padding: 0 2px; border-radius: var(--s1); background: var(--watch-
 .rh-b i.none { background: var(--surface-sunken); }
 .rh-note { padding: var(--s2) 0 var(--s3); font-size: var(--t-foot); color: var(--ink-2); }
 
+/* ==========================================================================
+   Goals and the study hub
+   ========================================================================== */
+.count-row .row-main { min-width: 0; }
+.count-mark svg { width: var(--ic-sm); height: var(--ic-sm); }
+.count-bar { margin-top: var(--s2); }
+.count-foot { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); padding: var(--s3) 0 var(--s2); border-top: 1px solid var(--group-rule); font-size: var(--t-foot); color: var(--ink-muted); }
+.count-foot b { font-size: var(--t-body); font-weight: var(--w-semi); color: var(--ink); }
+.count-foot b.good { color: var(--good); } .count-foot b.watch { color: var(--watch); }
+.sec > .season-study { margin-top: var(--s3); cursor: pointer; }
+.season-past { margin: var(--s3) var(--s4) 0; line-height: var(--lh-snug); }
+.wk-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); padding-top: var(--s2); font-size: var(--t-sub); }
+.wk-head b { font-weight: var(--w-semi); }
+.wk-head .meta { font-size: var(--t-foot); color: var(--ink-muted); }
+.wk-strip { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--s1); margin: var(--s3) 0 var(--s2); }
+.wk { height: var(--ctl); padding: 0; border: 0; border-radius: var(--r-sm); background: var(--surface-sunken); color: var(--ink-muted); font-size: var(--t-cap); font-weight: var(--w-semi); font-variant-numeric: tabular-nums; cursor: pointer; }
+.wk.hit { background: var(--good-soft); color: var(--good); }
+.wk.miss { background: var(--watch-soft); color: var(--watch); }
+.wk.low { background: var(--serious-soft); color: var(--serious); }
+.wk.cur { box-shadow: inset 0 0 0 2px var(--accent); color: var(--ink); }
+.wk-note { padding: var(--s2) 0; }
+.wk-field { margin: var(--s2) 0 var(--s2); }
+.goal-row { padding: var(--s3) 0; cursor: pointer; transition: opacity var(--dur-1) var(--ease); }
+.goal-row:active { opacity: .62; }
+.goal-row + .goal-row { border-top: 1px solid var(--group-rule); }
+.goal-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.goal-bar { margin: var(--s2) 0; }
+.goal-next { color: var(--ink-2); }
+
+.study-seg { margin: var(--s4) 0 var(--s3); }
+.study-seg button { padding: 0 2px; }
+.tonight .row-title { display: flex; align-items: center; }
+.sub-dot { display: inline-block; flex: 0 0 auto; width: var(--s2); height: var(--s2); margin-right: var(--s2); border-radius: var(--r-full); vertical-align: middle; }
+.btn.done { background: var(--good-soft); color: var(--good); }
+.btn svg { width: var(--ic-sm); height: var(--ic-sm); }
+.btn.sm svg { margin-right: var(--s1); }
+.plan-wk.past { opacity: .55; }
+.plan-now { padding-top: var(--s3); }
+.study-text { margin: 0; padding: var(--s3) 0; font-size: var(--t-sub); line-height: var(--lh-body); color: var(--ink-2); }
+.study-mix { margin: 0 var(--s1) var(--s3); line-height: var(--lh-snug); }
+.study-tally { padding: var(--s3) 0 var(--s2); text-align: center; }
+.study-acts { margin-top: var(--s3); }
+a.row { text-decoration: none; color: inherit; }
+.fold { margin-bottom: var(--s2); border-radius: var(--r-lg); background: var(--surface); }
+.fold summary { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); min-height: var(--hit); padding: var(--s3) var(--s4); list-style: none; cursor: pointer; font-size: var(--t-sub); }
+.fold summary::-webkit-details-marker { display: none; }
+.fold summary b { font-weight: var(--w-semi); }
+.fold summary .meta { flex: 0 0 auto; font-size: var(--t-foot); color: var(--ink-muted); }
+.fold-body { padding: 0 var(--s4) var(--s2); }
+.fold-body p { margin: 0; padding: var(--s3) 0; border-top: 1px solid var(--hairline); font-size: var(--t-sub); line-height: var(--lh-body); color: var(--ink-2); }
+.fold-body p b { color: var(--ink); font-weight: var(--w-semi); }
+.flash { display: flex; flex-direction: column; min-height: 15em; padding: var(--s4); border-radius: var(--r-lg); background: var(--surface); cursor: pointer; }
+.flash-top, .quiz-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); font-size: var(--t-foot); color: var(--ink-muted); }
+.flash-q { flex: 1; margin: var(--s5) 0; font-family: var(--serif); font-size: var(--t-h3); line-height: var(--lh-snug); color: var(--ink); }
+.flash-a { padding-top: var(--s3); border-top: 1px solid var(--hairline); font-size: var(--t-body); line-height: var(--lh-body); color: var(--ink); }
+.flash-hint { text-align: center; font-size: var(--t-foot); color: var(--ink-muted); }
+.quiz-top { margin: 0 var(--s1) var(--s2); }
+.quiz-bar { height: var(--s1); margin-bottom: var(--s3); }
+.quiz { padding-top: var(--s4); padding-bottom: var(--s4); }
+.quiz-q { font-family: var(--serif); font-size: var(--t-h3); line-height: var(--lh-snug); color: var(--ink); }
+.quiz-prompt { margin-bottom: var(--s3); font-size: var(--t-sub); color: var(--ink-2); }
+.opts { display: grid; gap: var(--s2); margin: var(--s4) 0 var(--s2); }
+.opts.two { grid-template-columns: 1fr 1fr; }
+.opt { display: flex; align-items: center; gap: var(--s3); min-height: var(--hit); padding: var(--s2) var(--s3); border: 1px solid var(--hairline-strong); border-radius: var(--r-md); background: transparent; color: var(--ink); font-size: var(--t-sub); line-height: var(--lh-snug); text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease); }
+.opt:active { transform: scale(.98); }
+.opts.two .opt { justify-content: center; text-align: center; }
+.opt-k { flex: 0 0 auto; width: var(--s6); height: var(--s6); display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-full); background: var(--surface-sunken); font-size: var(--t-foot); font-weight: var(--w-semi); color: var(--ink-2); }
+.opt.right { border-color: var(--good); background: var(--good-soft); color: var(--good); font-weight: var(--w-semi); }
+.opt.wrong { border-color: var(--serious); background: var(--serious-soft); color: var(--serious); }
+.quiz-note { margin: var(--s2) 0; font-size: var(--t-foot); line-height: var(--lh-snug); color: var(--ink-2); }
+.quiz-field { margin: var(--s4) 0 0; }
+.quiz-wrote { margin-top: var(--s4); font-size: var(--t-sub); }
+.verdict { margin-top: var(--s2); padding: var(--s3); border-radius: var(--r-md); font-size: var(--t-sub); line-height: var(--lh-snug); }
+.verdict.right { background: var(--good-soft); color: var(--good); }
+.verdict.wrong { background: var(--serious-soft); color: var(--serious); }
+.verdict b { font-weight: var(--w-semi); color: var(--ink); }
+.verdict .also { color: var(--ink-2); }
+.quiz-quit { margin-top: var(--s5); text-align: center; }
+.quiz-quit .link { color: var(--ink-muted); font-weight: var(--w-med); }
+.score.good { color: var(--good); } .score.watch { color: var(--watch); } .score.serious { color: var(--serious); }
+.row-end.score { font-weight: var(--w-semi); }
+.result { padding-top: var(--s5); padding-bottom: var(--s4); text-align: center; }
+.result .hero-num { margin: var(--s1) 0; }
+.result-by { margin: var(--s4) 0 var(--s2); text-align: left; }
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; margin: 0 calc(-1 * var(--gutter)) var(--s3); padding: 0 var(--gutter); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+.chips.scroll .chip { flex: 0 0 auto; }
+.vis-fig { display: flex; justify-content: center; }
+.study-photo { width: 100%; max-width: 300px; aspect-ratio: 1; margin: 0 auto; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: var(--r-md); background: var(--surface-sunken); color: var(--ink-muted); font-size: var(--t-foot); }
+.study-photo img { width: 100%; height: 100%; object-fit: cover; }
+.life { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: center; align-items: center; padding: var(--s3) 0; }
+.life-l { width: 100%; font-size: var(--t-foot); color: var(--ink-muted); text-align: center; }
+.life-s { padding: var(--s2) var(--s3); border: 1px solid var(--hairline-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--t-foot); }
+.life-s.ask { border-color: transparent; background: var(--accent); color: var(--accent-ink); font-weight: var(--w-semi); }
+.life-to { display: inline-flex; color: var(--ink-muted); }
+.life-to svg { width: var(--s3); height: var(--s3); }
+
 /* ---- style guide ---- */
 .sg-swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s3); }
 .sw { font-size: var(--t-cap); color: var(--ink-muted); line-height: var(--lh-snug); }
@@ -1567,8 +1664,7 @@ mark.unread { padding: 0 2px; border-radius: var(--s1); background: var(--watch-
     <section class="view" id="view-goals">
       <header class="lt"><h1 class="lt-title">Goals</h1></header>
       <div id="twyBody"></div>
-      <div class="section-head" style="margin-top:22px"><h2>Life goals</h2><button class="action" id="goalAdd">+ Add</button></div>
-      <div id="goalList"></div>
+      <section class="sec"><div class="sec-h"><h2>Life goals</h2><button class="link" id="goalAdd">Add</button></div><div id="goalList"></div></section>
     </section>
 
     <!-- ============ WEEKLY REVIEW (under Life) ============ -->
@@ -5101,15 +5197,20 @@ function sprintTap(k, dir){
     if(g.done) toast(g.label+' ✓');
   }
 }
+// ---------- Goals (redesigned): what is in season on top, life goals beneath ----------
+function seasonStudyRowHTML(){
+  if(typeof QFK === 'undefined' || today() > QFK.exam) return '';
+  const left=daysBetween(today(),QFK.exam), nights=studyLast7(), tonight=studyTonight();
+  return '<div class="season-study" onclick="showView(\'study\')"><span class="hero-num">'+(left>0?left:'0')+'</span><div class="row-main">'+
+    '<div class="row-title">Quest for Knowledge, '+(left>0?left+' day'+(left===1?'':'s')+' to the test':'test day')+'</div>'+
+    '<div class="row-sub">Tonight '+esc(subName(tonight))+' · '+nights+' of the last 7 nights studied</div></div><span class="row-chev">'+CHEV+'</span></div>';
+}
 function renderSprint(el){
   const T=DB.twy, S=sprintDays();
   const hits=T.goals.filter(sprintHit).length;
   const past=DB.twyPast&&DB.twyPast.fall2026;
-  let h='<div class="section-head"><h2>'+esc(T.name)+' sprint</h2>'+
-    '<span style="font-size:12px;color:var(--muted)">'+(!S.started?('starts '+fmtDate(T.start)):S.over?'complete':('day '+S.day+' of '+S.total+' · '+S.left+' left'))+'</span></div>';
-  h+='<div class="card">';
-  h+='<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:18px">Three goals</b>'+
-     '<span style="font-size:12.5px;color:var(--muted)">'+fmtDate(T.start).slice(5)+' – '+fmtDate(T.end).slice(5)+'</span></div>';
+  let h='<section class="sec"><div class="sec-h"><h2>'+esc(T.name)+' sprint</h2>'+
+    '<span class="meta num">'+(!S.started?('starts '+fmtDate(T.start)):S.over?'complete':('day '+S.day+' of '+S.total+' · '+S.left+' left'))+'</span></div><div class="sec-body">';
   h+=T.goals.map(g=>{
     const hit=sprintHit(g);
     let right, sub=g.sub, bar='';
@@ -5118,28 +5219,25 @@ function renderSprint(el){
       right=n+'/'+g.target;
       const last=sprintDaysDone(g).slice(-1)[0], ring=sprintRingDays(g).length;
       if(!hit && S.started) sub=(n>=pace?'on pace':('behind — pace is '+pace+' by today'))+(last?(' · last '+fmtDate(last).slice(5)):'')+(ring?(' · '+ring+' from the ring'):' · tap to add one');
-      bar='<div class="g-bar" style="margin:6px 0 2px"><i style="width:'+Math.min(100,Math.round(n/g.target*100))+'%'+(!hit&&n<pace?';background:var(--warning)':'')+'"></i></div>';
+      bar='<div class="bar count-bar"><i class="'+(hit?'good':(n<pace?'watch':''))+'" style="width:'+Math.min(100,Math.round(n/g.target*100))+'%"></i></div>';
     } else {
-      right=hit?'done':(g.due?(daysBetween(today(),g.due)>=0?(daysBetween(today(),g.due)+'d'):'past'):'—');
+      const dl=g.due?daysBetween(today(),g.due):null;
+      right=hit?'done':(g.due?(dl>=0?(dl+(dl===1?' day':' days')):'past'):'—');
       if(hit) sub='done '+fmtDate(g.done);
     }
-    return '<div class="tac'+(hit?' hit':'')+'" onclick="sprintTap(\''+g.k+'\',1)" oncontextmenu="event.preventDefault();sprintTap(\''+g.k+'\',-1)">'+
-      '<span class="tk">'+(hit?'✓':(g.type==='count'?sprintCount(g):'○'))+'</span>'+
-      '<span class="tl"><b>'+esc(g.label)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+bar+'</span>'+
-      '<span class="tc" onclick="event.stopPropagation();sprintTap(\''+g.k+'\',-1)">'+esc(right)+'</span></div>';
+    return '<div class="count-row'+(hit?' hit':'')+'" onclick="sprintTap(\''+g.k+'\',1)" oncontextmenu="event.preventDefault();sprintTap(\''+g.k+'\',-1)">'+
+      '<span class="count-mark">'+(hit?IC_CHECK:(g.type==='count'?sprintCount(g):''))+'</span>'+
+      '<div class="row-main"><div class="row-title">'+esc(g.label)+'</div>'+(sub?'<div class="row-sub">'+esc(sub)+'</div>':'')+bar+'</div>'+
+      '<span class="count-n" onclick="event.stopPropagation();sprintTap(\''+g.k+'\',-1)">'+esc(right)+'</span></div>';
   }).join('');
-  if(typeof QFK!=='undefined' && today()<=QFK.exam){
-    const left=daysBetween(today(),QFK.exam), nights=studyLast7(), tonight=studyTonight();
-    h+='<div class="notice" style="margin:4px 0 0;padding:10px 12px;border-radius:10px;background:var(--accent-soft);color:var(--accent);cursor:pointer" onclick="showView(\'study\')"><b>Quest for Knowledge</b> — '+(left>0?left+' day'+(left===1?'':'s')+' to the test':'test day')+' · tonight '+esc(subName(tonight))+' · '+nights+' of the last 7 nights studied. Open the study hub →</div>';
-  }
-  h+='<div class="twy-score"><span style="font-size:12.5px;color:var(--muted)">'+hits+' of '+T.goals.length+' done'+(T.goals.some(g=>g.type==='count')?' · long-press a row to undo':'')+'</span><b style="color:'+(hits===T.goals.length?'var(--good)':'var(--ink)')+'">'+hits+'/'+T.goals.length+'</b></div>';
-  h+='</div>';
+  h+='<div class="count-foot"><span>'+hits+' of '+T.goals.length+' done'+(T.goals.some(g=>g.type==='count')?' · long-press a row to undo':'')+'</span><b class="num'+(hits===T.goals.length?' good':'')+'">'+hits+'/'+T.goals.length+'</b></div>';
+  h+='</div>'+seasonStudyRowHTML();
   if(past){
     const wk=past.weeks||{}, scored=Object.keys(wk).filter(k=>Object.keys(wk[k].c||{}).length).length;
     const avg=scored?Math.round(Object.keys(wk).reduce((a,k)=>a+(past.tactics.filter(t=>((wk[k].c||{})[t.k]||0)>=t.t).length),0)/scored/past.tactics.length*100):0;
-    h+='<div style="font-size:12.5px;color:var(--muted);margin:10px 4px 0">'+esc(past.name)+' 12 Week Year stopped at week '+Math.max(1,Math.min(12,Math.floor((parseD(past.endedEarly||today())-parseD(past.start))/(7*86400000))+1))+' · '+scored+' weeks scored, '+avg+'% average. The next twelve weeks start in January.</div>';
+    h+='<div class="data-fresh season-past">'+esc(past.name)+' 12 Week Year stopped at week '+Math.max(1,Math.min(12,Math.floor((parseD(past.endedEarly||today())-parseD(past.start))/(7*86400000))+1))+' · '+scored+' weeks scored, '+avg+'% average. The next twelve weeks start in January.</div>';
   }
-  el.innerHTML=h;
+  el.innerHTML=h+'</section>';
 }
 function renderTWY(){
   const el=$('twyBody'); if(!el) return;
@@ -5157,8 +5255,9 @@ function renderTWY(){
     const h=twyHits(i), scored=Object.keys((T.weeks||{})['w'+i]?.c||{}).length>0;
     let cls=''; if(i<curW || (scored&&i!==curW)) cls=h>=8?' hit':h>=7?' miss':scored||i<curW?' low':'';
     if(i===n) cls+=' cur';
-    strip+='<span class="twy-wk'+cls+'" onclick="TWYV.wk='+i+';renderTWY()">'+i+'</span>';
+    strip+='<button class="wk'+cls+'" onclick="TWYV.wk='+i+';renderTWY()" aria-label="Week '+i+'">'+i+'</button>';
   }
+  // the week's counts that the app can see for itself (sleep, food) are kept up to date here, as before
   if(!notStarted && n<=Math.max(1,curW)){
     const wk=twyWk(n); const wd=twyWeekDates(n);
     const M=DB.settings.macros||{p:150,f:30,s:25};
@@ -5181,35 +5280,34 @@ function renderTWY(){
     if(dirty){ wk.mt=Date.now(); save(); }
   }
   const fr=twyFriendTouches(n);
-  let h='<div class="section-head"><h2>12 Week Year \u00b7 '+esc(T.name)+'</h2>'+
-    '<span style="font-size:12px;color:var(--muted)">'+(notStarted?('starts '+fmtDate(T.start)):over?'complete':twyPhase(curW))+'</span></div>';
-  h+='<div class="card">';
-  h+='<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:18px">Week '+n+' of 12</b>'+
-     '<span style="font-size:12.5px;color:var(--muted)">'+fmtDate(ws)+' \u2013 '+fmtDate(we)+' \u00b7 '+twyPhase(n)+'</span></div>';
-  h+='<div class="twy-strip">'+strip+'</div>';
-  if(n===12) h+='<div class="notice" style="margin:10px 0 2px">Sprint finish \u2014 work ends Thu Nov 12, Kauai on the 13th. The trip is the reward.</div>';
+  let h='<section class="sec"><div class="sec-h"><h2>12 Week Year · '+esc(T.name)+'</h2>'+
+    '<span class="meta">'+(notStarted?('starts '+fmtDate(T.start)):over?'complete':twyPhase(curW))+'</span></div><div class="sec-body">';
+  h+='<div class="wk-head"><b>Week '+n+' of 12</b><span class="meta num">'+fmtDate(ws)+' – '+fmtDate(we)+' · '+twyPhase(n)+'</span></div>';
+  h+='<div class="wk-strip">'+strip+'</div>';
+  if(n===12) h+='<div class="data-fresh wk-note">Sprint finish: work ends Thu Nov 12, Kauai on the 13th. The trip is the reward.</div>';
   h+=T.tactics.map(t=>{
     const c=w.c[t.k]||0, hit=c>=t.t;
-    const sub=t.k==='H'&&fr>c ? (fr+' logged in Friends this week \u2014 tap to count') : t.sub;
-    return '<div class="tac'+(hit?' hit':'')+'" onclick="twyTap(\''+t.k+'\',1)" oncontextmenu="event.preventDefault();twyTap(\''+t.k+'\',-1)">'+
-      '<span class="tk">'+(hit?'\u2713':t.k)+'</span>'+
-      '<span class="tl"><b>'+esc(t.label)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</span>'+
-      '<span class="tc" onclick="event.stopPropagation();twyTap(\''+t.k+'\',-1)">'+c+'/'+t.t+'</span></div>';
+    const sub=t.k==='H'&&fr>c ? (fr+' logged in People this week, tap to count') : t.sub;
+    return '<div class="count-row'+(hit?' hit':'')+'" onclick="twyTap(\''+t.k+'\',1)" oncontextmenu="event.preventDefault();twyTap(\''+t.k+'\',-1)">'+
+      '<span class="count-mark">'+(hit?IC_CHECK:t.k)+'</span>'+
+      '<div class="row-main"><div class="row-title">'+esc(t.label)+'</div>'+(sub?'<div class="row-sub">'+esc(sub)+'</div>':'')+'</div>'+
+      '<span class="count-n" onclick="event.stopPropagation();twyTap(\''+t.k+'\',-1)">'+c+'/'+t.t+'</span></div>';
   }).join('');
-  h+='<div class="twy-score"><span style="font-size:12.5px;color:var(--muted)">'+hits+' of '+T.tactics.length+' tactics hit \u00b7 target 80%</span><b style="color:'+(score>=80?'var(--good)':score>=70?'var(--warning)':'var(--ink)')+'">'+score+'%</b></div>';
-  h+='<div class="field" style="margin-top:10px"><input placeholder="What happened this week\u2026" value="'+esc(w.note||'')+'" onchange="twySetNote(this.value)"></div>';
-  h+='</div>';
+  h+='<div class="count-foot"><span>'+hits+' of '+T.tactics.length+' tactics hit · target 80%</span><b class="num'+(score>=80?' good':score>=70?' watch':'')+'">'+score+'%</b></div>';
+  h+='<div class="field wk-field"><input placeholder="What happened this week" value="'+esc(w.note||'')+'" onchange="twySetNote(this.value)"></div>';
+  h+='</div></section>';
   el.innerHTML=h;
 }
 function renderGoals(){ renderTWY();
   const el=$('goalList'); if(!el) return; const gs=DB.goals||[];
-  if(!gs.length){ el.innerHTML='<div class="card"><b>No goals yet.</b><div style="font-size:14px;color:var(--ink-2);margin-top:4px;line-height:1.55">Set a life goal — a number to move (books read, pounds, dollars saved, hours practiced) or a project with milestones. LifeOS tracks momentum and nudges you toward the next step.</div><button class="btn" style="margin-top:14px" onclick="editGoal(\'\')">Add your first goal</button></div>'; return; }
-  el.innerHTML=gs.map(g=>{ const p=goalPct(g), m=goalMomentum(g);
-    return '<div class="goal" onclick="openGoal(\''+g.id+'\')"><div class="g-top"><span class="g-name">'+esc(g.name)+'</span><span class="g-mom '+m.cls+'">'+m.label+'</span></div>'+
-      '<div class="g-prog">'+esc(goalProgressText(g))+'</div>'+
-      '<div class="g-bar"><i style="width:'+Math.round(p*100)+'%'+(m.cls==='low'?';background:var(--warning)':'')+'"></i></div>'+
-      '<div class="g-next">'+SPARK+'<p>'+esc(goalNext(g))+'</p></div></div>';
-  }).join('');
+  if(!gs.length){ el.innerHTML='<div class="sec-body"><div class="empty-state"><div class="es-title">No goals yet</div><div class="es-text">Set a life goal: a number to move (books read, pounds, dollars saved, hours practiced) or a project with milestones. LifeOS tracks momentum and points at the next step.</div>'+
+    '<button class="btn sm" onclick="editGoal(\'\')">Add your first goal</button></div></div>'; return; }
+  el.innerHTML='<div class="sec-body">'+gs.map(g=>{ const p=goalPct(g), m=goalMomentum(g);
+    return '<div class="goal-row" onclick="openGoal(\''+g.id+'\')"><div class="goal-top"><span class="row-title">'+esc(g.name)+'</span><span class="status '+(m.cls==='low'?'watch':m.cls==='up'?'good':'')+'">'+m.label+'</span></div>'+
+      '<div class="row-sub">'+esc(goalProgressText(g))+'</div>'+
+      '<div class="bar goal-bar"><i class="'+(m.cls==='low'?'watch':'')+'" style="width:'+Math.round(p*100)+'%"></i></div>'+
+      '<div class="row-sub goal-next">'+esc('Next: '+String(goalNext(g)).replace(/^Next:\s*/,''))+'</div></div>';
+  }).join('')+'</div>';
 }
 function openGoal(id){
   const g=(DB.goals||[]).find(x=>x.id===id); if(!g) return; const p=goalPct(g), m=goalMomentum(g);
@@ -6928,37 +7026,25 @@ const mdb = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 const shuffle = a => { a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 const pick = (a, n) => shuffle(a).slice(0, n);
 
+// ---------- Quest for Knowledge study hub (redesigned markup; the drills, pools and scoring are untouched) ----------
+const segHTML = (items, cur, fn) => '<div class="segc study-seg">'+items.map(s => '<button class="'+(cur===s[0]?'on':'')+'" onclick="'+fn(s[0])+'">'+s[1]+'</button>').join('')+'</div>';
 function studyHeadHTML(){
   const left = studyDaysLeft(), S = studyDB(), t = today(), done = !!S.log[t], streak = studyStreak();
   const tonight = studyTonight();
-  const wk = studyWeek(), w = QFK.plan[wk];
-  let h = '<div class="card" style="border-top:3px solid var(--accent)">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:20px">' +
-    (left > 1 ? left + ' days to the test' : left === 1 ? 'The test is tomorrow' : left === 0 ? 'Test day' : 'The test was ' + fmtDate(QFK.exam)) + '</b>' +
-    '<span style="font-size:12.5px;color:var(--muted)">' + fmtDate(QFK.exam) + ' · vs ' + esc(QFK.opponent) + '</span></div>';
-  if(left >= 0) h += '<div style="font-size:14px;color:var(--ink-2);margin-top:6px;line-height:1.5">Tonight: <b>' + esc(subName(tonight)) + '</b>' +
-    (w ? ' · ' + esc(w.title.replace(/^Week \d · /,'')) + (tonight!=='test' && w[tonight] ? ' — ' + esc(w[tonight]) : '') : '') + '</div>';
-  h += '<div style="display:flex;gap:8px;margin-top:12px;align-items:center">' +
-    '<button class="btn' + (done ? '' : ' secondary') + '" style="flex:1;margin:0" onclick="studyLogToday()">' + (done ? '✓ Studied tonight' : 'Done studying tonight') + '</button>' +
-    '<span style="font-size:12.5px;color:var(--muted);white-space:nowrap">' + streak + ' night' + (streak===1?'':'s') + ' running · ' + studyLast7() + ' of 7</span></div>';
-  h += '</div>';
+  let h = '<header class="lt"><div class="lt-eyebrow">' + fmtDate(QFK.exam) + ' · vs ' + esc(QFK.opponent) + '</div><h1 class="lt-title">' +
+    (left > 1 ? left + ' days to the test' : left === 1 ? 'The test is tomorrow' : left === 0 ? 'Test day' : 'The test was ' + fmtDate(QFK.exam)) + '</h1></header>';
+  h += '<div class="sec-body tonight"><div class="row"><div class="row-main"><div class="row-title">' +
+    (left >= 0 ? subDot(tonight) + 'Tonight: ' + esc(subName(tonight)) : 'Study log') + '</div>' +
+    '<div class="row-sub">' + streak + ' night' + (streak===1?'':'s') + ' running · ' + studyLast7() + ' of the last 7</div></div>' +
+    '<button class="btn sm' + (done ? ' done' : '') + '" onclick="studyLogToday()">' + (done ? IC_CHECK + '<span>Studied tonight</span>' : 'Done studying tonight') + '</button></div></div>';
   return h;
 }
-function studySegHTML(){
-  const segs = [['plan','Plan'],['guide','Guide'],['cards','Cards'],['test','Test'],['visual','Visual'],['listen','Listen']];
-  return '<div class="mood-range" style="margin:14px 0 10px">' + segs.map(s =>
-    '<button class="' + (STUDYV.seg===s[0]?'on':'') + '" onclick="STUDYV.seg=\'' + s[0] + '\';renderStudy()">' + s[1] + '</button>').join('') + '</div>';
-}
-function subPillsHTML(cur, key, all){
-  const subs = (all ? [['all','All']] : []).concat(Object.keys(QFK.subjects).map(k => [k, QFK.subjects[k].short]));
-  return '<div class="mood-range" style="margin:0 0 10px">' + subs.map(s =>
-    '<button class="' + (cur===s[0]?'on':'') + '" onclick="STUDYV.' + key + '=\'' + s[0] + '\';' + (key==='sub' ? 'STUDYV.queue=null;' : '') + 'renderStudy()">' + s[1] + '</button>').join('') + '</div>';
-}
+// a test in progress has the screen to itself
 function renderStudy(){
   const el = $('studyBody'); if(!el) return;
   if(currentView !== 'study') return;
-  let h = studyHeadHTML() + studySegHTML();
-  const seg = STUDYV.seg;
+  const seg = STUDYV.seg, T = STUDYV.test;
+  let h = (seg==='test' && T && T.at < T.qs.length) ? '' : studyHeadHTML() + studySegHTML();
   if(seg==='plan') h += studyPlanHTML();
   else if(seg==='guide') h += studyGuideHTML();
   else if(seg==='cards') h += studyCardsHTML();
@@ -6968,38 +7054,43 @@ function renderStudy(){
   el.innerHTML = h;
   if(seg==='visual' && STUDYV.vis==='photo') studyPhotoLoad();
 }
+function studySegHTML(){
+  return segHTML([['plan','Plan'],['guide','Guide'],['cards','Cards'],['test','Test'],['visual','Visual'],['listen','Listen']], STUDYV.seg, k => 'STUDYV.seg=\''+k+'\';renderStudy()');
+}
+function subPillsHTML(cur, key, all){
+  const subs = (all ? [['all','All']] : []).concat(Object.keys(QFK.subjects).map(k => [k, QFK.subjects[k].short]));
+  return segHTML(subs, cur, k => 'STUDYV.' + key + '=\'' + k + '\';' + (key==='sub' ? 'STUDYV.queue=null;' : '') + 'renderStudy()');
+}
+const subDot = s => '<i class="sub-dot" style="background:' + subColor(s) + '"></i>';
+const pctTone = r => r >= .85 ? 'good' : r >= .7 ? 'watch' : 'serious';
 // ---- plan ----
 function studyPlanHTML(){
   const wk = studyWeek(), t = today();
   let h = '';
   QFK.plan.forEach((w, i) => {
     const cur = i===wk, past = t > w.to;
-    h += '<div class="card" style="' + (cur ? 'border-left:3px solid var(--accent)' : past ? 'opacity:.6' : '') + '">' +
-      '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-family:var(--serif);font-size:17px">' + esc(w.title) + '</b><span style="font-size:12px;color:var(--muted)">' + fmtDate(w.from).slice(5) + ' – ' + fmtDate(w.to).slice(5) + (cur?' · now':'') + '</span></div>' +
-      '<div style="font-size:13.5px;line-height:1.6;color:var(--ink-2);margin-top:6px">' +
-      '<div><b style="color:' + subColor('hist') + '">History</b> — ' + esc(w.hist) + '</div>' +
-      '<div><b style="color:' + subColor('astro') + '">Astronomy</b> — ' + esc(w.astro) + '</div>' +
-      '<div><b style="color:' + subColor('animals') + '">Animals</b> — ' + esc(w.animals) + '</div>' +
-      '<div style="margin-top:6px;color:var(--ink)">' + esc(w.do) + '</div></div></div>';
+    h += '<section class="sec plan-wk' + (past && !cur ? ' past' : '') + '"><div class="sec-h"><h2>' + esc(w.title) + '</h2><span class="meta num">' + fmtDate(w.from).slice(5) + ' – ' + fmtDate(w.to).slice(5) + '</span></div>' +
+      '<div class="sec-body">' + (cur ? '<div class="plan-now"><span class="status info">This week</span></div>' : '') +
+      [['hist','History'],['astro','Astronomy'],['animals','Animals']].map(s => '<div class="fact"><div class="fact-l">' + subDot(s[0]) + s[1] + '</div><div class="fact-v">' + esc(w[s[0]]) + '</div></div>').join('') +
+      '<div class="fact"><div class="fact-l">Each night</div><div class="fact-v">' + esc(w.do) + '</div></div></div></section>';
   });
-  h += '<div class="card"><b style="font-family:var(--serif);font-size:17px">The test</b><div style="font-size:13.5px;line-height:1.6;color:var(--ink-2);margin-top:6px">' +
+  h += '<section class="sec"><div class="sec-h"><h2>The test</h2></div><div class="sec-body"><p class="study-text">' +
     '120 questions, 40 per subject, 120 minutes: a minute each. 41 are visual, 39 fill in, 40 multiple choice. Half foundational, a third applied, 15% hard. Answer what you know, mark the rest, come back. On visuals answer at the level the prompt asks. Fill-ins forgive spelling, not vagueness ("waning crescent", not "crescent"). ' +
-    'Nightly rotation: Sun Animals · Mon History · Tue Astronomy · Wed Animals · Thu History · Fri Astronomy · Sat a mixed test.</div>' +
-    '<a class="action" style="display:inline-block;margin-top:10px" href="' + QFK.notion + '" target="_blank" rel="noopener">Rule guide and full study guides in Notion →</a></div>';
+    'Nightly rotation: Sun Animals · Mon History · Tue Astronomy · Wed Animals · Thu History · Fri Astronomy · Sat a mixed test.</p>' +
+    '<a class="row act" href="' + QFK.notion + '" target="_blank" rel="noopener"><div class="row-main"><div class="row-title">Rule guide and full study guides in Notion</div></div><span class="row-chev">' + CHEV + '</span></a></div></section>';
   const tests = studyDB().tests.slice(-6).reverse();
-  if(tests.length) h += '<div class="card"><b style="font-family:var(--serif);font-size:17px">Recent tests</b>' + tests.map(x =>
-    '<div class="mny-item"><span>' + esc(fmtDate(x.date).slice(5)) + ' · ' + esc(x.sub==='all'?'Mixed':QFK.subjects[x.sub].short) + ' · ' + x.n + ' Qs</span><b>' + Math.round(x.score/x.n*100) + '%</b></div>').join('') + '</div>';
+  if(tests.length) h += '<section class="sec"><div class="sec-h"><h2>Recent tests</h2></div><div class="sec-body">' + tests.map(x =>
+    '<div class="row"><div class="row-main"><div class="row-title plain">' + esc(fmtDate(x.date).slice(5)) + ' · ' + esc(x.sub==='all'?'Mixed':QFK.subjects[x.sub].short) + ' · ' + x.n + ' Qs</div></div><span class="row-end num money-amt">' + Math.round(x.score/x.n*100) + '%</span></div>').join('') + '</div></section>';
   return h;
 }
 // ---- guide ----
 function studyGuideHTML(){
   let h = subPillsHTML(STUDYV.gsub, 'gsub', false);
   const s = STUDYV.gsub;
-  h += '<div style="font-size:12.5px;color:var(--muted);margin:0 2px 8px">' + esc(QFK.subjects[s].mix) + '</div>';
+  h += '<div class="data-fresh study-mix">' + esc(QFK.subjects[s].mix) + '</div>';
   QFK.guide[s].forEach((sec, i) => {
-    h += '<details class="card" style="padding:0"' + (i===0?' open':'') + '><summary style="padding:14px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline">' +
-      '<b style="font-family:var(--serif);font-size:16.5px">' + esc(sec.h) + '</b>' + (sec.q ? '<span style="font-size:12px;color:var(--muted)">' + sec.q + ' Qs</span>' : '') + '</summary>' +
-      '<div style="padding:0 16px 14px">' + sec.pts.map(p => '<div style="font-size:14px;line-height:1.6;color:var(--ink-2);padding:7px 0;border-top:1px solid var(--hairline)">' + mdb(p) + '</div>').join('') + '</div></details>';
+    h += '<details class="fold"' + (i===0?' open':'') + '><summary><b>' + esc(sec.h) + '</b>' + (sec.q ? '<span class="meta num">' + sec.q + ' Qs</span>' : '') + '</summary>' +
+      '<div class="fold-body">' + sec.pts.map(p => '<p>' + mdb(p) + '</p>').join('') + '</div></details>';
   });
   return h;
 }
@@ -7016,20 +7107,105 @@ function studyCardsHTML(){
   const S = studyDB();
   const boxes = [0,0,0,0,0,0];
   QFK.cards.forEach((c, i) => { if(STUDYV.sub!=='all' && c[0]!==STUDYV.sub) return; const st = S.cards[cardId(i)]; boxes[st ? Math.min(5, st.box||1) : 0]++; });
+  const tally = boxes[0] + ' new · ' + (boxes[1]+boxes[2]) + ' learning · ' + (boxes[3]+boxes[4]+boxes[5]) + ' solid';
   if(STUDYV.card==null && STUDYV.queue.length) STUDYV.card = STUDYV.queue[0];
   if(STUDYV.card==null){
-    return h + '<div class="card" style="text-align:center;padding:28px 16px"><b style="font-family:var(--serif);font-size:18px">Nothing due' + (STUDYV.sub!=='all' ? ' in ' + esc(QFK.subjects[STUDYV.sub].short) : '') + '</b>' +
-      '<div style="font-size:13.5px;color:var(--muted);margin-top:6px;line-height:1.5">Cards come back on a schedule: a card you know waits 1, 2, 4, 8 then 16 days. ' + boxes[0] + ' new · ' + (boxes[1]+boxes[2]) + ' learning · ' + (boxes[3]+boxes[4]+boxes[5]) + ' solid.</div>' +
-      '<button class="btn secondary" style="margin-top:14px" onclick="studyCardsReset()">Drill everything anyway</button></div>';
+    return h + '<div class="sec-body"><div class="empty-state"><div class="es-title">Nothing due' + (STUDYV.sub!=='all' ? ' in ' + esc(QFK.subjects[STUDYV.sub].short) : '') + '</div>' +
+      '<div class="es-text">Cards come back on a schedule: a card you know waits 1, 2, 4, 8 then 16 days. ' + tally + '.</div>' +
+      '<button class="btn sm secondary" onclick="studyCardsReset()">Drill everything anyway</button></div></div>';
   }
   const c = QFK.cards[STUDYV.card], st = S.cards[cardId(STUDYV.card)] || {};
-  h += '<div class="card" style="min-height:220px;display:flex;flex-direction:column;border-top:3px solid ' + subColor(c[0]) + '" onclick="if(!STUDYV.flipped){STUDYV.flipped=true;renderStudy()}">' +
-    '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span>' + esc(QFK.subjects[c[0]].short) + '</span><span>' + STUDYV.queue.length + ' left today · box ' + (st.box||'new') + '</span></div>' +
-    '<div style="font-family:var(--serif);font-size:19px;line-height:1.4;margin:18px 0;flex:1">' + esc(c[1]) + '</div>' +
-    (STUDYV.flipped ? '<div style="font-size:15.5px;line-height:1.5;color:var(--ink);border-top:1px solid var(--hairline);padding-top:12px">' + esc(c[2]) + '</div>' :
-      '<div style="font-size:13px;color:var(--muted);text-align:center">tap to show the answer</div>') + '</div>';
-  if(STUDYV.flipped) h += '<div style="display:flex;gap:10px"><button class="btn secondary" style="flex:1;margin:0" onclick="studyGrade(false)">Again</button><button class="btn" style="flex:1;margin:0" onclick="studyGrade(true)">Got it</button></div>';
-  h += '<div style="font-size:12px;color:var(--muted);margin:12px 2px 0">' + boxes[0] + ' new · ' + (boxes[1]+boxes[2]) + ' learning · ' + (boxes[3]+boxes[4]+boxes[5]) + ' solid</div>';
+  h += '<div class="flash" onclick="if(!STUDYV.flipped){STUDYV.flipped=true;renderStudy()}">' +
+    '<div class="flash-top"><span>' + subDot(c[0]) + esc(QFK.subjects[c[0]].short) + '</span><span class="num">' + STUDYV.queue.length + ' left today · box ' + (st.box||'new') + '</span></div>' +
+    '<div class="flash-q">' + esc(c[1]) + '</div>' +
+    (STUDYV.flipped ? '<div class="flash-a">' + esc(c[2]) + '</div>' : '<div class="flash-hint">tap to show the answer</div>') + '</div>';
+  if(STUDYV.flipped) h += '<div class="btn-row study-acts"><button class="btn secondary" onclick="studyGrade(false)">Again</button><button class="btn" onclick="studyGrade(true)">Got it</button></div>';
+  h += '<div class="data-fresh study-tally">' + tally + '</div>';
+  return h;
+}
+// ---- practice tests ----
+function studyTestHTML(){
+  const T = STUDYV.test;
+  if(!T){
+    let h = subPillsHTML(STUDYV.sub, 'sub', true);
+    h += '<div class="sec-body"><p class="study-text">Half multiple choice, half fill in, pulled at random from the pools (the baseline exam, the practice sets, and the guides). Fill-ins are checked the way the wives will check them: spelling forgiven, vagueness not. You can overrule the checker.</p>' +
+      '<div class="btn-row study-acts"><button class="btn" onclick="studyTestStart(STUDYV.sub,20)">20 questions</button>' +
+      '<button class="btn secondary" onclick="studyTestStart(STUDYV.sub,' + (STUDYV.sub==='all'?60:40) + ')">' + (STUDYV.sub==='all'?'60, like the baseline':'40, a full section') + '</button></div></div>';
+    const tests = studyDB().tests.slice().reverse().slice(0, 10);
+    if(tests.length){
+      h += '<section class="sec"><div class="sec-h"><h2>Scores</h2></div><div class="sec-body">' + tests.map(x =>
+        '<div class="row"><div class="row-main"><div class="row-title plain">' + esc(fmtDate(x.date).slice(5)) + ' · ' + esc(x.sub==='all'?'Mixed':QFK.subjects[x.sub].short) + '</div><div class="row-sub">' + x.n + ' Qs · ' + Math.round(x.ms/60000) + ' min</div></div>' +
+        '<span class="row-end num score ' + pctTone(x.score/x.n) + '">' + x.score + '/' + x.n + '</span></div>').join('') +
+        '<div class="data-fresh study-tally">85% and up is winning territory. Below 70% in a subject: back to that guide.</div></div></section>';
+    }
+    return h;
+  }
+  if(T.at >= T.qs.length) return studyTestResultHTML();
+  const x = T.qs[T.at], q = x.q;
+  let h = '<div class="quiz-top"><span>' + subDot(x.s) + '<span class="num">' + (T.at+1) + ' of ' + T.qs.length + '</span> · ' + esc(QFK.subjects[x.s].short) + '</span><span class="num">' + Math.round((Date.now()-T.start)/60000) + ' min</span></div>' +
+    '<div class="bar quiz-bar"><i style="width:' + Math.round(T.at/T.qs.length*100) + '%"></i></div>';
+  h += '<div class="sec-body quiz"><div class="quiz-q">' + esc(q[1]) + '</div>';
+  if(x.kind==='mc'){
+    h += '<div class="opts">' + q[2].map((o, i) => {
+      let cls = ''; if(T.picked!=null){ if(i===q[3]) cls = ' right'; else if(i===T.picked) cls = ' wrong'; }
+      return '<button class="opt' + cls + '" onclick="studyPick(' + i + ')"><span class="opt-k">' + 'ABCD'[i] + '</span><span class="opt-t">' + esc(o) + '</span></button>'; }).join('') + '</div>';
+    if(T.picked!=null) h += (q[4] ? '<div class="quiz-note">' + esc(q[4]) + '</div>' : '') + '<button class="btn" onclick="studyNext()">Next</button>';
+  } else {
+    if(!T.shown) h += '<div class="field quiz-field"><input id="studyAns" placeholder="Your answer" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" value="' + esc(T.typed) + '" onkeydown="if(event.key===\'Enter\')studyCheck()"></div><button class="btn" onclick="studyCheck()">Check</button>';
+    else {
+      const ok = T.answers[T.at].ok;
+      h += '<div class="quiz-wrote">You wrote: <b>' + esc(T.typed||'—') + '</b></div>' +
+        '<div class="verdict ' + (ok?'right':'wrong') + '">' + (ok?'Right':'Not quite') + ' — <b>' + esc(q[2][0]) + '</b>' + (q[2].length>1 ? ' <span class="also">(also: ' + esc(q[2].slice(1).join(', ')) + ')</span>' : '') + '</div>' +
+        (q[3] ? '<div class="quiz-note">' + esc(q[3]) + '</div>' : '') +
+        '<div class="btn-row study-acts">' + (!ok ? '<button class="btn secondary" onclick="studyOverride()">I had it</button>' : '') + '<button class="btn" onclick="studyNext()">Next</button></div>';
+    }
+  }
+  h += '</div><div class="quiz-quit"><button class="link" onclick="studyQuitAsk()">Quit this test</button></div>';
+  return h;
+}
+function studyQuitAsk(){
+  openSheet('<h3>Quit this test?</h3><p class="sheet-text">Your answers so far are dropped and nothing is scored.</p>'+
+    '<button class="btn destructive" onclick="closeSheet();STUDYV.test=null;renderStudy()">Quit</button><button class="btn secondary" onclick="closeSheet()">Keep going</button>');
+}
+function studyTestResultHTML(){
+  const T = STUDYV.test, score = T.answers.filter(a=>a.ok).length, n = T.qs.length, pct = Math.round(score/n*100);
+  const by = {}; T.answers.forEach(a => { by[a.s] = by[a.s] || [0,0]; by[a.s][1]++; if(a.ok) by[a.s][0]++; });
+  let h = '<div class="sec-body result"><div class="data-fresh">' + Math.round((Date.now()-T.start)/60000) + ' minutes</div>' +
+    '<div class="hero-num score ' + pctTone(score/n) + '">' + pct + '%</div><div class="data-line">' + score + ' of ' + n + '</div>' +
+    '<div class="result-by">' + Object.keys(by).map(s => '<div class="row"><div class="row-main"><div class="row-title plain">' + subDot(s) + esc(QFK.subjects[s].name) + '</div></div><span class="row-end num money-amt">' + by[s][0] + '/' + by[s][1] + '</span></div>').join('') + '</div>' +
+    '<button class="btn" onclick="STUDYV.test=null;renderStudy()">Done</button></div>';
+  const missed = T.qs.filter((x, i) => !T.answers[i].ok);
+  if(missed.length) h += '<section class="sec"><div class="sec-h"><h2>Missed</h2><span class="meta num">' + missed.length + '</span></div><div class="sec-body">' + missed.map(x =>
+    '<div class="fact"><div class="fact-l">' + esc(x.q[1]) + '</div><div class="fact-v"><b>' + esc(x.kind==='mc' ? x.q[2][x.q[3]] : x.q[2][0]) + '</b></div></div>').join('') + '</div></section>';
+  return h;
+}
+// ---- visual drills ----
+function studyVisualHTML(){
+  const kinds = [['const','Constellations'],['moon','Moon'],['eclipse','Eclipses'],['solar','Solar system'],['life','Star life'],['galaxy','Galaxies'],['photo','Photos']];
+  let h = '<div class="chips scroll">' + kinds.map(k => '<button class="chip' + (STUDYV.vis===k[0]?' on':'') + '" onclick="STUDYV.vis=\'' + k[0] + '\';STUDYV.visQ=null;renderStudy()">' + k[1] + '</button>').join('') + '</div>';
+  if(!STUDYV.visQ) STUDYV.visQ = studyVisMake(STUDYV.vis);
+  const Q = STUDYV.visQ;
+  if(STUDYV.vis==='photo') h += '<div class="chips scroll">' + Object.keys(QFK.visual.photos).map(g => '<button class="chip' + (STUDYV.photoGroup===g?' on':'') + '" onclick="STUDYV.photoGroup=\'' + g + '\';STUDYV.visQ=null;renderStudy()">' + g[0].toUpperCase()+g.slice(1) + '</button>').join('') + '</div>';
+  h += '<div class="sec-body quiz"><div class="quiz-prompt">' + esc(Q.prompt) + '</div><div class="vis-fig">' + Q.svg + '</div>' +
+    '<div class="opts two">' + Q.options.map((o, i) => {
+      let cls = ''; if(Q.picked!=null){ if(o===Q.answer) cls = ' right'; else if(i===Q.picked) cls = ' wrong'; }
+      return '<button class="opt' + cls + '" onclick="studyVisPick(' + i + ')"><span class="opt-t">' + esc(o) + '</span></button>'; }).join('') + '</div>' +
+    (Q.picked!=null ? (Q.note ? '<div class="quiz-note">' + esc(Q.note) + '</div>' : '') + '<button class="btn" onclick="STUDYV.visQ=null;renderStudy()">Next</button>' : '') +
+    '<div class="data-fresh study-tally num">' + STUDYV.visScore[0] + ' of ' + STUDYV.visScore[1] + ' this session</div></div>';
+  if(STUDYV.vis==='const') h += '<div class="data-fresh study-mix">Simplified patterns, not to scale; the exam may rotate them. The bright ring marks the key star.</div>';
+  return h;
+}
+function lifeSVG(item){
+  return '<div class="life"><div class="life-l">' + esc(item.label) + '</div>' +
+    item.seq.map((s, i) => '<span class="life-s' + (s==='?' ? ' ask' : '') + '">' + esc(s) + '</span>' + (i<item.seq.length-1 ? '<span class="life-to">' + CHEV + '</span>' : '')).join('') + '</div>';
+}
+// ---- listening ----
+function studyListenHTML(){
+  let h = '<div class="data-fresh study-mix">Audio covers concepts and stories; 41 of 120 questions are pictures, so pair it with the Visual drills. Links open the show’s page or a search, so nothing here goes stale.</div>';
+  Object.keys(QFK.subjects).forEach(s => {
+    h += '<section class="sec"><div class="sec-h"><h2>' + subDot(s) + esc(QFK.subjects[s].name) + '</h2></div><div class="sec-body">' +
+      QFK.listen.filter(l => l.s===s).map(l => '<a class="row" href="' + esc(l.url) + '" target="_blank" rel="noopener"><div class="row-main"><div class="row-title">' + esc(l.title) + '</div><div class="row-sub">' + esc(l.who) + '</div></div><span class="row-chev">' + CHEV + '</span></a>').join('') + '</div></section>';
+  });
   return h;
 }
 function studyGrade(ok){
@@ -7069,44 +7245,6 @@ function studyTestStart(sub, n){
   STUDYV.test = { sub, qs, at:0, answers:[], start:Date.now(), picked:null, typed:'', shown:false };
   renderStudy();
 }
-function studyTestHTML(){
-  const T = STUDYV.test;
-  if(!T){
-    let h = subPillsHTML(STUDYV.sub, 'sub', true);
-    h += '<div class="card"><b style="font-family:var(--serif);font-size:17px">Practice test</b>' +
-      '<div style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin-top:6px">Half multiple choice, half fill in, pulled at random from the pools (the baseline exam, the practice sets, and the guides). Fill-ins are checked the way the wives will check them: spelling forgiven, vagueness not. You can overrule the checker.</div>' +
-      '<div style="display:flex;gap:10px;margin-top:14px"><button class="btn" style="flex:1;margin:0" onclick="studyTestStart(STUDYV.sub,20)">20 questions</button>' +
-      '<button class="btn secondary" style="flex:1;margin:0" onclick="studyTestStart(STUDYV.sub,' + (STUDYV.sub==='all'?60:40) + ')">' + (STUDYV.sub==='all'?'60, like the baseline':'40, a full section') + '</button></div></div>';
-    const tests = studyDB().tests.slice().reverse().slice(0, 10);
-    if(tests.length){
-      h += '<div class="card"><b style="font-family:var(--serif);font-size:17px">Scores</b>' + tests.map(x =>
-        '<div class="mny-item"><span>' + esc(fmtDate(x.date).slice(5)) + ' · ' + esc(x.sub==='all'?'Mixed':QFK.subjects[x.sub].short) + ' · ' + x.n + ' Qs · ' + Math.round(x.ms/60000) + ' min</span><b style="color:' + (x.score/x.n>=.85?'var(--good)':x.score/x.n>=.7?'var(--warning)':'var(--serious)') + '">' + x.score + '/' + x.n + '</b></div>').join('') +
-        '<div style="font-size:12px;color:var(--muted);margin-top:8px">85% and up is winning territory. Below 70% in a subject: back to that guide.</div></div>';
-    }
-    return h;
-  }
-  if(T.at >= T.qs.length) return studyTestResultHTML();
-  const x = T.qs[T.at], q = x.q;
-  let h = '<div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin:0 2px 8px"><span>' + (T.at+1) + ' of ' + T.qs.length + ' · ' + esc(QFK.subjects[x.s].short) + '</span><span>' + Math.round((Date.now()-T.start)/60000) + ' min</span></div>';
-  h += '<div class="card" style="border-top:3px solid ' + subColor(x.s) + '"><div style="font-family:var(--serif);font-size:18px;line-height:1.4">' + esc(q[1]) + '</div>';
-  if(x.kind==='mc'){
-    h += '<div style="margin-top:14px">' + q[2].map((o, i) => {
-      let style = ''; if(T.picked!=null){ if(i===q[3]) style = 'background:var(--good);color:#fff;border-color:var(--good)'; else if(i===T.picked) style = 'background:var(--serious);color:#fff;border-color:var(--serious)'; }
-      return '<div class="tac" style="' + style + ';border-radius:10px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--border)" onclick="studyPick(' + i + ')"><span class="tk">' + 'ABCD'[i] + '</span><span class="tl" style="font-size:14.5px">' + esc(o) + '</span></div>'; }).join('') + '</div>';
-    if(T.picked!=null) h += (q[4] ? '<div style="font-size:13px;color:var(--muted);margin-top:4px">' + esc(q[4]) + '</div>' : '') + '<button class="btn" style="margin-top:12px" onclick="studyNext()">Next</button>';
-  } else {
-    if(!T.shown) h += '<div class="field" style="margin-top:14px"><input id="studyAns" placeholder="Your answer" autocomplete="off" autocapitalize="off" value="' + esc(T.typed) + '" onkeydown="if(event.key===\'Enter\')studyCheck()"></div><button class="btn" style="margin-top:10px" onclick="studyCheck()">Check</button>';
-    else {
-      const ok = T.answers[T.at].ok;
-      h += '<div style="margin-top:14px;font-size:14px">You wrote: <b>' + esc(T.typed||'—') + '</b></div>' +
-        '<div style="margin-top:6px;padding:10px 12px;border-radius:10px;background:' + (ok?'var(--good)':'var(--serious)') + ';color:#fff;font-size:14.5px">' + (ok?'Right':'Not quite') + ' — <b>' + esc(q[2][0]) + '</b>' + (q[2].length>1 ? ' <span style="opacity:.85">(also: ' + esc(q[2].slice(1).join(', ')) + ')</span>' : '') + '</div>' +
-        (q[3] ? '<div style="font-size:13px;color:var(--muted);margin-top:6px">' + esc(q[3]) + '</div>' : '') +
-        '<div style="display:flex;gap:10px;margin-top:12px">' + (!ok ? '<button class="btn secondary" style="flex:1;margin:0" onclick="studyOverride()">I had it</button>' : '') + '<button class="btn" style="flex:1;margin:0" onclick="studyNext()">Next</button></div>';
-    }
-  }
-  h += '</div><div style="text-align:center"><span class="action" onclick="if(confirm(\'Quit this test?\')){STUDYV.test=null;renderStudy()}">quit</span></div>';
-  return h;
-}
 function studyPick(i){ const T = STUDYV.test; if(!T || T.picked!=null) return; const x = T.qs[T.at]; T.picked = i; T.answers[T.at] = { ok: i===x.q[3], s:x.s }; renderStudy(); }
 function studyCheck(){ const T = STUDYV.test; const inp = $('studyAns'); T.typed = inp ? inp.value : ''; const x = T.qs[T.at]; T.answers[T.at] = { ok: ansMatch(T.typed, x.q[2]), s:x.s }; T.shown = true; renderStudy(); }
 function studyOverride(){ const T = STUDYV.test; T.answers[T.at].ok = true; renderStudy(); }
@@ -7120,33 +7258,7 @@ function studyNext(){
   renderStudy();
   setTimeout(() => { const i = $('studyAns'); if(i) i.focus(); }, 50);
 }
-function studyTestResultHTML(){
-  const T = STUDYV.test, score = T.answers.filter(a=>a.ok).length, n = T.qs.length, pct = Math.round(score/n*100);
-  const by = {}; T.answers.forEach(a => { by[a.s] = by[a.s] || [0,0]; by[a.s][1]++; if(a.ok) by[a.s][0]++; });
-  let h = '<div class="card" style="text-align:center"><div style="font-size:12.5px;color:var(--muted)">' + Math.round((Date.now()-T.start)/60000) + ' minutes</div>' +
-    '<div style="font-family:var(--serif);font-size:44px;color:' + (pct>=85?'var(--good)':pct>=70?'var(--warning)':'var(--serious)') + '">' + pct + '%</div><div style="font-size:14px">' + score + ' of ' + n + '</div>' +
-    '<div style="margin-top:12px">' + Object.keys(by).map(s => '<div class="mny-item"><span>' + esc(QFK.subjects[s].name) + '</span><b>' + by[s][0] + '/' + by[s][1] + '</b></div>').join('') + '</div>' +
-    '<button class="btn" style="margin-top:14px" onclick="STUDYV.test=null;renderStudy()">Done</button></div>';
-  const missed = T.qs.filter((x, i) => !T.answers[i].ok);
-  if(missed.length) h += '<div class="card"><b style="font-family:var(--serif);font-size:17px">Missed</b>' + missed.map(x => '<div style="font-size:13.5px;line-height:1.5;padding:8px 0;border-top:1px solid var(--hairline)"><div style="color:var(--ink-2)">' + esc(x.q[1]) + '</div><b>' + esc(x.kind==='mc' ? x.q[2][x.q[3]] : x.q[2][0]) + '</b></div>').join('') + '</div>';
-  return h;
-}
 // ---- visual drills ----
-function studyVisualHTML(){
-  const kinds = [['const','Constellations'],['moon','Moon'],['eclipse','Eclipses'],['solar','Solar system'],['life','Star life'],['galaxy','Galaxies'],['photo','Photos']];
-  let h = '<div class="mood-range" style="margin:0 0 10px">' + kinds.map(k => '<button class="' + (STUDYV.vis===k[0]?'on':'') + '" onclick="STUDYV.vis=\'' + k[0] + '\';STUDYV.visQ=null;renderStudy()">' + k[1] + '</button>').join('') + '</div>';
-  if(!STUDYV.visQ) STUDYV.visQ = studyVisMake(STUDYV.vis);
-  const Q = STUDYV.visQ;
-  if(STUDYV.vis==='photo') h += '<div class="mood-range" style="margin:0 0 10px">' + Object.keys(QFK.visual.photos).map(g => '<button class="' + (STUDYV.photoGroup===g?'on':'') + '" onclick="STUDYV.photoGroup=\'' + g + '\';STUDYV.visQ=null;renderStudy()">' + g[0].toUpperCase()+g.slice(1) + '</button>').join('') + '</div>';
-  h += '<div class="card" style="text-align:center"><div style="font-size:12.5px;color:var(--muted);text-align:left;margin-bottom:8px">' + esc(Q.prompt) + '</div>' + Q.svg +
-    '<div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">' + Q.options.map((o, i) => {
-      let style = ''; if(Q.picked!=null){ if(o===Q.answer) style = 'background:var(--good);color:#fff;border-color:var(--good)'; else if(i===Q.picked) style = 'background:var(--serious);color:#fff;border-color:var(--serious)'; }
-      return '<button class="btn secondary" style="margin:0;padding:10px 8px;font-size:13.5px;' + style + '" onclick="studyVisPick(' + i + ')">' + esc(o) + '</button>'; }).join('') + '</div>' +
-    (Q.picked!=null ? '<div style="font-size:13px;color:var(--ink-2);margin-top:10px;line-height:1.5">' + esc(Q.note||'') + '</div><button class="btn" style="margin-top:10px" onclick="STUDYV.visQ=null;renderStudy()">Next</button>' : '') +
-    '<div style="font-size:12px;color:var(--muted);margin-top:10px">' + STUDYV.visScore[0] + ' of ' + STUDYV.visScore[1] + ' this session</div></div>';
-  if(STUDYV.vis==='const') h += '<div class="notice">Simplified patterns, not to scale; the exam may rotate them. The bright ring marks the key star.</div>';
-  return h;
-}
 function studyVisPick(i){ const Q = STUDYV.visQ; if(Q.picked!=null) return; Q.picked = i; STUDYV.visScore[1]++; if(Q.options[i]===Q.answer) STUDYV.visScore[0]++; renderStudy(); }
 function svgWrap(inner, bg){ return '<svg viewBox="0 0 100 100" style="width:100%;max-width:300px;aspect-ratio:1;border-radius:12px;background:' + (bg||'#0b1026') + '">' + inner + '</svg>'; }
 function constSVG(c){
@@ -7193,10 +7305,6 @@ function galaxySVG(kind){
   if(kind==='elliptical') return svgWrap('<defs><radialGradient id="eg"><stop offset="0" stop-color="#fff3d6"/><stop offset="1" stop-color="#0b1026"/></radialGradient></defs><ellipse cx="50" cy="50" rx="34" ry="24" fill="url(#eg)"/>');
   return svgWrap('<path d="M30 40 C 20 30, 45 18, 55 28 S 85 35, 72 52 S 70 80, 50 72 S 25 78, 28 60 S 22 48, 30 40 Z" fill="#cfd6ff" opacity=".6"/>' + [...Array(18)].map((_,i)=>'<circle cx="'+(30+(i*37)%45)+'" cy="'+(30+(i*53)%42)+'" r="1" fill="#fff"/>').join(''));
 }
-function lifeSVG(item){
-  return '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;padding:10px 0"><div style="width:100%;font-size:12px;color:var(--muted)">' + esc(item.label) + '</div>' +
-    item.seq.map((s, i) => '<span style="padding:7px 9px;border-radius:8px;border:1px solid var(--border);font-size:12.5px;background:' + (s==='?'?'var(--warning);color:#fff;font-weight:700':'var(--surface-2)') + '">' + esc(s) + '</span>' + (i<item.seq.length-1?'<span style="color:var(--muted)">→</span>':'')).join('') + '</div>';
-}
 function studyVisMake(kind){
   const V = QFK.visual;
   if(kind==='const'){ const c = pick(V.constellations,1)[0]; const others = pick(V.constellations.filter(x=>x!==c),3).map(x=>x.name);
@@ -7217,7 +7325,7 @@ function studyVisMake(kind){
   const nice = t => V.nice[t] || t;
   const others = pick(list.filter(x=>x!==title),3).map(nice);
   return { prompt:g==='animals'?'Name the animal (common group name is fine on the exam when the species isn\'t listed).':g==='portraits'?'Name the president or leader.':g==='planets'?'Name the planet.':g==='biomes'?'Name the biome.':'Name the object and know its type.',
-    svg:'<div id="studyPhoto" style="width:100%;max-width:300px;aspect-ratio:1;margin:0 auto;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;overflow:hidden">loading…</div>',
+    svg:'<div id="studyPhoto" class="study-photo"><span class="spinner"></span></div>',
     options:shuffle([nice(title),...others]), answer:nice(title), title, note:g==='deepsky'?'M31 Andromeda = spiral galaxy · M45 Pleiades = open star cluster · M42 Orion = nebula.':'' };
 }
 async function studyPhotoLoad(){
@@ -7231,19 +7339,9 @@ async function studyPhotoLoad(){
     }
     if(!url) throw new Error('no image');
     if(STUDYV.visQ !== Q) return;
-    box.innerHTML = '<img src="' + esc(url) + '" alt="" style="width:100%;height:100%;object-fit:cover">';
-  }catch(e){ if(STUDYV.visQ === Q) box.textContent = 'No photo available offline — tap Next'; }
+    box.innerHTML = '<img src="' + esc(url) + '" alt="">';
+  }catch(e){ if(STUDYV.visQ === Q) box.textContent = 'No photo available offline. Tap Next.'; }
 }
-// ---- listening ----
-function studyListenHTML(){
-  let h = '<div class="notice" style="margin:0 2px 10px">Audio covers concepts and stories; 41 of 120 questions are pictures, so pair it with the Visual drills. Links open the show\'s page or a search, so nothing here goes stale.</div>';
-  Object.keys(QFK.subjects).forEach(s => {
-    h += '<div class="card"><b style="font-family:var(--serif);font-size:17px;color:' + subColor(s) + '">' + esc(QFK.subjects[s].name) + '</b>' +
-      QFK.listen.filter(l => l.s===s).map(l => '<a href="' + esc(l.url) + '" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;padding:9px 0;border-top:1px solid var(--hairline)"><b style="font-size:14.5px">' + esc(l.title) + ' ↗</b><div style="font-size:13px;color:var(--ink-2);line-height:1.45">' + esc(l.who) + '</div></a>').join('') + '</div>';
-  });
-  return h;
-}
-
 // ---------- charts: one language for every inline chart ----------
 // pts: [{label, v}] where v may be null for a gap. Direct labels, a quiet
 // average line, a marker on the latest reading, touch to scrub.

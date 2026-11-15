@@ -77,6 +77,12 @@ async function shot(browser, { name, theme, view, w = 393, h = 852, prep, steps,
   jobs.push({ name: 'p3-people', theme: 'light', view: 'friends', h: 1500 });
   jobs.push({ name: 'p3-person', theme: 'light', view: 'friends', steps: "openPerson(DB.friends.slice().sort((a,b)=>((b.log||[]).length+(b.docs||[]).length)-((a.log||[]).length+(a.docs||[]).length))[0].id)", h: 2600 });
   jobs.push({ name: 'p3-person-dark', theme: 'dark', view: 'friends', steps: "openPerson(peopleThisWeek()[0].f.id)" });
+  jobs.push({ name: 'p3-goals', theme: 'light', view: 'goals', h: 1500 });
+  jobs.push({ name: 'p3-goals-dark', theme: 'dark', view: 'goals' });
+  for (const seg of ['plan', 'guide', 'cards', 'test', 'visual', 'listen']) jobs.push({ name: `p3-study-${seg}`, theme: 'light', view: ['goals', 'study'], steps: `STUDYV.seg='${seg}'; renderStudy()`, h: 1300 });
+  jobs.push({ name: 'p3-study-quiz', theme: 'light', view: ['goals', 'study'], steps: "STUDYV.seg='test'; studyTestStart('all',20); const T=STUDYV.test; const k=T.qs.findIndex(x=>x.kind==='mc'); T.at=k<0?0:k; renderStudy(); studyPick((T.qs[T.at].q[3]+1)%4)" });
+  jobs.push({ name: 'p3-study-fill', theme: 'dark', view: ['goals', 'study'], steps: "STUDYV.seg='test'; studyTestStart('all',20); const T=STUDYV.test; const k=T.qs.findIndex(x=>x.kind==='fill'); T.at=k<0?0:k; renderStudy(); document.getElementById('studyAns').value='zzz'; studyCheck()" });
+  jobs.push({ name: 'p3-study-card', theme: 'dark', view: ['goals', 'study'], steps: "STUDYV.seg='cards'; renderStudy(); STUDYV.flipped=true; renderStudy()" });
   const only = process.env.LIFEOS_ONLY;
   for (const j of jobs) { if (only && !j.name.includes(only)) continue; const m = await shot(browser, j); console.log(j.name, JSON.stringify(m)); }
   await browser.close();

@@ -189,6 +189,23 @@ swap_range('function renderToday(){', 'function editTile(key){', piece('today.js
 swap_range('function memThisMonthHTML(){', "// when Claude hasn't weighed in yet", piece('otd.js'))
 swap_range('function otdCard(j, yr, why){', '// ---- the look-back', piece('otd2.js'))
 swap_range('function renderMacros(){', 'function twyWeekOf(dstr){', piece('macros.js'))
+# ---------------------------------------------------------------- Goals and the study hub
+swap('      <div class="section-head" style="margin-top:22px"><h2>Life goals</h2><button class="action" id="goalAdd">+ Add</button></div>\n      <div id="goalList"></div>\n',
+     '      <section class="sec"><div class="sec-h"><h2>Life goals</h2><button class="link" id="goalAdd">Add</button></div><div id="goalList"></div></section>\n')
+swap_range('function renderSprint(el){', 'function renderGoals(){ renderTWY();', '')
+swap_range('function renderGoals(){ renderTWY();', 'function openGoal(id){', piece('goals.js'))
+swap_range('// ---- plan ----', 'function studyGrade(ok){', '')
+swap_range('function studyTestHTML(){', 'function studyPick(i){', '')
+swap_range('function studyTestResultHTML(){', '// ---- visual drills ----', '')
+swap_range('function studyVisualHTML(){', 'function studyVisPick(i){', '')
+swap_range('function lifeSVG(item){', 'function studyVisMake(kind){', '')
+swap_range('// ---- listening ----', '// ---------- push notifications ----------', '')
+swap_range('function studyHeadHTML(){', 'function studyGrade(ok){', piece('study.js'))
+swap("""    svg:'<div id="studyPhoto" style="width:100%;max-width:300px;aspect-ratio:1;margin:0 auto;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;overflow:hidden">loading…</div>',""",
+     """    svg:'<div id="studyPhoto" class="study-photo"><span class="spinner"></span></div>',""")
+swap("""    box.innerHTML = '<img src="' + esc(url) + '" alt="" style="width:100%;height:100%;object-fit:cover">';""", """    box.innerHTML = '<img src="' + esc(url) + '" alt="">';""")
+swap("""box.textContent = 'No photo available offline — tap Next'; }""", """box.textContent = 'No photo available offline. Tap Next.'; }""")
+
 swap('// ---------- push notifications ----------', piece('guide.js') + piece('settings.js') + '// ---------- push notifications ----------')
 
 # ---------------------------------------------------------------- Insights hub

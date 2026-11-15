@@ -33,16 +33,16 @@ const seed = { settings: {}, stats: {}, journal: [], friends: [], events: [], go
   ok(w.QFK.mc.every(q => q[2].length === 4 && q[3] >= 0 && q[3] < 4), 'every MC has 4 options and a valid answer');
   // the goals page shows the study card; the brief nudge points to study
   w.showView('goals');
-  ok(/Quest for Knowledge — 25 days to the test · tonight Astronomy/.test(w.document.getElementById('twyBody').textContent), 'goals page: study card with days and tonight\'s subject');
+  ok(/Quest for Knowledge.{1,3}25 days to the test.{0,4}tonight Astronomy/i.test(w.document.getElementById('twyBody').textContent), 'goals page: study card with days and tonight\'s subject');
   const brief = w.twyFocusHTML();
   ok(/25 days to the test — tonight is Astronomy/.test(brief.replace(/<[^>]+>/g,'')) && /showView\('study'\)/.test(brief), 'brief nudge names tonight\'s subject and opens the hub');
   // open the hub
   w.showView('study');
   const body = () => w.document.getElementById('studyBody').textContent;
-  ok(/25 days to the test/.test(body()) && /Tonight: Astronomy/.test(body()) && /Week 1 · foundations/.test(body()), 'plan segment renders: ' + body().slice(0, 80).replace(/\s+/g,' '));
+  ok(/25 days to the test/.test(body()) && /Tonight:? ?Astronomy/.test(body()) && /Week 1 · foundations/.test(body()), 'plan segment renders: ' + body().slice(0, 80).replace(/\s+/g,' '));
   // log tonight
   w.studyLogToday();
-  ok(w.DB.study.log['2026-11-03'] && /✓ Studied tonight/.test(body()) && /1 night running/.test(body()), 'log tonight → streak 1');
+  ok(w.DB.study.log['2026-11-03'] && /Studied tonight/.test(body()) && !/Done studying tonight/.test(body()) && /1 night running/.test(body()), 'log tonight → streak 1');
   ok(w.twyFocusHTML().indexOf('tonight is') < 0, 'brief stops nagging once tonight is logged');
   // guide
   w.STUDYV.seg = 'guide'; w.renderStudy();
@@ -94,7 +94,7 @@ const seed = { settings: {}, stats: {}, journal: [], friends: [], events: [], go
   ok(/<img src="https:\/\/upload\.wikimedia\.org\/x\/640px-y\.jpg"/.test(w.document.getElementById('studyPhoto').innerHTML), 'photo drill loads the Wikipedia lead image at 640px');
   ok(w.QFK.visual.photos.animals.length >= 75, 'photo list covers the recognition list: ' + w.QFK.visual.photos.animals.length);
   // listen
-  w.STUDYV.seg = 'listen'; w.renderStudy(); ok((body().match(/↗/g) || []).length >= 15, 'listen links render');
+  w.STUDYV.seg = 'listen'; w.renderStudy(); ok(w.document.querySelectorAll('#studyBody a[href^="http"]').length >= 15, 'listen links render');
   // merge: remote has an older card grade and a newer log night and a test
   const remote = JSON.parse(JSON.stringify(seed)); remote.study = { log: { '2026-11-02': 1 }, cards: { ['c' + first]: { box: 3, due: '2026-11-09', t: 1 } }, tests: [{ id: 'r1', date: '2026-11-02', sub: 'hist', n: 20, score: 15, ms: 60000, by: {} }] };
   w.mergeRemote(remote);
