@@ -1,0 +1,3 @@
+{ "name": "lifeos-ui-tests", "private": true, "description": "Headless checks for the LifeOS single-file app. LIFEOS_FILE picks the build under test.",
+  "scripts": { "test": "node sprint.test.js && node study.test.js && node parity.test.js" },
+  "devDependencies": { "jsdom": "^24.1.3" } }
