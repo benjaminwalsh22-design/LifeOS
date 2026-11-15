@@ -20,11 +20,11 @@ function dsChart(pts, o){
   return '<div class="chart-wrap" id="'+id+'"><div class="chart-read"><span class="cr-l">'+esc(pts[last].label)+'</span><b class="cr-v">'+esc(fmt(pts[last].v))+'</b></div>'+
     '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.label||'Trend')+'" onpointerdown="chartScrub(event,\''+id+'\')" onpointermove="chartScrub(event,\''+id+'\')" onpointerup="chartScrub(null,\''+id+'\')" onpointerleave="chartScrub(null,\''+id+'\')">'+
     '<line class="grid" x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(mean).toFixed(1)+'" y2="'+Y(mean).toFixed(1)+'"/>'+
-    '<text x="'+L+'" y="'+(Y(mean)-5).toFixed(1)+'">average '+esc(fmt(mean))+'</text>'+
+
     '<path class="line" d="'+d.trim()+'" style="stroke:'+col+'"/>'+dots+
     '<line class="now" x1="'+X(last).toFixed(1)+'" x2="'+X(last).toFixed(1)+'" y1="'+T+'" y2="'+(H-B)+'"/>'+
     '<circle class="pt" cx="'+X(last).toFixed(1)+'" cy="'+Y(pts[last].v).toFixed(1)+'" r="4.5" style="fill:'+col+'"/>'+
-    '<text x="'+L+'" y="'+(H-4)+'">'+esc(pts[0].label)+'</text><text x="'+(W-R)+'" y="'+(H-4)+'" text-anchor="end" class="lab">'+esc(o.nowLabel||pts[pts.length-1].label)+'</text>'+
+    '<text x="'+L+'" y="'+(H-4)+'">'+esc(pts[0].label)+'</text><text x="'+(W/2)+'" y="'+(H-4)+'" text-anchor="middle">average '+esc(fmt(mean))+'</text><text x="'+(W-R)+'" y="'+(H-4)+'" text-anchor="end" class="lab">'+esc(o.nowLabel||pts[pts.length-1].label)+'</text>'+
     '</svg></div>';
 }
 function chartScrub(ev, id){

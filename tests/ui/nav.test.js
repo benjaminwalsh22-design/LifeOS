@@ -126,7 +126,7 @@ for (let i = 0; i < 30; i++) { const d = new Date(Date.UTC(2026, 10, 15 - i)).to
     w.navBack(); settle();
   }
   w.showView('body'); settle();
-  ok(/Sleep/.test($('tiles').textContent) && /Trends/.test($('bodyExtra').textContent) && /Signals/.test($('bodyExtra').textContent), 'Body shows the day\'s numbers, trends and signals');
+  ok(/Sleep/.test($('tiles').textContent) && /7-day/.test($('tiles').textContent) && !!$('tiles').querySelector('svg.spark') && /Signals/.test($('bodyExtra').textContent), 'Body shows the day\'s numbers with their 30-day line and weekly average, and signals');
   w.showView('mind'); settle(); $('ckOpen').click();
   ok(w.document.getElementById('overlay').classList.contains('open'), 'the check-in button on Mind still opens the check-in');
   w.closeSheet();

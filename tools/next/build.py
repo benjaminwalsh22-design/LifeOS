@@ -100,15 +100,13 @@ swap_range('    <section class="view" id="view-insights">', '    <!-- ==========
      '    <!-- behind the Insights doors: the blocks of the old single page, regrouped -->\n'
      '    <section class="view" id="view-mind">\n'
      '      <div id="moodCard"></div>\n'
-     '      <div class="section-head"><h2>Daily check-in</h2><button class="action" id="ckOpen">Check in</button></div>\n'
-     '      <div id="ckCard"></div>\n'
+     '      <section class="sec"><div class="sec-h"><h2>Today’s check-in</h2><button class="link" id="ckOpen">Check in</button></div><div id="ckCard"></div></section>\n'
      '      <div id="mindExtra"></div>\n'
      '    </section>\n'
      '    <section class="view" id="view-body">\n'
-     '      <div id="bodyCard"></div>\n'
-     '      <div class="section-head"><h2>Daily numbers</h2><span class="action" style="cursor:default">tap for trends</span></div>\n'
-     '      <div class="tiles" id="tiles"></div>\n'
+     '      <section class="sec"><div class="sec-h"><h2>Today’s numbers</h2><span class="meta">tap for the trend</span></div><div class="sec-body" id="tiles"></div></section>\n'
      '      <div id="bodyExtra"></div>\n'
+     '      <div id="bodyCard"></div>\n'
      '    </section>\n'
      '    <section class="view" id="view-money"><div id="moneyBody"></div></section>\n'
      '    <section class="view" id="view-firm"><div id="firmBody"></div></section>\n\n')
@@ -194,7 +192,13 @@ swap_range('function renderMacros(){', 'function twyWeekOf(dstr){', piece('macro
 swap('// ---------- push notifications ----------', piece('guide.js') + piece('settings.js') + '// ---------- push notifications ----------')
 
 # ---------------------------------------------------------------- Insights hub
-swap_range('function renderInsightsView(){', '// ---------- account sync (Supabase) ----------', piece('hub.js'))
+swap_range('function renderMood(){', 'function moodHover(ms){', '')
+swap_range('function renderBody(){', 'const QUOTES=[', '')
+swap_range('function tilesHTML(st, day){', "// ---- Annalise's cycle", '')
+swap_range('function cycleTileHTML(){', 'function openCycleSheet(){', '')
+swap_range('function renderCheckin(){', 'const slider = (k, label, v) =>', '')
+swap_range('function openTrend(key, range){', 'function trendHover(pts, m){', '')
+swap_range('function renderInsightsView(){', '// ---------- account sync (Supabase) ----------', piece('hub.js') + piece('doors.js'))
 
 # ---------------------------------------------------------------- Journal and Entry
 SEARCH_IC = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path stroke-linecap="round" d="m16 16 4.5 4.5"/></svg>'

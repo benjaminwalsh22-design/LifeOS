@@ -105,28 +105,6 @@ function renderHub(){
   const el = $('insightsHub'); if(!el) return;
   el.innerHTML = hubChangedHTML() + hubObsHTML() + hubDoorsHTML();
 }
-// behind the doors: the blocks of the old page, each in the room it belongs to
-function renderDoors(){
-  const stateHTML = (title, text) => '<div class="sec-body"><div class="empty-state"><div class="es-title">'+title+'</div><div class="es-text">'+text+'</div>'+
-    (SUPA && SUPA.session ? '' : '<button class="btn sm secondary" onclick="showView(\'set-account\')">Account and sync</button>')+'</div></div>';
-  const head = (t, meta) => '<div class="section-head" style="margin-top:22px"><h2>'+t+'</h2>'+(meta ? '<span class="action" style="cursor:default">'+meta+'</span>' : '')+'</div>';
-  const cards = kind => TRENDS.filter(m => (m.kind === 'checkin') === (kind === 'mind')).map(trendCardHTML).filter(Boolean);
-  let el = $('mindExtra');
-  if(el){ const pat = patternInsights(), tc = cards('mind');
-    el.innerHTML = (tc.length ? head('Trends','last 30 days') + tc.join('') : '') +
-      (pat.length ? head('Patterns in your data') + pat.map(insightCardHTML).join('') : ''); }
-  el = $('bodyExtra');
-  if(el){ const hi = healthInsights(), tc = cards('body');
-    el.innerHTML = (tc.length ? head('Trends','last 30 days') + tc.join('') : '') + head('Signals') +
-      (hi.length ? hi.map(insightCardHTML).join('')
-        : '<div class="empty">'+(healthDepth() >= 14
-          ? 'Nothing out of the ordinary in your numbers right now. Signals speak up when something moves — a jump in resting heart rate, a short night, a week of better sleep.'
-          : 'Sync a few days from Apple Health and trends show up here.')+'</div>'); }
-  el = $('moneyBody');
-  if(el) el.innerHTML = moneyPanelHTML() || stateHTML('No spending to show yet', 'Money comes from your budget, through your account. It appears here once this phone is signed in and the first sync has run.');
-  el = $('firmBody');
-  if(el) el.innerHTML = workHTML() || stateHTML('No firm report yet', 'The firm’s hours, billing and year-to-date figures arrive with each report, through your account.');
-}
 function renderInsightsView(){
   loadLife(false);
   if($('tiles')) $('tiles').innerHTML = tilesHTML(DB.stats[today()]||{});

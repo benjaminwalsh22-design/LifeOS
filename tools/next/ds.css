@@ -435,6 +435,7 @@ input[type=range].slider::-moz-range-thumb { width: var(--thumb); height: var(--
 .chart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .chart .area { opacity: .10; }
 .chart .now { stroke: var(--ink-muted); stroke-width: 1; stroke-dasharray: 2 3; }
+.chart .grid { stroke-dasharray: 1 3; stroke: var(--hairline-strong); }
 .chart .pt { stroke: var(--bg); stroke-width: 2; }
 .chart text { font-family: var(--sans); font-size: 12px; fill: var(--ink-muted); font-variant-numeric: tabular-nums; }
 .chart text.lab { font-weight: 600; }
@@ -571,6 +572,48 @@ mark.unread { padding: 0 2px; border-radius: var(--s1); background: var(--watch-
 .row.act.danger .row-title { color: var(--serious); }
 .btn.destructive { background: var(--serious); color: var(--bg); }
 .sheet-text { margin: 0 0 var(--s4); font-size: var(--t-sub); line-height: var(--lh-body); color: var(--ink-2); }
+
+/* ==========================================================================
+   Behind the Insights doors
+   ========================================================================== */
+.view > .sec:first-child, .view > div:first-child > .sec:first-child { margin-top: var(--s2); }
+.spark { flex: 0 0 auto; width: calc(var(--s12) * 1.5); height: calc(var(--s6) + var(--s1)); overflow: visible; }
+.spark polyline { fill: none; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.stat-row .chg { flex: 0 0 7.8em; }
+.chg-s { margin-top: 1px; font-size: var(--t-cap); color: var(--ink-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chg-s .delta { font-size: var(--t-cap); }
+.row-sub.stale, .chg-v.stale { color: var(--watch); }
+.chg-v .none { color: var(--ink-muted); font-weight: var(--w-reg); }
+.chart-block + .chart-block { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--group-rule); }
+.chart-block:first-child { padding-top: var(--s2); }
+.chart-name { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sub); font-weight: var(--w-semi); color: var(--ink); }
+.chart-name i { width: var(--s2); height: var(--s2); border-radius: var(--r-full); }
+.chart-name .meta { margin-left: auto; font-size: var(--t-foot); font-weight: var(--w-reg); color: var(--ink-muted); }
+.chart-note { padding: var(--s3) 0 var(--s2); }
+.mood-seg { margin-bottom: var(--s3); }
+.mood-stats2 { margin-top: var(--s3); padding-top: var(--s4); padding-bottom: var(--s4); }
+.sec-h + .mood-stats2 { margin-top: 0; }
+.yr-row, .cat-row { display: grid; align-items: center; gap: var(--s3); min-height: var(--s8); font-size: var(--t-foot); }
+.yr-row { grid-template-columns: 3em 1fr 2.4em; }
+.yr-l, .cat-l { color: var(--ink-muted); }
+.yr-v, .cat-v { text-align: right; font-weight: var(--w-semi); color: var(--ink); }
+.cat-row { grid-template-columns: 6.5em 1fr 4.6em; min-height: var(--s10); }
+.cat-l { color: var(--ink); font-size: var(--t-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-bars { display: grid; gap: 3px; }
+.cat-bars .bar { height: var(--s1); }
+.cat-bars .bar.typ > i, .cat-key i.typ { background: var(--ink-muted); opacity: .45; }
+.cat-key { display: flex; gap: var(--s4); padding: var(--s3) 0 var(--s2); font-size: var(--t-cap); color: var(--ink-muted); }
+.cat-key span { display: inline-flex; align-items: center; gap: var(--s1); }
+.cat-key i { width: var(--s3); height: var(--s1); border-radius: var(--r-full); background: var(--accent); }
+.money-hero { padding-top: var(--s4); padding-bottom: var(--s4); }
+.money-hero .hero-num { margin: var(--s1) 0 var(--s2); }
+.money-hero .data-line { margin-top: var(--s1); line-height: var(--lh-body); }
+.money-hero .data-fresh { margin-top: var(--s3); line-height: var(--lh-snug); }
+.money-amt { color: var(--ink); font-weight: var(--w-semi); }
+.money-amt.good { color: var(--good); }
+.row-title.plain { font-weight: var(--w-reg); }
+.sheet-chart { margin-top: var(--s4); }
+.sheet-stats { margin: var(--s4) 0; }
 
 /* ---- style guide ---- */
 .sg-swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s3); }
