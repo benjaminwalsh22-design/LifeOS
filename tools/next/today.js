@@ -151,6 +151,5 @@ function renderToday(){
   $('todayDigest').innerHTML = pw.length ? '<section class="sec"><div class="sec-h"><h2>This week’s people</h2><button class="link" onclick="showView(\'friends\')">Everyone</button></div>'+
     '<div class="sec-body">'+pw.map(pwRowHTML).join('')+'</div></section>' : '';
 
-  // Places keeps a door here until the Insights hub gives it a proper home (phase 2)
-  $('todayMore').innerHTML = '<div class="today-foot"><button class="link" onclick="showView(\'places\')">Places</button></div>';
+  $('todayMore').innerHTML = '';
 }

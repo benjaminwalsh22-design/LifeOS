@@ -42,13 +42,12 @@ function chartScrub(ev, id){
 // ---------- style guide: the kit on one screen ----------
 function renderStyleGuide(){
   const el=$('guideBody'); if(!el) return;
-  const dir=document.documentElement.getAttribute('data-dir')==='b'?'b':'a', th=DB.settings.theme||'light';
+  const th=DB.settings.theme||'light';
   const sw=(name,tok)=>'<div class="sw"><i style="background:var('+tok+')"></i>'+name+'</div>';
   const sec=(title,body,meta)=>'<section class="sec"><div class="sec-h"><h2>'+title+'</h2>'+(meta?'<span class="meta">'+meta+'</span>':'')+'</div>'+body+'</section>';
   const demo=[['Oct 17',52],['Oct 20',55],['Oct 23',49],['Oct 26',null],['Oct 29',58],['Nov 1',61],['Nov 4',57],['Nov 7',54],['Nov 10',60],['Nov 13',63],['Today',59]].map(p=>({label:p[0],v:p[1]}));
-  let h='<header class="lt"><div class="lt-eyebrow">LifeOS redesign · phase 1</div><h1 class="lt-title">Style guide</h1></header>';
-  h+='<div class="sg-stack"><div><div class="field"><label>Direction</label><div class="segc"><button class="'+(dir==='a'?'on':'')+'" onclick="setDir(\'a\')">A · Paper</button><button class="'+(dir==='b'?'on':'')+'" onclick="setDir(\'b\')">B · Slate</button></div></div>'+
-     '<div class="field"><label>Theme</label><div class="segc"><button class="'+(th==='light'?'on':'')+'" onclick="setThemePref(\'light\')">Light</button><button class="'+(th==='dark'?'on':'')+'" onclick="setThemePref(\'dark\')">Dark</button></div></div></div></div>';
+  let h='<header class="lt"><div class="lt-eyebrow">LifeOS redesign</div><h1 class="lt-title">Style guide</h1></header>';
+  h+='<div class="sg-stack"><div><div class="field"><label>Theme</label><div class="segc"><button class="'+(th==='light'?'on':'')+'" onclick="setThemePref(\'light\')">Light</button><button class="'+(th==='dark'?'on':'')+'" onclick="setThemePref(\'dark\')">Dark</button></div></div></div></div>';
   h+=sec('Colour','<div class="sg-swatches">'+sw('bg','--bg')+sw('surface','--surface')+sw('raised','--surface-raised')+sw('sunken','--surface-sunken')+
      sw('ink','--ink')+sw('ink-2','--ink-2')+sw('ink-muted','--ink-muted')+sw('accent','--accent')+
      sw('good','--good')+sw('watch','--watch')+sw('serious','--serious')+sw('ai wash','--ai-wash')+

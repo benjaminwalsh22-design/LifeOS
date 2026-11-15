@@ -1,139 +1,13 @@
 /* ==========================================================================
    LifeOS design system (redesign, Nov 2026)
-   One token layer, two themes, a small component kit. Everything below reads
+   One token layer, two themes (light and dark), a small component kit. Everything below reads
    tokens; nothing sets a raw colour, size, space or radius. The legacy sheet
    above is being retired screen by screen; the alias block keeps screens that
    have not been rebuilt yet on the new palette.
    ========================================================================== */
 :root {
   color-scheme: light;
-  /* ---- colour: direction A, "Paper", light ---- */
-  --bg: #F5F2EB;
-  --surface: #FBF9F4;
-  --surface-raised: #FFFFFF;
-  --surface-sunken: #EBE7DD;
-  --ink: #1F1D19;
-  --ink-2: #4F4B43;
-  --ink-muted: #6B665C;
-  --hairline: rgba(31,29,25,.11);
-  --hairline-strong: rgba(31,29,25,.20);
-  --accent: #2F4A70;
-  --accent-ink: #FFFFFF;
-  --accent-soft: rgba(47,74,112,.10);
-  --good: #47633E;
-  --good-soft: rgba(71,99,62,.13);
-  --watch: #7F540E;
-  --watch-soft: rgba(127,84,14,.13);
-  --serious: #A2452A;
-  --serious-soft: rgba(162,69,42,.12);
-  --ai-wash: #E9EDF2;
-  --ai-ink: #3E5068;
-  --own-rule: rgba(31,29,25,.28);
-  --statusbar: var(--accent);   /* the strip behind the iPhone status bar, whose text is always white */
-  --scrim: rgba(20,18,14,.42);
-  --bar: rgba(245,242,235,.88);
-  --c1: #2F4A70; --c2: #B4603A; --c3: #5E7353; --c4: #7E689E; --c5: #A9762B; --c6: #3B7C76;
-  --avatar-ink: #FFFFFF;
-  --knob: #FFFFFF;        /* switch knob, slider thumb */
-  --seg-on: #FFFFFF;      /* the selected segment */
-
-  /* ---- type: seven sizes, in units of the system body size (17px on iPhone,
-     larger when Dynamic Type is turned up) ---- */
-  --u: calc(1rem / 17);
-  --t-cap: calc(12 * var(--u));
-  --t-foot: calc(13 * var(--u));
-  --t-sub: calc(15 * var(--u));
-  --t-body: calc(17 * var(--u));
-  --t-h3: calc(20 * var(--u));
-  --t-h2: calc(26 * var(--u));
-  --t-h1: calc(34 * var(--u));
-  --lh-tight: 1.18;
-  --lh-snug: 1.35;
-  --lh-body: 1.5;
-  --lh-read: 1.62;
-  --w-reg: 400; --w-med: 500; --w-semi: 600;
-  --sans: -apple-system, system-ui, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-  --serif: "New York", ui-serif, "Iowan Old Style", Georgia, "Times New Roman", serif;
-  --title-font: var(--serif);
-  --title-track: -0.012em;
-
-  /* ---- space (4px grid), radius, elevation, motion ---- */
-  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px; --s12: 48px;
-  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 24px; --r-full: 999px;
-  --e1: 0 1px 2px rgba(20,18,14,.06), 0 6px 20px rgba(20,18,14,.10);
-  --e2: 0 -2px 24px rgba(20,18,14,.16);
-  --dur-1: 120ms; --dur-2: 200ms; --dur-3: 320ms;
-  --ease: cubic-bezier(.2,.7,.2,1);
-  --spring: cubic-bezier(.32,.72,0,1);
-  --hit: 44px;          /* smallest touch target */
-  --ctl: 32px;          /* compact control: pills, small buttons, segments */
-  --ctl-lg: 50px;       /* full-width button */
-  --av: 36px;           /* avatar, count mark */
-  --ic: 24px; --ic-sm: 16px;
-  --grab-w: 36px; --grab-h: 5px;
-  --sw-w: 51px; --sw-h: 31px; --sw-knob: 27px;
-  --thumb: 28px; --track: 6px;
-  --gutter: var(--s5);
-  --bar-h: 44px;
-  --tab-h: 52px;
-
-  /* ---- how a section sits on the page (the main structural difference
-     between the two directions) ---- */
-  --group-bg: transparent;
-  --group-pad: 0px;
-  --group-pad-y: 0px;
-  --group-radius: 0px;
-  --group-rule: var(--hairline);
-
-  /* ---- legacy names, pointed at the new tokens ---- */
-  --page: var(--bg);
-  --surface-2: var(--surface-sunken);
-  --muted: var(--ink-muted);
-  --border: var(--hairline);
-  --fill: var(--accent);
-  --fill-ink: var(--accent-ink);
-  --warning: var(--watch);
-  --critical: var(--serious);
-  --gold: var(--c5); --violet: var(--c4); --aqua: var(--c6); --magenta: var(--c2);
-  --shadow-soft: none;
-  --header: var(--bg); --header-ink: var(--ink); --header-sub: var(--ink-muted);
-  --text: var(--ink);
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #131210;
-  --surface: #1B1A17;
-  --surface-raised: #24221E;
-  --surface-sunken: #2A2823;
-  --ink: #EFEBE1;
-  --ink-2: #C2BDB0;
-  --ink-muted: #9A9588;
-  --hairline: rgba(239,235,225,.11);
-  --hairline-strong: rgba(239,235,225,.22);
-  --accent: #9DB9E0;
-  --accent-ink: #12203A;
-  --accent-soft: rgba(157,185,224,.15);
-  --good: #9DB58D;
-  --good-soft: rgba(157,181,141,.16);
-  --watch: #DBAE5C;
-  --watch-soft: rgba(219,174,92,.16);
-  --serious: #E39A72;
-  --serious-soft: rgba(227,154,114,.16);
-  --ai-wash: #1A1F28;
-  --ai-ink: #A9BBD6;
-  --own-rule: rgba(239,235,225,.30);
-  --statusbar: var(--bg);
-  --scrim: rgba(0,0,0,.6);
-  --bar: rgba(19,18,16,.86);
-  --c1: #9DB9E0; --c2: #E39A72; --c3: #9DB58D; --c4: #B7A6DC; --c5: #DBAE5C; --c6: #7DBFB7;
-  --avatar-ink: #131210;
-  --knob: #EFEBE1;
-  --seg-on: #45413A;
-  --e1: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.45);
-  --e2: 0 -2px 28px rgba(0,0,0,.55);
-}
-/* ---- direction B, "Slate": cooler, grouped, sans titles ---- */
-:root[data-dir="b"] {
+  /* ---- colour, light ("Slate": cool neutral page, white grouped surfaces, indigo accent) ---- */
   --bg: #F1F2F4;
   --surface: #FFFFFF;
   --surface-raised: #FFFFFF;
@@ -155,18 +29,79 @@
   --ai-wash: #EEEDF8;
   --ai-ink: #4A4690;
   --own-rule: rgba(21,23,27,.30);
+  --statusbar: var(--accent);   /* the strip behind the iPhone status bar, whose text is always white */
   --scrim: rgba(10,12,16,.42);
   --bar: rgba(241,242,244,.88);
   --c1: #3A4CB4; --c2: #C2562F; --c3: #2A6E47; --c4: #7A55B0; --c5: #A8740E; --c6: #1F7C86;
-  --title-font: var(--sans);
+  --avatar-ink: #FFFFFF;
+  --knob: #FFFFFF;        /* switch knob, slider thumb */
+  --seg-on: #FFFFFF;      /* the selected segment */
+
+  /* ---- type: seven sizes, in units of the system body size (17px on iPhone,
+     larger when Dynamic Type is turned up) ---- */
+  --u: calc(1rem / 17);
+  --t-cap: calc(12 * var(--u));
+  --t-foot: calc(13 * var(--u));
+  --t-sub: calc(15 * var(--u));
+  --t-body: calc(17 * var(--u));
+  --t-h3: calc(20 * var(--u));
+  --t-h2: calc(26 * var(--u));
+  --t-h1: calc(34 * var(--u));
+  --lh-tight: 1.18;
+  --lh-snug: 1.35;
+  --lh-body: 1.5;
+  --lh-read: 1.62;
+  --w-reg: 400; --w-med: 500; --w-semi: 600;
+  --sans: -apple-system, system-ui, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --serif: "New York", ui-serif, "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --title-font: var(--sans);     /* screen and section titles; serif stays for his words, AI prose and hero numbers */
   --title-track: -0.022em;
+
+  /* ---- space (4px grid), radius, elevation, motion ---- */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px; --s12: 48px;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 24px; --r-full: 999px;
+  --e1: 0 1px 2px rgba(10,12,16,.06), 0 6px 20px rgba(10,12,16,.10);
+  --e2: 0 -2px 24px rgba(10,12,16,.16);
+  --e-push: -1px 0 0 var(--hairline), -16px 0 40px rgba(10,12,16,.10);   /* the leading edge of a screen sliding over another */
+  --dur-1: 120ms; --dur-2: 200ms; --dur-3: 320ms;
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --spring: cubic-bezier(.32,.72,0,1);
+  --hit: 44px;          /* smallest touch target */
+  --ctl: 32px;          /* compact control: pills, small buttons, segments */
+  --ctl-lg: 50px;       /* full-width button */
+  --av: 36px;           /* avatar, count mark */
+  --ic: 24px; --ic-sm: 16px;
+  --grab-w: 36px; --grab-h: 5px;
+  --sw-w: 51px; --sw-h: 31px; --sw-knob: 27px;
+  --thumb: 28px; --track: 6px;
+  --gutter: var(--s4);
+  --bar-h: 44px;
+  --tab-h: 52px;
+
+  /* ---- how a section sits on the page: a white group on the grey page ---- */
   --group-bg: var(--surface);
   --group-pad: var(--s4);
   --group-pad-y: var(--s2);
   --group-radius: var(--r-lg);
-  --gutter: var(--s4);
+  --group-rule: var(--hairline);
+
+  /* ---- legacy names, pointed at the new tokens ---- */
+  --page: var(--bg);
+  --surface-2: var(--surface-sunken);
+  --muted: var(--ink-muted);
+  --border: var(--hairline);
+  --fill: var(--accent);
+  --fill-ink: var(--accent-ink);
+  --warning: var(--watch);
+  --critical: var(--serious);
+  --gold: var(--c5); --violet: var(--c4); --aqua: var(--c6); --magenta: var(--c2);
+  --shadow-soft: none;
+  --header: var(--bg); --header-ink: var(--ink); --header-sub: var(--ink-muted);
+  --text: var(--ink);
+  --paper: var(--bg); --stone: var(--ink-muted);   /* used by the old sheet but never defined there */
 }
-:root[data-dir="b"][data-theme="dark"] {
+:root[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #0B0C0E;
   --surface: #16181B;
   --surface-raised: #1E2125;
@@ -195,6 +130,9 @@
   --avatar-ink: #0B0C0E;
   --knob: #F1F2F4;
   --seg-on: #3C4047;
+  --e1: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.45);
+  --e2: 0 -2px 28px rgba(0,0,0,.55);
+  --e-push: -1px 0 0 var(--hairline), -16px 0 40px rgba(0,0,0,.5);
 }
 
 /* ---- base ---- */
@@ -212,10 +150,32 @@ button { font-family: inherit; color: inherit; touch-action: manipulation; }
 [hidden] { display: none !important; }
 .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
 .app { position: relative; background: var(--bg); }
-main { padding: var(--s2) var(--gutter) calc(env(safe-area-inset-bottom) + var(--tab-h) + var(--s8)); overscroll-behavior-y: contain; }
-body[data-focus] main { padding-bottom: calc(env(safe-area-inset-bottom) + var(--s6)); }
-.view { animation: view-in var(--dur-2) var(--ease); }
-@keyframes view-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ---- screens: each one scrolls on its own, so each keeps its place ---- */
+main { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0; }
+body[data-focus] main { padding: 0; }
+.view {
+  position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
+  padding: var(--s2) var(--gutter) calc(env(safe-area-inset-bottom) + var(--tab-h) + var(--s8));
+  background: var(--bg); animation: none;
+}
+body[data-focus] .view { padding-bottom: calc(env(safe-area-inset-bottom) + var(--s6)); }
+body.sheet-open .view { overflow: hidden; }
+.backrow { display: none; }   /* Back lives in the top bar now */
+/* push and pop: the new screen slides over, the old one eases back a little */
+.view.nav-in { z-index: 2; box-shadow: var(--e-push); animation: nav-in var(--dur-3) var(--spring) both; }
+.view.nav-out { z-index: 1; animation: nav-out var(--dur-3) var(--spring) both; }
+.view.nav-back-in { z-index: 1; animation: nav-back-in var(--dur-3) var(--spring) both; }
+.view.nav-back-out { z-index: 2; box-shadow: var(--e-push); animation: nav-back-out var(--dur-3) var(--spring) both; }
+@keyframes nav-in { from { transform: translate3d(100%,0,0); } to { transform: translate3d(0,0,0); } }
+@keyframes nav-out { from { transform: translate3d(0,0,0); } to { transform: translate3d(-28%,0,0); } }
+@keyframes nav-back-in { from { transform: translate3d(-28%,0,0); } to { transform: translate3d(0,0,0); } }
+@keyframes nav-back-out { from { transform: translate3d(0,0,0); } to { transform: translate3d(100%,0,0); } }
+/* the edge swipe: the screen underneath shows while the top one follows the finger */
+.view.under { display: block; z-index: 1; }
+.view.over { z-index: 2; box-shadow: var(--e-push); will-change: transform; }
+.view.dragging { transition: none; }
+.view.settling { transition: transform var(--dur-2) var(--ease); }
 
 /* pressed state: every tappable thing answers the finger */
 .press, .btn, .tab, .row[onclick], .chip, .link, .tb-btn, .season, .own[onclick], .ai[onclick] { transition: transform var(--dur-1) var(--ease), opacity var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease); }
@@ -226,7 +186,7 @@ body[data-focus] main { padding-bottom: calc(env(safe-area-inset-bottom) + var(-
 /* ---- top bar ---- */
 header.topbar {
   position: relative; z-index: 20; flex: 0 0 auto;
-  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr); align-items: center; column-gap: var(--s2);
   min-height: calc(env(safe-area-inset-top) + var(--bar-h) + var(--s2));
   padding: calc(env(safe-area-inset-top) + var(--s2)) var(--gutter) 0;
   background: var(--bg);
@@ -237,13 +197,18 @@ header.topbar {
 header.topbar::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--statusbar); }
 .topbar h1 {
   grid-column: 2; font-family: var(--sans); font-size: var(--t-body); font-weight: var(--w-semi);
-  letter-spacing: -0.01em; color: var(--ink); text-align: center; white-space: nowrap;
+  letter-spacing: -0.01em; color: var(--ink); text-align: center; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis;
   transition: opacity var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
 }
 .app[data-large="1"]:not(.scrolled) .topbar h1 { opacity: 0; transform: translateY(4px); }
 .topbar .date { display: none; }
 .tb-right { grid-column: 3; display: flex; justify-content: flex-end; align-items: center; gap: var(--s2); }
-.tb-left { grid-column: 1; display: flex; align-items: center; }
+.tb-left { grid-column: 1; display: flex; align-items: center; min-width: 0; }
+.tb-back { position: relative; display: inline-flex; align-items: center; max-width: 100%; height: var(--ctl); margin-left: calc(-1 * var(--s2)); padding: 0 var(--s1) 0 0; border: 0; background: none; color: var(--accent); font-size: var(--t-body); cursor: pointer; transition: opacity var(--dur-1) var(--ease); }
+.tb-back:active { opacity: .5; }
+.tb-back::after { content: ""; position: absolute; inset: -6px -4px; }
+.tb-back svg { flex: 0 0 auto; width: var(--ic); height: var(--ic); }
+.tb-back span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-btn {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--s1);
   flex: 0 0 auto; height: var(--ctl); padding: 0 var(--s3); border: 0; border-radius: var(--r-full); white-space: nowrap;
@@ -256,12 +221,14 @@ header.topbar::before { content: ""; position: absolute; top: 0; left: 0; right:
 /* beside a centred title the Ask control folds down to its icon */
 .app[data-large="0"] .tb-ask, .app.scrolled .tb-ask { width: var(--ctl); padding: 0; }
 .app[data-large="0"] .tb-ask span, .app.scrolled .tb-ask span { display: none; }
-body[data-focus] .tb-ask { display: none; }
+body[data-focus] .tb-ask, .app[data-view="ask"] .tb-ask { display: none; }
 body[data-focus] .topgear { display: inline-flex; }
+.app[data-view="settings"] .topgear { display: none; }
 
 /* large title that leads a tab's root screen */
 .lt { padding: var(--s1) 0 var(--s5); }
 .lt-eyebrow { font-size: var(--t-foot); font-weight: var(--w-semi); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); }
+.lt + * > .sec:first-child, .lt + .sec { margin-top: 0; }
 .lt-title { margin-top: var(--s1); font-family: var(--title-font); font-size: var(--t-h1); line-height: var(--lh-tight); font-weight: var(--w-semi); letter-spacing: var(--title-track); color: var(--ink); text-wrap: balance; }
 
 /* ---- tab bar: floats over the content ---- */
@@ -450,7 +417,6 @@ input[type=range].slider::-moz-range-thumb { width: var(--thumb); height: var(--
 .sheet h3 { margin-bottom: var(--s4); padding-right: var(--s10); font-family: var(--title-font); font-size: var(--t-h3); line-height: var(--lh-snug); font-weight: var(--w-semi); letter-spacing: var(--title-track); }
 .sheet .closer { position: absolute; top: var(--s4); right: var(--s4); float: none; width: var(--ctl); height: var(--ctl); margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); background: var(--surface-sunken); color: var(--ink-2); font-size: var(--t-h3); line-height: 1; z-index: 2; }
 .sheet .closer::after { content: ""; position: absolute; inset: -7px; }
-body.sheet-open main { overflow: hidden; }
 
 /* ---- toast ---- */
 .toast {
@@ -479,12 +445,11 @@ body.sheet-open main { overflow: hidden; }
    Today
    ========================================================================== */
 .brief2 { min-height: calc(var(--t-h3) * var(--lh-snug) * 3 + var(--s8)); }
-:root[data-dir="b"] .brief2 .quote, :root[data-dir="b"] .focus-rows { background: var(--surface); border-radius: var(--r-lg); padding: var(--s4); }
+.brief2 .quote, .focus-rows { background: var(--surface); border-radius: var(--r-lg); padding: var(--s4); }
 .focus-rows { margin-top: var(--s4); }
 .focus-rows .row-title b { font-weight: var(--w-semi); }
 
-.season { margin-top: var(--s6); padding: var(--s4); border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--hairline); cursor: pointer; }
-:root[data-dir="b"] .season { border-color: transparent; }
+.season { margin-top: var(--s6); padding: var(--s4); border-radius: var(--r-lg); background: var(--surface); cursor: pointer; }
 .season-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); }
 .season-title { margin-top: var(--s1); font-family: var(--title-font); font-size: var(--t-h3); line-height: var(--lh-snug); font-weight: var(--w-semi); letter-spacing: var(--title-track); }
 .season-goals { margin-top: var(--s3); }
@@ -517,7 +482,28 @@ body.sheet-open main { overflow: hidden; }
 .otd-block .ai { margin-bottom: var(--s5); }
 .otd-all { padding: var(--s4) 0 0; font-size: var(--t-sub); font-weight: var(--w-semi); color: var(--accent); }
 .mem-strip { margin-top: var(--s6); }
-.today-foot { margin-top: var(--s10); padding-top: var(--s4); border-top: 1px solid var(--hairline); display: flex; gap: var(--s5); }
+
+/* ==========================================================================
+   Insights hub, Settings list
+   ========================================================================== */
+.row.nav .row-title { font-size: var(--t-body); font-weight: var(--w-reg); }
+.row.nav .row-end { max-width: 55%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.row-end.watch { color: var(--watch); }
+.chg { flex: 0 0 auto; text-align: right; }
+.chg-v { font-size: var(--t-body); font-weight: var(--w-semi); letter-spacing: -0.01em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.chg-v .unit { margin-left: 1px; font-size: var(--t-foot); font-weight: var(--w-med); color: var(--ink-muted); }
+.obs2 { margin-top: var(--s4); }
+.obs2 + .obs2 { padding-top: var(--s4); border-top: 1px solid var(--hairline); }
+.obs2-top { display: flex; align-items: center; gap: var(--s2); }
+.obs2-kind { font-size: var(--t-cap); font-weight: var(--w-semi); letter-spacing: .07em; text-transform: uppercase; color: var(--ai-ink); }
+.obs2-title { margin-top: var(--s1); font-family: var(--sans); font-size: var(--t-body); line-height: var(--lh-snug); font-weight: var(--w-semi); color: var(--ink); }
+.obs2 .ai-body { margin-top: var(--s1); }
+.obs2 { cursor: pointer; }
+.obs2 .ai-body.clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.obs2-more { margin-top: var(--s1); font-size: var(--t-foot); font-weight: var(--w-semi); color: var(--ai-ink); }
+.set-group { margin-top: var(--s6); }
+.set-group:first-child { margin-top: 0; }
+.group-h { margin: 0 var(--s4) var(--s2); font-size: var(--t-foot); font-weight: var(--w-reg); letter-spacing: .02em; text-transform: uppercase; color: var(--ink-muted); }
 
 /* ---- style guide ---- */
 .sg-swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s3); }

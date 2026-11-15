@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Contrast check for the design tokens: every text and signal colour against the
-surfaces it sits on, in both themes and both directions. Exits non-zero on a miss."""
+surfaces it sits on, in both themes. Exits non-zero on a miss."""
 import re, sys, pathlib
 css = (pathlib.Path(__file__).parent.parent.parent / 'tools' / 'next' / 'ds.css').read_text()
 def block(sel):
@@ -8,9 +8,7 @@ def block(sel):
 def toks(b): return dict(re.findall(r'(--[a-z0-9-]+):\s*([^;]+);', b))
 base = toks(block(':root'))
 dark = {**base, **toks(block(':root[data-theme="dark"]'))}
-themes = {'A light': base, 'A dark': dark,
-          'B light': {**base, **toks(block(':root[data-dir="b"]'))},
-          'B dark': {**dark, **toks(block(':root[data-dir="b"]')), **toks(block(':root[data-dir="b"][data-theme="dark"]'))}}
+themes = {'light': base, 'dark': dark}
 def rgb(v, T, under=None):
     v = v.strip()
     m = re.fullmatch(r'var\((--[a-z0-9-]+)\)', v)

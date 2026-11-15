@@ -95,6 +95,6 @@ setTimeout(() => { console.log('FAIL timed out'); process.exit(1); }, 60000);
   ok(!onlyA.length && !onlyB.length, 'distinct network requests identical (' + ca.length + ' kinds; ' + a.calls.length + ' calls old, ' + b.calls.length + ' new)' +
     (onlyA.length || onlyB.length ? '\n      only old: ' + onlyA.map((x) => x.slice(0, 160)).join('\n                ') + '\n      only new: ' + onlyB.map((x) => x.slice(0, 160)).join('\n                ') : ''));
   const extra = Object.keys(b.w.localStorage).filter((k) => !(k in a.w.localStorage));
-  ok(extra.every((k) => k === 'lifeos_theme' || k === 'lifeos_dir'), 'the only new storage keys are display preferences: ' + (extra.join(', ') || 'none'));
+  ok(extra.every((k) => k === 'lifeos_theme'), 'the only new storage keys are display preferences: ' + (extra.join(', ') || 'none'));
   console.log(fail ? fail + ' FAILED' : 'all passed'); process.exit(fail ? 1 : 0);
 })();

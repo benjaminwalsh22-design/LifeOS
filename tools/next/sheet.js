@@ -38,6 +38,4 @@ $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) clo
     window.visualViewport.addEventListener('resize', fit); fit(); }
   // :active needs a touch listener on iOS to fire at all
   document.addEventListener('touchstart', function(){}, {passive:true});
-  const mainEl=document.querySelector('main'), app=document.querySelector('.app');
-  if(mainEl && app) mainEl.addEventListener('scroll', ()=>app.classList.toggle('scrolled', mainEl.scrollTop>36), {passive:true});
 })();

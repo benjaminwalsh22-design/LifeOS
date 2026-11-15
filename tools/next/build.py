@@ -13,7 +13,7 @@ import re, sys, pathlib
 HERE = pathlib.Path(__file__).parent
 ROOT = HERE.parent.parent
 src = (ROOT / 'index.html').read_text()
-VERSION = 'v11.0 preview 1'
+VERSION = 'v11.0 preview 2'
 
 def piece(name):
     return (HERE / name).read_text().rstrip('\n') + '\n'
@@ -42,19 +42,20 @@ def swap_range(start, until, new):
 swap('<title>Life OS</title>', '<title>LifeOS</title>')
 swap('<meta name="apple-mobile-web-app-title" content="Life OS">', '<meta name="apple-mobile-web-app-title" content="LifeOS">')
 swap('<meta name="theme-color" id="metaTheme" content="#33527B">',
-     '<meta name="theme-color" id="metaTheme" content="#F5F2EB">\n'
+     '<meta name="theme-color" id="metaTheme" content="#F1F2F4">\n'
      '<script>/* theme and direction before first paint, so the wrong one never flashes */\n'
-     '(function(){try{var d=document.documentElement,t=localStorage.getItem("lifeos_theme"),r=localStorage.getItem("lifeos_dir");'
-     'if(t)d.setAttribute("data-theme",t);if(r)d.setAttribute("data-dir",r);'
-     'var m=document.getElementById("metaTheme");if(m&&t==="dark")m.setAttribute("content",r==="b"?"#0B0C0E":"#131210");else if(m&&r==="b")m.setAttribute("content","#F1F2F4");}catch(e){}})();</script>')
+     '(function(){try{var d=document.documentElement,t=localStorage.getItem("lifeos_theme");'
+     'if(t)d.setAttribute("data-theme",t);'
+     'var m=document.getElementById("metaTheme");if(m&&t==="dark")m.setAttribute("content","#0B0C0E");}catch(e){}})();</script>')
 swap('</style>\n</head>', '</style>\n<style id="ds">\n' + piece('ds.css') + '</style>\n</head>')
 
 # ---------------------------------------------------------------- chrome
-swap('<div class="app">', '<div class="app" data-large="1">')
+swap('<div class="app">', '<div class="app" data-large="1" data-view="today">')
+BACK_IC = '<svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5.5 8.5 12l6.5 6.5"/></svg>'
 ASK_IC = '<svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 12a7.5 7.5 0 0 1-10.9 6.7L4 20l1.3-4.4A7.5 7.5 0 1 1 20.5 12Z"/></svg>'
 swap_range('  <header class="topbar">', '  <div class="ptr" id="ptr">',
      '  <header class="topbar">\n'
-     '    <div class="tb-left"></div>\n'
+     '    <div class="tb-left"><button class="tb-back" id="tbBack" onclick="navBack()" aria-label="Back" hidden>' + BACK_IC + '<span id="tbBackLabel">Back</span></button></div>\n'
      '    <h1 id="topTitle">Today</h1>\n'
      '    <div class="tb-right">\n'
      '      <button class="tb-btn tb-ask" onclick="showView(\'ask\')" aria-label="Ask Ben">' + ASK_IC + '<span>Ask Ben</span></button>\n'
@@ -85,23 +86,96 @@ swap_range('    <section class="view active" id="view-today">', '    <!-- ======
      '    </section>\n\n')
 swap('    <!-- ============ STUDY (Quest for Knowledge, under Goals) ============ -->',
      '    <!-- ============ STYLE GUIDE (redesign preview) ============ -->\n'
-     '    <section class="view" id="view-styleguide"><div class="backrow" onclick="showView(\'settings\')">&lsaquo; Settings</div><div id="guideBody"></div></section>\n'
+     '    <section class="view" id="view-styleguide"><div id="guideBody"></div></section>\n'
      '    <!-- ============ STUDY (Quest for Knowledge, under Goals) ============ -->')
 swap('      <span>Friends</span></button>', '      <span>People</span></button>')
-swap('<div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">v10.5</b></div>',
-     '<div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">' + VERSION + '</b></div>\n'
-     '        <button class="btn secondary" style="margin-top:10px" onclick="showView(\'styleguide\')">Style guide</button>')
+swap("""<div class="syncbanner" id="syncBanner" hidden onclick="showView('settings')">""", """<div class="syncbanner" id="syncBanner" hidden onclick="showView('set-account')">""")
 
+# ---------------------------------------------------------------- structure: Insights hub and doors, large titles, Settings pages
+swap_range('    <section class="view" id="view-insights">', '    <!-- ============ SCHEDULE ============ -->',
+     '    <section class="view" id="view-insights">\n'
+     '      <header class="lt"><h1 class="lt-title">Insights</h1></header>\n'
+     '      <div id="insightsHub"></div>\n'
+     '    </section>\n'
+     '    <!-- behind the Insights doors: the blocks of the old single page, regrouped -->\n'
+     '    <section class="view" id="view-mind">\n'
+     '      <div id="moodCard"></div>\n'
+     '      <div class="section-head"><h2>Daily check-in</h2><button class="action" id="ckOpen">Check in</button></div>\n'
+     '      <div id="ckCard"></div>\n'
+     '      <div id="mindExtra"></div>\n'
+     '    </section>\n'
+     '    <section class="view" id="view-body">\n'
+     '      <div id="bodyCard"></div>\n'
+     '      <div class="section-head"><h2>Daily numbers</h2><span class="action" style="cursor:default">tap for trends</span></div>\n'
+     '      <div class="tiles" id="tiles"></div>\n'
+     '      <div id="bodyExtra"></div>\n'
+     '    </section>\n'
+     '    <section class="view" id="view-money"><div id="moneyBody"></div></section>\n'
+     '    <section class="view" id="view-firm"><div id="firmBody"></div></section>\n\n')
+swap('    <section class="view" id="view-friends">\n', '    <section class="view" id="view-friends">\n      <header class="lt"><h1 class="lt-title">People</h1></header>\n')
+swap('    <section class="view" id="view-journal">\n', '    <section class="view" id="view-journal">\n      <header class="lt"><h1 class="lt-title">Journal</h1></header>\n')
+swap('    <section class="view" id="view-goals">\n', '    <section class="view" id="view-goals">\n      <header class="lt"><h1 class="lt-title">Goals</h1></header>\n')
+swap_range('    <section class="view" id="view-settings">', '    <!-- ============ HEALTH (under Life) ============ -->',
+     '    <section class="view" id="view-settings">\n'
+     '      <header class="lt"><h1 class="lt-title">Settings</h1></header>\n'
+     '      <div id="settingsList"></div>\n'
+     '    </section>\n'
+     '    <!-- each Settings row opens one of these; the controls and their ids are the old ones -->\n'
+     '    <section class="view" id="view-set-profile">\n'
+     '      <div class="card">\n'
+     '        <div class="field"><label>Your name</label><input id="setName" placeholder="Benjamin"></div>\n'
+     '        <div class="field"><label>Theme</label>\n'
+     '          <select id="setTheme"><option value="light">Light</option><option value="dark">Dark</option></select>\n'
+     '        </div>\n'
+     '      </div>\n'
+     '    </section>\n'
+     '    <section class="view" id="view-set-ai">\n'
+     '      <div class="card">\n'
+     '        <div class="field"><label>Anthropic API key (for journal AI analysis)</label>\n'
+     '          <input id="setApiKey" type="password" placeholder="sk-ant-...">\n'
+     '        </div>\n'
+     '        <div class="notice">With a key, journal photos are transcribed, summarized and analyzed by Claude, directly from your phone to the Anthropic API — no other server involved. Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Leave blank to just store photos.</div>\n'
+     '      </div>\n'
+     '    </section>\n'
+     '    <section class="view" id="view-set-data">\n'
+     '      <div class="card">\n'
+     '        <button class="btn secondary" id="exportBtn">Export data backup (JSON)</button>\n'
+     '        <button class="btn secondary" id="importBtn" style="margin-top:10px">Import backup</button>\n'
+     '        <input type="file" id="importInput" accept="application/json" hidden>\n'
+     '        <div class="notice">Everything lives on this device. Export occasionally to keep a backup — it includes journal photos.</div>\n'
+     '        <button class="btn danger" id="wipeBtn">Erase all data</button>\n'
+     '      </div>\n'
+     '    </section>\n'
+     '    <section class="view" id="view-set-health">\n'
+     '      <div class="card">\n'
+     '        <div style="font-size:15px;font-weight:650;margin-bottom:6px">Apple Health</div>\n'
+     '        <div class="notice" style="margin-top:0">Apple doesn’t let a web app read Health directly. Two ways in: a <b>Shortcut</b> that opens LifeOS with your numbers, or <b>live sync</b> — point the app at a private URL your Shortcut posts to, and it pulls the latest on its own.</div>\n'
+     '        <div class="field" style="margin-top:12px"><label>Live sync URL (optional)</label><input id="setSyncUrl" type="url" placeholder="https://…/health?key=…"></div>\n'
+     '        <button class="btn secondary" id="syncNowBtn">Sync now</button>\n'
+     '        <div class="notice" id="syncStatus"></div>\n'
+     '        <button class="btn secondary" style="margin-top:6px" onclick="testHealthSync()">Test with sample data</button>\n'
+     '        <div class="notice">Ask Claude for the Shortcut recipe (opens-the-app) or the live-sync relay setup.</div>\n'
+     '      </div>\n'
+     '    </section>\n'
+     '    <section class="view" id="view-set-lock"><div class="card" id="lockCard"></div></section>\n'
+     '    <section class="view" id="view-set-notif"><div class="card" id="notifCard"></div></section>\n'
+     '    <section class="view" id="view-set-account">\n'
+     '      <div class="card">\n'
+     '        <div style="font-size:15px;font-weight:650;margin-bottom:6px">Account &amp; Sync</div>\n'
+     '        <div id="acctBody"></div>\n'
+     '      </div>\n'
+     '    </section>\n'
+     '    <section class="view" id="view-set-about">\n'
+     '      <div class="card" style="text-align:center">\n'
+     '        <div style="font-size:13px;color:var(--muted)">LifeOS <b id="appVer">' + VERSION + '</b></div>\n'
+     '        <button class="btn secondary" style="margin-top:10px" onclick="checkUpdate()">Check for updates</button>\n'
+     '        <div class="notice">Fetches the newest version from your site and reloads. Your data is untouched — it lives on this phone, not in the app files.</div>\n'
+     '        <button class="btn secondary" style="margin-top:10px" onclick="showView(\'styleguide\')">Style guide</button>\n'
+     '      </div>\n'
+     '    </section>\n\n')
 # ---------------------------------------------------------------- behaviour of the chrome
 swap_range('function openSheet(html){', '// ---------- navigation ----------', piece('sheet.js') + '\n')
-swap("goals:'Goals', study:'Quest for Knowledge', review:'Weekly Review', settings:'Settings' };",
-     "goals:'Goals', study:'Quest for Knowledge', review:'Weekly Review', settings:'Settings', styleguide:'Style guide' };")
-swap("const VIEWS = { today:'Today', friends:'Friends',", "const VIEWS = { today:'Today', friends:'People',")
-swap("goals:'goals', study:'goals', settings:'today',", "goals:'goals', study:'goals', settings:'today', styleguide:'today',")
-swap("  $('topTitle').textContent = VIEWS[v] || '';\n",
-     "  $('topTitle').textContent = VIEWS[v] || '';\n"
-     "  const app = document.querySelector('.app'); app.setAttribute('data-large', v === 'today' || v === 'styleguide' ? '1' : '0'); app.classList.remove('scrolled');\n"
-     "  if (v === 'styleguide') renderStyleGuide();\n")
+swap_range('// ---------- navigation ----------', '// ---------- friends logic ----------', piece('nav.js'))
 swap_range('function applyTheme(){', 'function initSettings(){', piece('theme.js'))
 
 # ---------------------------------------------------------------- Today
@@ -117,7 +191,20 @@ swap_range('function renderToday(){', 'function editTile(key){', piece('today.js
 swap_range('function memThisMonthHTML(){', "// when Claude hasn't weighed in yet", piece('otd.js'))
 swap_range('function otdCard(j, yr, why){', '// ---- the look-back', piece('otd2.js'))
 swap_range('function renderMacros(){', 'function twyWeekOf(dstr){', piece('macros.js'))
-swap('// ---------- push notifications ----------', piece('guide.js') + '// ---------- push notifications ----------')
+swap('// ---------- push notifications ----------', piece('guide.js') + piece('settings.js') + '// ---------- push notifications ----------')
+
+# ---------------------------------------------------------------- Insights hub
+swap_range('function renderInsightsView(){', '// ---------- account sync (Supabase) ----------', piece('hub.js'))
+
+# ---------------------------------------------------------------- the few places that reached for the old single scroller
+swap("    if (mainEl.scrollTop <= 0){ P.y = e.touches[0].clientY; P.active = true; P.pull = 0; }", "    if (scroller().scrollTop <= 0){ P.y = e.touches[0].clientY; P.active = true; P.pull = 0; }")
+swap("    if (!P.active || P.busy) return;\n    const dy = e.touches[0].clientY - P.y;\n    if (dy > 0 && mainEl.scrollTop <= 0){",
+     "    if (!P.active || P.busy || NAV.swiping) return;\n    const dy = e.touches[0].clientY - P.y;\n    if (dy > 0 && scroller().scrollTop <= 0){")
+swap("    '<div class=\"turn-a\">' + askMd(t.answer_markdown || '') + '</div></div>').join('');\n  const m = document.querySelector('main'); if(m) m.scrollTop = 0;",
+     "    '<div class=\"turn-a\">' + askMd(t.answer_markdown || '') + '</div></div>').join('');\n  scroller().scrollTop = 0;")
+# a notification or a link opens its screen in the tab it belongs to
+swap("  if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }", "  if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v, 'cold'); return true; }")
+swap("if(m && VIEWS[m[1]]!=null) showView(m[1]); });", "if(m && VIEWS[m[1]]!=null) showView(m[1], 'cold'); });")
 
 (ROOT / 'next.html').write_text(src)
 print('next.html written:', len(src), 'bytes,', src.count('\n'), 'lines')
