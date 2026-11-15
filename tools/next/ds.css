@@ -98,7 +98,7 @@
   --shadow-soft: none;
   --header: var(--bg); --header-ink: var(--ink); --header-sub: var(--ink-muted);
   --text: var(--ink);
-  --paper: var(--bg); --stone: var(--ink-muted);   /* used by the old sheet but never defined there */
+  --paper: var(--bg);   /* used by the old sheet but never defined there */
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -614,6 +614,44 @@ mark.unread { padding: 0 2px; border-radius: var(--s1); background: var(--watch-
 .row-title.plain { font-weight: var(--w-reg); }
 .sheet-chart { margin-top: var(--s4); }
 .sheet-stats { margin: var(--s4) 0; }
+
+/* ==========================================================================
+   People and Person
+   ========================================================================== */
+.lt-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); }
+.group-h.gap { margin-top: var(--s6); }
+.row-sub .soon { color: var(--accent); font-weight: var(--w-med); }
+.row-sub .late { color: var(--watch); font-weight: var(--w-med); }
+.row-sub.clamp2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.icon-btn { position: relative; flex: 0 0 auto; width: var(--ctl); height: var(--ctl); display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: var(--r-full); background: var(--surface-sunken); color: var(--ink-2); font-size: var(--t-h3); line-height: 1; cursor: pointer; transition: transform var(--dur-1) var(--ease), opacity var(--dur-1) var(--ease); }
+.icon-btn::after { content: ""; position: absolute; inset: -6px; }
+.icon-btn:active { transform: scale(.92); opacity: .7; }
+.icon-btn svg { width: var(--ic-sm); height: var(--ic-sm); }
+.icon-btn.quiet { background: transparent; color: var(--ink-muted); }
+.person-head { display: flex; align-items: center; gap: var(--s4); padding-bottom: var(--s3); }
+.person-who { min-width: 0; }
+.person-head .lt-title { margin-top: 0; font-size: var(--t-h2); }
+.av.xl { flex: 0 0 calc(var(--av) * 2); width: calc(var(--av) * 2); height: calc(var(--av) * 2); font-size: var(--t-h2); }
+.person-when { display: flex; flex-direction: column; gap: 2px; }
+.data-line.late { color: var(--watch); font-weight: var(--w-med); }
+.data-line.soon { color: var(--accent); font-weight: var(--w-med); }
+.person-acts { margin-top: var(--s4); }
+.agent-off { margin-top: var(--s3); }
+.agent-out { margin-top: var(--s4); }
+.agent-body { margin-top: var(--s2); }
+.agent-body p { font-family: var(--serif); font-size: var(--t-body); line-height: var(--lh-read); color: var(--ink); -webkit-user-select: text; user-select: text; }
+.agent-body .btn { margin-top: var(--s3); }
+.fact { padding: var(--s3) 0; }
+.fact + .fact { border-top: 1px solid var(--group-rule); }
+.fact-l { font-size: var(--t-foot); color: var(--ink-muted); }
+.fact-v { margin-top: 2px; font-size: var(--t-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
+.rhythm { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--s3); padding: var(--s3) 0 var(--s2); }
+.rh { display: flex; flex-direction: column; align-items: center; gap: var(--s1); font-size: var(--t-cap); color: var(--ink-muted); }
+.rh b { min-height: 1.2em; font-size: var(--t-foot); font-weight: var(--w-semi); color: var(--ink); }
+.rh-b { display: flex; align-items: flex-end; width: 100%; height: var(--s12); }
+.rh-b i { display: block; width: 100%; border-radius: var(--s1); background: var(--accent); }
+.rh-b i.none { background: var(--surface-sunken); }
+.rh-note { padding: var(--s2) 0 var(--s3); font-size: var(--t-foot); color: var(--ink-2); }
 
 /* ---- style guide ---- */
 .sg-swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s3); }

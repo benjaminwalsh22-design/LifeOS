@@ -226,6 +226,14 @@ swap_range('async function openEntry(id){', 'async function requeueEntry(id){', 
 swap_range('async function renderJournalList(){', "$('jScan').addEventListener('click'", piece('journal.js'))
 swap('renderPerson(); renderReview(); renderInsightsView(); }', 'renderPerson(); renderReview(); renderInsightsView(); renderEntry(); }')
 
+# ---------------------------------------------------------------- People and Person
+swap('      <header class="lt"><h1 class="lt-title">People</h1></header>\n      <div class="section-head"><h2>Keep in touch</h2><button class="action" id="friendAdd">+ Add friend</button></div>\n',
+     '      <header class="lt lt-row"><h1 class="lt-title">People</h1><button class="link" id="friendAdd">Add</button></header>\n')
+swap_range('function renderFriends(){', 'function editFriend(id){', '')
+swap_range('function rhythmHTML(p){', 'function friendTrendInsights(){', '')
+swap_range('function agentBusy(msg){', 'function copyText(t){', '')
+swap_range('function renderPerson(){', 'function openLog(pid,lid){', piece('people.js'))
+
 # ---------------------------------------------------------------- the few places that reached for the old single scroller
 swap("    if (mainEl.scrollTop <= 0){ P.y = e.touches[0].clientY; P.active = true; P.pull = 0; }", "    if (scroller().scrollTop <= 0){ P.y = e.touches[0].clientY; P.active = true; P.pull = 0; }")
 swap("    if (!P.active || P.busy) return;\n    const dy = e.touches[0].clientY - P.y;\n    if (dy > 0 && mainEl.scrollTop <= 0){",

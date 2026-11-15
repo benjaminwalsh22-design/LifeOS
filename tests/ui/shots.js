@@ -74,6 +74,9 @@ async function shot(browser, { name, theme, view, w = 393, h = 852, prep, steps,
   for (const v of ['mind', 'body', 'money', 'firm']) jobs.push({ name: `p3-door-${v}`, theme: 'light', view: ['insights', v], h: 2300 });
   jobs.push({ name: 'p3-door-mind-dark', theme: 'dark', view: ['insights', 'mind'] });
   jobs.push({ name: 'p3-trend-sheet', theme: 'light', view: ['insights', 'body'], steps: "openTrend('hrv')", wait: 600 });
+  jobs.push({ name: 'p3-people', theme: 'light', view: 'friends', h: 1500 });
+  jobs.push({ name: 'p3-person', theme: 'light', view: 'friends', steps: "openPerson(DB.friends.slice().sort((a,b)=>((b.log||[]).length+(b.docs||[]).length)-((a.log||[]).length+(a.docs||[]).length))[0].id)", h: 2600 });
+  jobs.push({ name: 'p3-person-dark', theme: 'dark', view: 'friends', steps: "openPerson(peopleThisWeek()[0].f.id)" });
   const only = process.env.LIFEOS_ONLY;
   for (const j of jobs) { if (only && !j.name.includes(only)) continue; const m = await shot(browser, j); console.log(j.name, JSON.stringify(m)); }
   await browser.close();
