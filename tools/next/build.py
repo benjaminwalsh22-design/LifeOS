@@ -3,7 +3,6 @@
 
     python3 tools/next/build.py           writes next.html (the preview)
     python3 tools/next/build.py --live    also writes index.html (the live app)
-    python3 tools/next/build.py --sunrise the preview opens with the sunrise accent (the live file never does)
 
 The starting point is rollback/index-v10.5.html, which never changes. This
 script swaps the old markup-building functions for the pieces in this folder
@@ -17,7 +16,7 @@ HERE = pathlib.Path(__file__).parent
 ROOT = HERE.parent.parent
 LIVE = '--live' in sys.argv
 src = (ROOT / 'rollback' / 'index-v10.5.html').read_text()
-VERSION = 'v11.1' if LIVE else 'v11.1 preview'
+VERSION = 'v11.2' if LIVE else 'v11.2 preview'
 
 def piece(name):
     return (HERE / name).read_text().rstrip('\n') + '\n'
@@ -429,12 +428,7 @@ new_css = prune_css(old_css, alive)
 src = src[:m.start(1)] + '\n/* what is left of the old stylesheet: layout for parts the design system has not replaced */\n' + new_css + src[m.end(1):]
 print('old stylesheet:', len(old_css), '->', len(new_css), 'bytes')
 
-# --sunrise: the preview (never the live file) opens with the sunrise accent switched on, to try it out
-nxt = src
-if '--sunrise' in sys.argv:
-    if nxt.count('<html lang="en">') != 1: sys.exit('build: html tag not found')
-    nxt = nxt.replace('<html lang="en">', '<html lang="en" data-accent="sunrise">')
-(ROOT / 'next.html').write_text(nxt)
+(ROOT / 'next.html').write_text(src)
 if LIVE:
     (ROOT / 'index.html').write_text(src)
     print('index.html written: the redesign is live once this is pushed')

@@ -8,8 +8,7 @@ def block(sel):
 def toks(b): return dict(re.findall(r'(--[a-z0-9-]+):\s*([^;]+);', b))
 base = toks(block(':root'))
 dark = {**base, **toks(block(':root[data-theme="dark"]'))}
-sun = toks(block(':root[data-accent="sunrise"]'))
-themes = {'light': base, 'dark': dark, 'sunrise': {**base, **sun}, 'sunrise dark': {**dark, **sun, **toks(block(':root[data-accent="sunrise"][data-theme="dark"]'))}}
+themes = {'light': base, 'dark': dark}
 def rgb(v, T, under=None):
     v = v.strip()
     m = re.fullmatch(r'var\((--[a-z0-9-]+)\)', v)

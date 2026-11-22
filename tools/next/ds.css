@@ -7,7 +7,7 @@
    ========================================================================== */
 :root {
   color-scheme: light;
-  /* ---- colour, light ("Slate": cool neutral page, white grouped surfaces, indigo accent) ---- */
+  /* ---- colour, light ("Slate": cool neutral page, white grouped surfaces, sunrise-coral accent) ---- */
   --bg: #F1F2F4;
   --surface: #FFFFFF;
   --surface-raised: #FFFFFF;
@@ -17,23 +17,25 @@
   --ink-muted: #5E646E;
   --hairline: rgba(21,23,27,.10);
   --hairline-strong: rgba(21,23,27,.18);
-  --accent: #3A4CB4;
-  --accent-ink: #FFFFFF;
-  --accent-fill: var(--accent);   /* what buttons, bars and the selected day are filled with; --accent-ink is the text on it */
-  --accent-soft: rgba(58,76,180,.10);
+  /* the accent is the sunrise of the app icon: a deep coral for links and icons (it has to read as text on every
+     surface), the icon's own coral for fills, with dark text on it */
+  --accent: #AE3F2A;
+  --accent-fill: #FFA890;         /* what buttons, bars and the selected day are filled with */
+  --accent-ink: #2B120C;          /* the text on a fill */
+  --accent-soft: rgba(222,95,69,.10);
   --good: #2A6E47;
   --good-soft: rgba(42,110,71,.12);
   --watch: #835206;
   --watch-soft: rgba(131,82,6,.12);
-  --serious: #A63620;
-  --serious-soft: rgba(166,54,32,.11);
+  --serious: #AD1F3A;             /* crimson, so a warning never reads as a link */
+  --serious-soft: rgba(173,31,58,.10);
   --ai-wash: #EEEDF8;
   --ai-ink: #4A4690;
   --own-rule: rgba(21,23,27,.30);
-  --statusbar: var(--accent);   /* the strip behind the iPhone status bar, whose text is always white */
+  --statusbar: #DD6B50;           /* the strip behind the iPhone status bar, whose text is always white */
   --scrim: rgba(10,12,16,.42);
   --bar: rgba(241,242,244,.88);
-  --c1: #3A4CB4; --c2: #C2562F; --c3: #2A6E47; --c4: #7A55B0; --c5: #A8740E; --c6: #1F7C86;
+  --c1: #DE5F45; --c2: #3A4CB4; --c3: #2A6E47; --c4: #7A55B0; --c5: #A8740E; --c6: #1F7C86;
   --avatar-ink: #FFFFFF;
   --knob: #FFFFFF;        /* switch knob, slider thumb */
   --seg-on: #FFFFFF;      /* the selected segment */
@@ -112,43 +114,28 @@
   --ink-muted: #8E939D;
   --hairline: rgba(241,242,244,.10);
   --hairline-strong: rgba(241,242,244,.20);
-  --accent: #9AA7FF;
-  --accent-ink: #0E1130;
-  --accent-soft: rgba(154,167,255,.16);
+  --accent: #FFA18F;
+  --accent-fill: #FFA18F;
+  --accent-soft: rgba(255,161,143,.16);
   --good: #7FC79C;
   --good-soft: rgba(127,199,156,.15);
   --watch: #E0B052;
   --watch-soft: rgba(224,176,82,.15);
-  --serious: #F0937A;
-  --serious-soft: rgba(240,147,122,.15);
+  --serious: #FF8A9A;
+  --serious-soft: rgba(255,138,154,.15);
   --ai-wash: #1A1A2B;
   --ai-ink: #B4B2F0;
   --own-rule: rgba(241,242,244,.30);
   --statusbar: var(--bg);
   --scrim: rgba(0,0,0,.62);
   --bar: rgba(11,12,14,.86);
-  --c1: #9AA7FF; --c2: #F0937A; --c3: #7FC79C; --c4: #C3A5F0; --c5: #E0B052; --c6: #6CC6D0;
+  --c1: #FFA18F; --c2: #9AA7FF; --c3: #7FC79C; --c4: #C3A5F0; --c5: #E0B052; --c6: #6CC6D0;
   --avatar-ink: #0B0C0E;
   --knob: #F1F2F4;
   --seg-on: #3C4047;
   --e1: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.45);
   --e2: 0 -2px 28px rgba(0,0,0,.55);
   --e-push: -1px 0 0 var(--hairline), -16px 0 40px rgba(0,0,0,.5);
-}
-
-/* ---- an alternative accent: the sunrise of the app icon. Links and icons take a deep coral that reads on every
-   surface; fills take the icon's own coral with dark text; the warning red moves toward crimson so it stays distinct. ---- */
-:root[data-accent="sunrise"] {
-  --accent: #AE3F2A; --accent-fill: #FFA890; --accent-ink: #2B120C; --accent-soft: rgba(222,95,69,.10);
-  --statusbar: #DD6B50;
-  --c1: #DE5F45; --c2: #3A4CB4;
-  --serious: #AD1F3A; --serious-soft: rgba(173,31,58,.10);
-}
-:root[data-accent="sunrise"][data-theme="dark"] {
-  --accent: #FFA18F; --accent-fill: #FFA18F; --accent-soft: rgba(255,161,143,.16);
-  --statusbar: var(--bg);
-  --c1: #FFA18F; --c2: #9AA7FF;
-  --serious: #FF8A9A; --serious-soft: rgba(255,138,154,.15);
 }
 
 /* ---- base ---- */
