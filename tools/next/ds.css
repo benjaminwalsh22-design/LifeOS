@@ -19,6 +19,7 @@
   --hairline-strong: rgba(21,23,27,.18);
   --accent: #3A4CB4;
   --accent-ink: #FFFFFF;
+  --accent-fill: var(--accent);   /* what buttons, bars and the selected day are filled with; --accent-ink is the text on it */
   --accent-soft: rgba(58,76,180,.10);
   --good: #2A6E47;
   --good-soft: rgba(42,110,71,.12);
@@ -90,7 +91,7 @@
   --surface-2: var(--surface-sunken);
   --muted: var(--ink-muted);
   --border: var(--hairline);
-  --fill: var(--accent);
+  --fill: var(--accent-fill);
   --fill-ink: var(--accent-ink);
   --warning: var(--watch);
   --critical: var(--serious);
@@ -133,6 +134,21 @@
   --e1: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.45);
   --e2: 0 -2px 28px rgba(0,0,0,.55);
   --e-push: -1px 0 0 var(--hairline), -16px 0 40px rgba(0,0,0,.5);
+}
+
+/* ---- an alternative accent: the sunrise of the app icon. Links and icons take a deep coral that reads on every
+   surface; fills take the icon's own coral with dark text; the warning red moves toward crimson so it stays distinct. ---- */
+:root[data-accent="sunrise"] {
+  --accent: #AE3F2A; --accent-fill: #FFA890; --accent-ink: #2B120C; --accent-soft: rgba(222,95,69,.10);
+  --statusbar: #DD6B50;
+  --c1: #DE5F45; --c2: #3A4CB4;
+  --serious: #AD1F3A; --serious-soft: rgba(173,31,58,.10);
+}
+:root[data-accent="sunrise"][data-theme="dark"] {
+  --accent: #FFA18F; --accent-fill: #FFA18F; --accent-soft: rgba(255,161,143,.16);
+  --statusbar: var(--bg);
+  --c1: #FFA18F; --c2: #9AA7FF;
+  --serious: #FF8A9A; --serious-soft: rgba(255,138,154,.15);
 }
 
 /* ---- base ---- */
@@ -216,7 +232,7 @@ header.topbar::before { content: ""; position: absolute; top: 0; left: 0; right:
 }
 .tb-btn::after { content: ""; position: absolute; inset: -6px -2px; }
 .tb-btn svg { width: var(--ic-sm); height: var(--ic-sm); }
-.tb-btn.me { width: var(--ctl); padding: 0; font-family: var(--serif); font-size: var(--t-sub); background: var(--accent); color: var(--accent-ink); }
+.tb-btn.me { width: var(--ctl); padding: 0; font-family: var(--serif); font-size: var(--t-sub); background: var(--accent-fill); color: var(--accent-ink); }
 .topgear { display: inline-flex; }
 /* beside a centred title the Ask control folds down to its icon */
 .app[data-large="0"] .tb-ask, .app.scrolled .tb-ask { width: var(--ctl); padding: 0; }
@@ -279,7 +295,7 @@ nav.tabbar {
 .btn {
   display: flex; align-items: center; justify-content: center; gap: var(--s2); width: 100%; min-height: var(--ctl-lg);
   margin-top: var(--s2); padding: 0 var(--s5); border: 0; border-radius: var(--r-md);
-  background: var(--accent); color: var(--accent-ink); font-size: var(--t-body); font-weight: var(--w-semi); letter-spacing: -0.01em; cursor: pointer;
+  background: var(--accent-fill); color: var(--accent-ink); font-size: var(--t-body); font-weight: var(--w-semi); letter-spacing: -0.01em; cursor: pointer;
 }
 .btn.secondary { background: var(--surface-sunken); color: var(--ink); }
 .btn.quiet { background: transparent; color: var(--accent); }
@@ -306,7 +322,7 @@ nav.tabbar {
 
 /* ---- progress, tap-to-count ---- */
 .bar { height: var(--track); border-radius: var(--r-full); background: var(--surface-sunken); overflow: hidden; }
-.bar > i { display: block; height: 100%; border-radius: var(--r-full); background: var(--accent); transition: width var(--dur-3) var(--ease); }
+.bar > i { display: block; height: 100%; border-radius: var(--r-full); background: var(--accent-fill); transition: width var(--dur-3) var(--ease); }
 .bar > i.good { background: var(--good); } .bar > i.watch { background: var(--watch); } .bar > i.serious { background: var(--serious); }
 .count-row { display: flex; align-items: center; gap: var(--s3); min-height: var(--hit); padding: var(--s3) 0; cursor: pointer; }
 .count-row + .count-row { border-top: 1px solid var(--group-rule); }
@@ -604,7 +620,7 @@ mark.unread { padding: 0 2px; border-radius: var(--s1); background: var(--watch-
 .cat-bars .bar.typ > i, .cat-key i.typ { background: var(--ink-muted); opacity: .45; }
 .cat-key { display: flex; gap: var(--s4); padding: var(--s3) 0 var(--s2); font-size: var(--t-cap); color: var(--ink-muted); }
 .cat-key span { display: inline-flex; align-items: center; gap: var(--s1); }
-.cat-key i { width: var(--s3); height: var(--s1); border-radius: var(--r-full); background: var(--accent); }
+.cat-key i { width: var(--s3); height: var(--s1); border-radius: var(--r-full); background: var(--accent-fill); }
 .money-hero { padding-top: var(--s4); padding-bottom: var(--s4); }
 .money-hero .hero-num { margin: var(--s1) 0 var(--s2); }
 .money-hero .data-line { margin-top: var(--s1); line-height: var(--lh-body); }
@@ -649,7 +665,7 @@ mark.unread { padding: 0 2px; border-radius: var(--s1); background: var(--watch-
 .rh { display: flex; flex-direction: column; align-items: center; gap: var(--s1); font-size: var(--t-cap); color: var(--ink-muted); }
 .rh b { min-height: 1.2em; font-size: var(--t-foot); font-weight: var(--w-semi); color: var(--ink); }
 .rh-b { display: flex; align-items: flex-end; width: 100%; height: var(--s12); }
-.rh-b i { display: block; width: 100%; border-radius: var(--s1); background: var(--accent); }
+.rh-b i { display: block; width: 100%; border-radius: var(--s1); background: var(--accent-fill); }
 .rh-b i.none { background: var(--surface-sunken); }
 .rh-note { padding: var(--s2) 0 var(--s3); font-size: var(--t-foot); color: var(--ink-2); }
 
@@ -750,7 +766,7 @@ a.row { text-decoration: none; color: inherit; }
 .life { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: center; align-items: center; padding: var(--s3) 0; }
 .life-l { width: 100%; font-size: var(--t-foot); color: var(--ink-muted); text-align: center; }
 .life-s { padding: var(--s2) var(--s3); border: 1px solid var(--hairline-strong); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--t-foot); }
-.life-s.ask { border-color: transparent; background: var(--accent); color: var(--accent-ink); font-weight: var(--w-semi); }
+.life-s.ask { border-color: transparent; background: var(--accent-fill); color: var(--accent-ink); font-weight: var(--w-semi); }
 .life-to { display: inline-flex; color: var(--ink-muted); }
 .life-to svg { width: var(--s3); height: var(--s3); }
 
@@ -827,7 +843,7 @@ a.row { text-decoration: none; color: inherit; }
 .memread { background: var(--surface); }
 .memread::before, .lockscreen::before { content: ""; position: absolute; top: 0; left: 0; right: 0; z-index: 2; height: env(safe-area-inset-top); background: var(--statusbar); }
 .mr-prog { position: absolute; top: env(safe-area-inset-top); left: 0; right: 0; height: 2px; background: var(--hairline); }
-.mr-prog i { display: block; height: 100%; width: 0; background: var(--accent); transition: width var(--dur-3) var(--ease); }
+.mr-prog i { display: block; height: 100%; width: 0; background: var(--accent-fill); transition: width var(--dur-3) var(--ease); }
 .mr-top { align-items: center; padding: calc(env(safe-area-inset-top) + var(--s4)) var(--s5) var(--s2); }
 .mr-yr { font-size: var(--t-cap); font-weight: var(--w-semi); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); }
 .mr-body { padding: var(--s5) var(--s6) var(--s8); overscroll-behavior: contain; }
@@ -850,7 +866,7 @@ a.row { text-decoration: none; color: inherit; }
 .mr-nav { gap: var(--s3); padding: var(--s3) var(--s5) calc(env(safe-area-inset-bottom) + var(--s4)); }
 .mr-nav .btn { flex: 1; margin: 0; padding: 0 var(--s5); border: 0; border-radius: var(--r-md); font-size: var(--t-body); font-weight: var(--w-semi); }
 .mr-nav .btn.secondary { background: var(--surface-sunken); color: var(--ink); }
-.mr-nav .btn:not(.secondary) { background: var(--accent); color: var(--accent-ink); }
+.mr-nav .btn:not(.secondary) { background: var(--accent-fill); color: var(--accent-ink); }
 .lp-strip { gap: var(--s2); }
 .lp { border-radius: var(--r-md); }
 
@@ -877,7 +893,7 @@ a.row { text-decoration: none; color: inherit; }
 .day i { width: var(--s1); height: var(--s1); border-radius: var(--r-full); background: transparent; }
 .day.has i { background: var(--ink-muted); }
 .day.today .day-num { color: var(--accent); font-weight: var(--w-semi); }
-.day.sel { background: var(--accent); }
+.day.sel { background: var(--accent-fill); }
 .day.sel .day-dow, .day.sel .day-num { color: var(--accent-ink); }
 .day.sel.has i { background: var(--accent-ink); }
 .sched-h { align-items: center; margin: var(--s4) 0 var(--s2); }

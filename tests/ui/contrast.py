@@ -8,7 +8,8 @@ def block(sel):
 def toks(b): return dict(re.findall(r'(--[a-z0-9-]+):\s*([^;]+);', b))
 base = toks(block(':root'))
 dark = {**base, **toks(block(':root[data-theme="dark"]'))}
-themes = {'light': base, 'dark': dark}
+sun = toks(block(':root[data-accent="sunrise"]'))
+themes = {'light': base, 'dark': dark, 'sunrise': {**base, **sun}, 'sunrise dark': {**dark, **sun, **toks(block(':root[data-accent="sunrise"][data-theme="dark"]'))}}
 def rgb(v, T, under=None):
     v = v.strip()
     m = re.fullmatch(r'var\((--[a-z0-9-]+)\)', v)
@@ -23,7 +24,7 @@ def lum(c):
 def cr(a, b): la, lb = sorted([lum(a), lum(b)], reverse=True); return (la+.05)/(lb+.05)
 text = ['--ink', '--ink-2', '--ink-muted']
 pairs = [(t, s, 4.5) for t in text for s in ('--bg', '--surface', '--surface-raised', '--surface-sunken')]
-pairs += [('--accent', '--bg', 4.5), ('--accent', '--surface', 4.5), ('--accent-ink', '--accent', 4.5), ('--bg', '--ink', 4.5),
+pairs += [('--accent', '--bg', 4.5), ('--accent', '--surface', 4.5), ('--accent-ink', '--accent-fill', 4.5), ('--accent', '--surface-sunken', 4.5), ('--bg', '--ink', 4.5),
           ('--good', '--bg', 4.5), ('--watch', '--bg', 4.5), ('--serious', '--bg', 4.5), ('--good', '--surface', 4.5), ('--watch', '--surface', 4.5), ('--serious', '--surface', 4.5),
           ('--ink', '--ai-wash', 4.5), ('--ai-ink', '--ai-wash', 4.5), ('--ai-ink', '--bg', 4.5),
           ('--good', '--good-soft', 4.5), ('--watch', '--watch-soft', 4.5), ('--serious', '--serious-soft', 4.5), ('--accent', '--accent-soft', 4.5)]

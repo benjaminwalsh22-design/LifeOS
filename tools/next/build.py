@@ -2,7 +2,8 @@
 """Builds the redesigned LifeOS from the last version before the redesign.
 
     python3 tools/next/build.py           writes next.html (the preview)
-    python3 tools/next/build.py --live    also writes index.html (the live app), labelled v11.0
+    python3 tools/next/build.py --live    also writes index.html (the live app)
+    python3 tools/next/build.py --sunrise the preview opens with the sunrise accent (the live file never does)
 
 The starting point is rollback/index-v10.5.html, which never changes. This
 script swaps the old markup-building functions for the pieces in this folder
@@ -286,6 +287,9 @@ swap("""    if($('reviewBody')) $('reviewBody').innerHTML='<div class="pagehead2
 swap_range('async function renderNotifCard(){', 'regSW().then(', '')
 swap_range('function renderLockCard(){', "document.addEventListener('visibilitychange', () => {", piece('settings2.js'))
 
+# the two score dots take the chart's two series colours, so they stay apart under either accent
+swap("const SC_HAP='var(--accent)', SC_ANX='var(--serious)';", "const SC_HAP='var(--c1)', SC_ANX='var(--c2)';")
+
 # ---------------------------------------------------------------- polish: questions as sheets, no symbol glyphs in messages
 swap("  if (dupOf && !confirm('This photo looks identical to your '+fmtDate(dupOf.date)+' entry. Save anyway?')){ window._pendingPhoto=null; closeSheet(); return; }",
      "  if (dupOf && !(await confirmSheet('Save it anyway?', 'This photo looks identical to your '+fmtDate(dupOf.date)+' entry.', 'Save anyway'))){ window._pendingPhoto=null; closeSheet(); return; }")
@@ -425,7 +429,12 @@ new_css = prune_css(old_css, alive)
 src = src[:m.start(1)] + '\n/* what is left of the old stylesheet: layout for parts the design system has not replaced */\n' + new_css + src[m.end(1):]
 print('old stylesheet:', len(old_css), '->', len(new_css), 'bytes')
 
-(ROOT / 'next.html').write_text(src)
+# --sunrise: the preview (never the live file) opens with the sunrise accent switched on, to try it out
+nxt = src
+if '--sunrise' in sys.argv:
+    if nxt.count('<html lang="en">') != 1: sys.exit('build: html tag not found')
+    nxt = nxt.replace('<html lang="en">', '<html lang="en" data-accent="sunrise">')
+(ROOT / 'next.html').write_text(nxt)
 if LIVE:
     (ROOT / 'index.html').write_text(src)
     print('index.html written: the redesign is live once this is pushed')
