@@ -939,24 +939,42 @@ select.tgl { font-size: max(16px, var(--t-foot)); }
 .lp-wait { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-foot); color: var(--ink-muted); }
 .sheet .btn + .btn, .view .card .btn + .btn, .pane .btn + .btn { margin-top: var(--s2); }
 
-/* the lock screen: the cover of a notebook */
-:root { --cover: var(--accent); --cover-ink: var(--accent-ink); --cover-soft: rgba(255,255,255,.16); --cover-muted: rgba(255,255,255,.74); }
-:root[data-theme="dark"] { --cover: var(--surface); --cover-ink: var(--ink); --cover-soft: var(--surface-sunken); --cover-muted: var(--ink-muted); }
-.lockscreen { background: var(--cover); color: var(--cover-ink); align-items: stretch; }
-.lock-inner { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: none; padding: calc(env(safe-area-inset-top) + var(--s12)) var(--s8) calc(env(safe-area-inset-bottom) + var(--s8)); color: var(--cover-ink); text-align: center; }
+/* the lock screen: the cover of a notebook, in the colours of the app icon (a sunrise on warm white) */
+:root {
+  --sun-1: #FFA18F; --sun-2: #FFB585; --sun-ray: #FFC289;                 /* the icon's own colours */
+  --cover: #FFFBF7; --cover-glow: #FFEFE3; --cover-sky: #EC8A72;          /* warm white page, a peach glow behind the sun, dawn at the very top */
+  --cover-ink: var(--ink); --cover-muted: var(--ink-muted); --cover-soft: #FBEADD;
+  --cover-btn: var(--ink); --cover-btn-ink: #FFFFFF;
+}
+:root[data-theme="dark"] {
+  --cover: #111214; --cover-glow: rgba(255,161,143,.10); --cover-sky: transparent;
+  --cover-soft: var(--surface-sunken); --cover-btn: var(--ink); --cover-btn-ink: var(--bg);
+}
+.lockscreen { background: radial-gradient(70% 34% at 50% 36%, var(--cover-glow) 0, transparent 100%), var(--cover); color: var(--cover-ink); align-items: stretch; }
+/* white status-bar text needs something behind it: a short dawn sky that fades into the page */
+.lockscreen::before { height: calc(env(safe-area-inset-top) + var(--s12)); background: linear-gradient(180deg, var(--cover-sky) 0, var(--cover-sky) calc(env(safe-area-inset-top) * .55), transparent 100%); z-index: 0; pointer-events: none; }
+/* some iPhones leave a band uncovered at the very bottom of a full-screen layer: paint past the edge so it never shows */
+.lockscreen::after, .memread::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 240px; background: var(--cover); }
+.memread::after { background: var(--surface); }
+nav.tabbar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 240px; background: var(--bg); }
+html:has(#lockscreen:not([style*="none"])) { background: var(--cover); }
+.lock-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: none; padding: calc(env(safe-area-inset-top) + var(--s12)) var(--s8) calc(env(safe-area-inset-bottom) + var(--s8)); color: var(--cover-ink); text-align: center; }
 .cover { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
-.cover-rule { width: var(--s10); height: 2px; margin-bottom: var(--s5); border-radius: var(--r-full); background: var(--cover-muted); }
-.cover-title { font-family: var(--serif); font-size: var(--t-h1); line-height: var(--lh-tight); font-weight: var(--w-semi); letter-spacing: -0.014em; }
+.sunrise { display: block; width: calc(var(--s12) * 2.5); height: auto; }
+.lock-inner .sunrise { color: inherit; }
+.cover-title { margin-top: var(--s3); font-family: var(--serif); font-size: var(--t-h1); line-height: var(--lh-tight); font-weight: var(--w-semi); letter-spacing: -0.014em; }
 .cover-name { margin-top: var(--s2); font-size: var(--t-sub); letter-spacing: .08em; text-transform: uppercase; color: var(--cover-muted); }
 .lock-form { width: 100%; max-width: 17em; }
-.lock-inner .btn { width: 100%; max-width: none; margin: var(--s2) 0 0; background: var(--cover-ink); color: var(--cover); }
+.lock-inner .btn { width: 100%; max-width: none; margin: var(--s2) 0 0; background: var(--cover-btn); color: var(--cover-btn-ink); }
+.lock-inner .btn#lockPinBtn { background: var(--cover-soft); color: var(--cover-ink); }
 .lock-inner .btn svg { width: var(--ic-sm); height: var(--ic-sm); color: currentColor; }
 .lock-or { margin: var(--s4) 0 var(--s2); font-size: var(--t-foot); color: var(--cover-muted); }
-.lock-inner input { width: 100%; min-height: var(--ctl-lg); margin: 0; padding: 0 var(--s3); border: 1px solid transparent; border-radius: var(--r-md); background: var(--cover-soft); color: var(--cover-ink); font-size: var(--t-h3); letter-spacing: .35em; text-align: center; outline: 0; }
+.lock-inner input { width: 100%; min-height: var(--ctl-lg); margin: 0; padding: 0 var(--s3); border: 1px solid var(--hairline-strong); border-radius: var(--r-md); background: var(--surface-raised); color: var(--cover-ink); font-size: var(--t-h3); letter-spacing: .35em; text-align: center; outline: 0; }
 .lock-inner input::placeholder { color: var(--cover-muted); letter-spacing: .1em; }
-.lock-inner input:focus { border-color: var(--cover-ink); }
+.lock-inner input:focus { border-color: var(--sun-1); box-shadow: 0 0 0 3px var(--cover-glow); }
 .lock-forgot { margin-top: var(--s5); font-size: var(--t-foot); color: var(--cover-muted); cursor: pointer; }
-.lockscreen.shake .lock-inner input { border-color: var(--cover-ink); }
+.lockscreen.shake .lock-inner input { border-color: var(--serious); }
+.about .sunrise { width: calc(var(--s12) * 1.5); margin: 0 auto var(--s1); }
 
 /* ==========================================================================
    Whole-app behaviour: taps, focus, text entry, offline

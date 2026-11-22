@@ -12,7 +12,7 @@
 <script>/* theme and direction before first paint, so the wrong one never flashes */
 (function(){try{var d=document.documentElement,t=localStorage.getItem("lifeos_theme");if(t)d.setAttribute("data-theme",t);var m=document.getElementById("metaTheme");if(m&&t==="dark")m.setAttribute("content","#0B0C0E");}catch(e){}})();</script>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%233987e5'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' font-family='system-ui' fill='white' font-weight='700'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='96 88 320 348'%3E%3Cpath d='M256 122v30M172 151l21 25M340 151l-21 25' fill='none' stroke='%23FFC289' stroke-width='14' stroke-linecap='round'/%3E%3Cpath d='M154 307a102 102 0 0 1 204 0Z' fill='%23FFA98C'/%3E%3Crect x='128' y='322' width='256' height='19' rx='9.5' fill='%23FFB98C'/%3E%3Crect x='158' y='358' width='196' height='18' rx='9' fill='%23FFD3B4'/%3E%3C/svg%3E">
 <style>
 /* what is left of the old stylesheet: layout for parts the design system has not replaced */
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -1242,24 +1242,42 @@ select.tgl { font-size: max(16px, var(--t-foot)); }
 .lp-wait { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-foot); color: var(--ink-muted); }
 .sheet .btn + .btn, .view .card .btn + .btn, .pane .btn + .btn { margin-top: var(--s2); }
 
-/* the lock screen: the cover of a notebook */
-:root { --cover: var(--accent); --cover-ink: var(--accent-ink); --cover-soft: rgba(255,255,255,.16); --cover-muted: rgba(255,255,255,.74); }
-:root[data-theme="dark"] { --cover: var(--surface); --cover-ink: var(--ink); --cover-soft: var(--surface-sunken); --cover-muted: var(--ink-muted); }
-.lockscreen { background: var(--cover); color: var(--cover-ink); align-items: stretch; }
-.lock-inner { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: none; padding: calc(env(safe-area-inset-top) + var(--s12)) var(--s8) calc(env(safe-area-inset-bottom) + var(--s8)); color: var(--cover-ink); text-align: center; }
+/* the lock screen: the cover of a notebook, in the colours of the app icon (a sunrise on warm white) */
+:root {
+  --sun-1: #FFA18F; --sun-2: #FFB585; --sun-ray: #FFC289;                 /* the icon's own colours */
+  --cover: #FFFBF7; --cover-glow: #FFEFE3; --cover-sky: #EC8A72;          /* warm white page, a peach glow behind the sun, dawn at the very top */
+  --cover-ink: var(--ink); --cover-muted: var(--ink-muted); --cover-soft: #FBEADD;
+  --cover-btn: var(--ink); --cover-btn-ink: #FFFFFF;
+}
+:root[data-theme="dark"] {
+  --cover: #111214; --cover-glow: rgba(255,161,143,.10); --cover-sky: transparent;
+  --cover-soft: var(--surface-sunken); --cover-btn: var(--ink); --cover-btn-ink: var(--bg);
+}
+.lockscreen { background: radial-gradient(70% 34% at 50% 36%, var(--cover-glow) 0, transparent 100%), var(--cover); color: var(--cover-ink); align-items: stretch; }
+/* white status-bar text needs something behind it: a short dawn sky that fades into the page */
+.lockscreen::before { height: calc(env(safe-area-inset-top) + var(--s12)); background: linear-gradient(180deg, var(--cover-sky) 0, var(--cover-sky) calc(env(safe-area-inset-top) * .55), transparent 100%); z-index: 0; pointer-events: none; }
+/* some iPhones leave a band uncovered at the very bottom of a full-screen layer: paint past the edge so it never shows */
+.lockscreen::after, .memread::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 240px; background: var(--cover); }
+.memread::after { background: var(--surface); }
+nav.tabbar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 240px; background: var(--bg); }
+html:has(#lockscreen:not([style*="none"])) { background: var(--cover); }
+.lock-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: none; padding: calc(env(safe-area-inset-top) + var(--s12)) var(--s8) calc(env(safe-area-inset-bottom) + var(--s8)); color: var(--cover-ink); text-align: center; }
 .cover { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
-.cover-rule { width: var(--s10); height: 2px; margin-bottom: var(--s5); border-radius: var(--r-full); background: var(--cover-muted); }
-.cover-title { font-family: var(--serif); font-size: var(--t-h1); line-height: var(--lh-tight); font-weight: var(--w-semi); letter-spacing: -0.014em; }
+.sunrise { display: block; width: calc(var(--s12) * 2.5); height: auto; }
+.lock-inner .sunrise { color: inherit; }
+.cover-title { margin-top: var(--s3); font-family: var(--serif); font-size: var(--t-h1); line-height: var(--lh-tight); font-weight: var(--w-semi); letter-spacing: -0.014em; }
 .cover-name { margin-top: var(--s2); font-size: var(--t-sub); letter-spacing: .08em; text-transform: uppercase; color: var(--cover-muted); }
 .lock-form { width: 100%; max-width: 17em; }
-.lock-inner .btn { width: 100%; max-width: none; margin: var(--s2) 0 0; background: var(--cover-ink); color: var(--cover); }
+.lock-inner .btn { width: 100%; max-width: none; margin: var(--s2) 0 0; background: var(--cover-btn); color: var(--cover-btn-ink); }
+.lock-inner .btn#lockPinBtn { background: var(--cover-soft); color: var(--cover-ink); }
 .lock-inner .btn svg { width: var(--ic-sm); height: var(--ic-sm); color: currentColor; }
 .lock-or { margin: var(--s4) 0 var(--s2); font-size: var(--t-foot); color: var(--cover-muted); }
-.lock-inner input { width: 100%; min-height: var(--ctl-lg); margin: 0; padding: 0 var(--s3); border: 1px solid transparent; border-radius: var(--r-md); background: var(--cover-soft); color: var(--cover-ink); font-size: var(--t-h3); letter-spacing: .35em; text-align: center; outline: 0; }
+.lock-inner input { width: 100%; min-height: var(--ctl-lg); margin: 0; padding: 0 var(--s3); border: 1px solid var(--hairline-strong); border-radius: var(--r-md); background: var(--surface-raised); color: var(--cover-ink); font-size: var(--t-h3); letter-spacing: .35em; text-align: center; outline: 0; }
 .lock-inner input::placeholder { color: var(--cover-muted); letter-spacing: .1em; }
-.lock-inner input:focus { border-color: var(--cover-ink); }
+.lock-inner input:focus { border-color: var(--sun-1); box-shadow: 0 0 0 3px var(--cover-glow); }
 .lock-forgot { margin-top: var(--s5); font-size: var(--t-foot); color: var(--cover-muted); cursor: pointer; }
-.lockscreen.shake .lock-inner input { border-color: var(--cover-ink); }
+.lockscreen.shake .lock-inner input { border-color: var(--serious); }
+.about .sunrise { width: calc(var(--s12) * 1.5); margin: 0 auto var(--s1); }
 
 /* ==========================================================================
    Whole-app behaviour: taps, focus, text entry, offline
@@ -1294,6 +1312,7 @@ input, textarea, select { font-size: max(16px, 1em); }          /* below 16px iO
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="sunG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFA18F"/><stop offset="1" stop-color="#FFB585"/></linearGradient><linearGradient id="sunL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFA98C"/><stop offset="1" stop-color="#FFCB90"/></linearGradient></defs></svg>
 <div class="app" data-large="1" data-view="today">
   <header class="topbar">
     <div class="tb-left"><button class="tb-back" id="tbBack" onclick="navBack()" aria-label="Back" hidden><svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5.5 8.5 12l6.5 6.5"/></svg><span id="tbBackLabel">Back</span></button></div>
@@ -1469,8 +1488,9 @@ input, textarea, select { font-size: max(16px, 1em); }          /* below 16px iO
     <section class="view" id="view-set-account"><div class="sec-body pane" id="acctBody"></div></section>
     <section class="view" id="view-set-about">
       <div class="sec-body pane about">
+        <svg class="sunrise" viewBox="112 104 288 316" role="img" aria-label="LifeOS"><path d="M256 122v30M172 151l21 25M340 151l-21 25" fill="none" stroke="#FFC289" stroke-width="14" stroke-linecap="round"/><path d="M154 307a102 102 0 0 1 204 0Z" fill="url(#sunG)"/><rect x="128" y="322" width="256" height="19" rx="9.5" fill="url(#sunL)"/><rect x="158" y="358" width="196" height="18" rx="9" fill="url(#sunL)" opacity=".62"/><rect x="190" y="392" width="132" height="16" rx="8" fill="url(#sunL)" opacity=".34"/></svg>
         <div class="about-name">LifeOS</div>
-        <div class="about-ver" id="appVer">v11.0</div>
+        <div class="about-ver" id="appVer">v11.1</div>
         <button class="btn secondary" onclick="checkUpdate()">Check for updates</button>
         <button class="btn secondary" onclick="showView('styleguide')">Style guide</button>
       </div>
@@ -1523,7 +1543,7 @@ input, textarea, select { font-size: max(16px, 1em); }          /* below 16px iO
 
   <div class="lockscreen" id="lockscreen" style="display:none">
     <div class="lock-inner">
-      <div class="cover"><div class="cover-rule"></div><div class="cover-title">LifeOS</div><div class="cover-name" id="lockName"></div></div>
+      <div class="cover"><svg class="sunrise" viewBox="112 104 288 316" role="img" aria-label="LifeOS"><path d="M256 122v30M172 151l21 25M340 151l-21 25" fill="none" stroke="#FFC289" stroke-width="14" stroke-linecap="round"/><path d="M154 307a102 102 0 0 1 204 0Z" fill="url(#sunG)"/><rect x="128" y="322" width="256" height="19" rx="9.5" fill="url(#sunL)"/><rect x="158" y="358" width="196" height="18" rx="9" fill="url(#sunL)" opacity=".62"/><rect x="190" y="392" width="132" height="16" rx="8" fill="url(#sunL)" opacity=".34"/></svg><div class="cover-title">LifeOS</div><div class="cover-name" id="lockName"></div></div>
       <div class="lock-form">
         <button class="btn" id="lockFace" style="display:none" onclick="faceUnlock()"><svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path stroke-linecap="round" d="M9 10v1.5M15 10v1.5M12 10v3.2h-1M9 15.5c.8.7 1.8 1 3 1s2.2-.3 3-1"/></svg><span>Unlock with Face ID</span></button>
         <div class="lock-or" id="lockOr" style="display:none">or enter your PIN</div>

@@ -16,7 +16,7 @@ HERE = pathlib.Path(__file__).parent
 ROOT = HERE.parent.parent
 LIVE = '--live' in sys.argv
 src = (ROOT / 'rollback' / 'index-v10.5.html').read_text()
-VERSION = 'v11.0' if LIVE else 'v11.0 preview 4'
+VERSION = 'v11.1' if LIVE else 'v11.1 preview'
 
 def piece(name):
     return (HERE / name).read_text().rstrip('\n') + '\n'
@@ -43,6 +43,8 @@ def swap_range(start, until, new):
 
 # ---------------------------------------------------------------- head
 swap('<title>Life OS</title>', '<title>LifeOS</title>')
+src, _n = re.subn(r'<link rel="icon" href="data:image/svg\+xml,[^"]*">', '<link rel="icon" href="data:image/svg+xml,' + "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='96 88 320 348'%3E%3Cpath d='M256 122v30M172 151l21 25M340 151l-21 25' fill='none' stroke='%23FFC289' stroke-width='14' stroke-linecap='round'/%3E%3Cpath d='M154 307a102 102 0 0 1 204 0Z' fill='%23FFA98C'/%3E%3Crect x='128' y='322' width='256' height='19' rx='9.5' fill='%23FFB98C'/%3E%3Crect x='158' y='358' width='196' height='18' rx='9' fill='%23FFD3B4'/%3E%3C/svg%3E" + '">', src)
+if _n != 1: sys.exit('build: favicon link not found')
 swap('<meta name="apple-mobile-web-app-title" content="Life OS">', '<meta name="apple-mobile-web-app-title" content="LifeOS">')
 swap('<meta name="theme-color" id="metaTheme" content="#33527B">',
      '<meta name="theme-color" id="metaTheme" content="#F1F2F4">\n'
@@ -53,7 +55,10 @@ swap('<meta name="theme-color" id="metaTheme" content="#33527B">',
 swap('</style>\n</head>', '</style>\n<style id="ds">\n' + piece('ds.css') + '</style>\n</head>')
 
 # ---------------------------------------------------------------- chrome
-swap('<div class="app">', '<div class="app" data-large="1" data-view="today">')
+# the app's own mark: the sunrise of the home-screen icon, drawn once here and used on the lock screen and in About
+SUN_DEFS = '<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="sunG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFA18F"/><stop offset="1" stop-color="#FFB585"/></linearGradient><linearGradient id="sunL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFA98C"/><stop offset="1" stop-color="#FFCB90"/></linearGradient></defs></svg>'
+SUN = '<svg class="sunrise" viewBox="112 104 288 316" role="img" aria-label="LifeOS"><path d="M256 122v30M172 151l21 25M340 151l-21 25" fill="none" stroke="#FFC289" stroke-width="14" stroke-linecap="round"/><path d="M154 307a102 102 0 0 1 204 0Z" fill="url(#sunG)"/><rect x="128" y="322" width="256" height="19" rx="9.5" fill="url(#sunL)"/><rect x="158" y="358" width="196" height="18" rx="9" fill="url(#sunL)" opacity=".62"/><rect x="190" y="392" width="132" height="16" rx="8" fill="url(#sunL)" opacity=".34"/></svg>'
+swap('<div class="app">', SUN_DEFS + '\n<div class="app" data-large="1" data-view="today">')
 BACK_IC = '<svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5.5 8.5 12l6.5 6.5"/></svg>'
 ASK_IC = '<svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.5 12a7.5 7.5 0 0 1-10.9 6.7L4 20l1.3-4.4A7.5 7.5 0 1 1 20.5 12Z"/></svg>'
 swap_range('  <header class="topbar">', '  <div class="ptr" id="ptr">',
@@ -162,7 +167,7 @@ swap_range('    <section class="view" id="view-settings">', '    <!-- ==========
      '    <section class="view" id="view-set-account"><div class="sec-body pane" id="acctBody"></div></section>\n'
      '    <section class="view" id="view-set-about">\n'
      '      <div class="sec-body pane about">\n'
-     '        <div class="about-name">LifeOS</div>\n'
+     '        ' + SUN + '\n        <div class="about-name">LifeOS</div>\n'
      '        <div class="about-ver" id="appVer">' + VERSION + '</div>\n'
      '        <button class="btn secondary" onclick="checkUpdate()">Check for updates</button>\n'
      '        <button class="btn secondary" onclick="showView(\'styleguide\')">Style guide</button>\n'
@@ -173,7 +178,7 @@ LOCK_IC = '<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 
 swap_range('  <div class="lockscreen" id="lockscreen" style="display:none">', '  <!-- modals -->',
      '  <div class="lockscreen" id="lockscreen" style="display:none">\n'
      '    <div class="lock-inner">\n'
-     '      <div class="cover"><div class="cover-rule"></div><div class="cover-title">LifeOS</div><div class="cover-name" id="lockName"></div></div>\n'
+     '      <div class="cover">' + SUN + '<div class="cover-title">LifeOS</div><div class="cover-name" id="lockName"></div></div>\n'
      '      <div class="lock-form">\n'
      '        <button class="btn" id="lockFace" style="display:none" onclick="faceUnlock()">' + LOCK_IC + '<span>Unlock with Face ID</span></button>\n'
      '        <div class="lock-or" id="lockOr" style="display:none">or enter your PIN</div>\n'
