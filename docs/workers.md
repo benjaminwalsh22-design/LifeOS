@@ -52,6 +52,9 @@ and added to the journal as an ordinary queued entry (`src:'pen'`, `psync:true`)
 so `transcribe-tick` reads it like a page scanned with the phone. Pages are told
 apart by a signature of what they draw, kept in `pen_pages`:
 
+- a notebook from the Moleskine app waits for a page rule, `{"rule":{"file":"<file id>","only":[[1,40]]}}`
+  (or `skip`, or neither for every page); pages outside the rule are never drawn, stored or imported.
+  Files saved into `LifeOS Journal` by hand need no rule;
 - a page seen before is skipped, wherever it now sits in the file;
 - a page written on again replaces its entry (the old one is tombstoned, his note is kept);
 - an empty page is noted and adds nothing; an entry he deleted is never brought back;

@@ -30,6 +30,7 @@ class Q {
   select(_c, o) { if (this.op === 'select') this.o = o; return this; }
   insert(row) { this.op = 'insert'; this.row = row; return this; }
   update(p) { this.op = 'update'; this.p = p; return this; }
+  delete() { this.op = 'delete'; return this; }
   upsert(row, o) { this.op = 'upsert'; this.row = row; this.o = o; return this; }
   eq(k, v) { this.f.push((r) => r[k] === v); return this; }
   gte(k, v) { this.f.push((r) => r[k] >= v); return this; }
@@ -52,6 +53,7 @@ class Q {
     }
     const hit = rows.filter((r) => this.f.every((fn) => fn(r)));
     if (this.op === 'update') { hit.forEach((r) => Object.assign(r, this.p)); return { data: null, error: null }; }
+    if (this.op === 'delete') { T[this.t] = rows.filter((r) => !hit.includes(r)); return { data: null, error: null }; }
     if (this.o && this.o.head) return { count: hit.length, data: null };
     const out = hit.map((r) => ({ ...r })).slice(0, this.n || 1e9);
     return this.one ? { data: out[0] || null } : { data: out, error: null };
@@ -183,8 +185,13 @@ const V1 = [lines(1, 12), lines(20, 9), lines(40, 5), lines(60, 10), lines(80, 7
 {
   DRIVE.folders.mol = { name: 'Moleskine Notebooks', kids: ['nb'] };
   DRIVE.files.nb = { name: 'Journal.pdf', bytes: await notebook(V1), cTag: 'v1', modified: ago(45), mime: 'application/pdf' };
-  const r = await call({});
+  let r = await call({});
   eq(r.out[0].watching, 1, 'the Moleskine folder is found by its name');
+  eq([r.out[0].waiting, T.pen_pages.length, STORE.size], [1, 0, 0], 'a notebook from the pen waits for a page rule: nothing is drawn or stored');
+  const d1 = downloads; await call({});
+  eq(downloads, d1, 'and while it waits it is not fetched again');
+  await call({ rule: { file: 'nb' } });                                  // every page of this one is his
+  r = await call({});
   eq([pages('held').length, pages('blank').length], [5, 1], 'five written pages are held, the empty one is only noted');
   eq(penEntries().length, 0, 'on hold, the journal is not touched');
   eq(STORE.size, 5, 'a picture is stored for each held page');
@@ -281,6 +288,37 @@ const V1 = [lines(1, 12), lines(20, 9), lines(40, 5), lines(60, 10), lines(80, 7
   eq(penEntries().length - n, 3, 'a picture and a second notebook dropped into "LifeOS Journal" (and its subfolder) are imported too');
 }
 
+// ================================================================ the children's pages
+{
+  // pages 1-3 are his, 4 is empty, 5-7 are the children's
+  const K1 = [lines(500, 9), lines(520, 9), lines(540, 4), [], lines(560, 3), lines(580, 5), lines(600, 2)];
+  DRIVE.folders.mol.kids.push('fam');
+  DRIVE.files.fam = { name: 'Smart notebook.pdf', bytes: await notebook(K1), cTag: 'k1', modified: ago(60), mime: 'application/pdf' };
+  const n = penEntries().length, pics = STORE.size;
+  await call({});
+  eq([penEntries().length - n, STORE.size - pics], [0, 0], 'a second notebook waits too, with nothing stored');
+  await call({ rule: { file: 'fam', only: [[1, 4]] } });
+  await call({});
+  eq([penEntries().length - n, STORE.size - pics], [3, 3], 'with the rule "pages 1 to 4", only his three written pages are drawn and imported');
+  ok(!pages().some((x) => x.file_id === 'fam' && x.page > 3), 'no trace is kept of the pages outside the rule');
+  // the children draw some more, and he writes on page 4
+  const K2 = [K1[0], K1[1], K1[2], lines(700, 6), lines(560, 8), K1[5], lines(600, 7), lines(620, 4)];
+  Object.assign(DRIVE.files.fam, { bytes: await notebook(K2), cTag: 'k2', modified: ago(30) });
+  await call({});
+  eq([penEntries().length - n, STORE.size - pics], [4, 4], 'later, his new page comes in and the children\'s new drawings still do not');
+  ok(pen.allowed({ skip: [[150, 176]] }, 148) && !pen.allowed({ skip: [[150, 176]] }, 149) && !pen.allowed(null, 0) && pen.allowed({}, 500), 'page rules count from 1 and no rule means not yet');
+  // on hold, a rule that is narrowed throws away what was held outside it
+  await call({ set: { live: false } });
+  DRIVE.files.fam2 = { name: 'Smart notebook 2.pdf', bytes: await notebook([lines(800, 5), lines(820, 5), lines(840, 5)]), cTag: 'q1', modified: ago(60), mime: 'application/pdf' };
+  DRIVE.folders.mol.kids.push('fam2');
+  await call({}); await call({ rule: { file: 'fam2' } }); await call({});
+  eq(pages('held').filter((x) => x.file_id === 'fam2').length, 3, 'on hold with the rule "all pages", three pages are held');
+  const before = STORE.size;
+  await call({ rule: { file: 'fam2', only: [[1, 1]] } });
+  eq([pages().filter((x) => x.file_id === 'fam2').length, before - STORE.size], [1, 2], 'narrowing the rule discards the held pages outside it, pictures included');
+  await call({ set: { live: true } }); await call({});
+}
+
 // ================================================================ a big first import is paced, and a flood waits
 {
   const big = Array.from({ length: 70 }, (_, i) => lines(1000 + i * 30, 6));
@@ -307,7 +345,7 @@ const V1 = [lines(1, 12), lines(20, 9), lines(40, 5), lines(60, 10), lines(80, 7
   const ids = PAYLOAD.journal.map((j) => j.id);
   eq(ids.length, new Set(ids).size, 'no entry id appears twice');
   const st = await call({ status: true });
-  ok(st.live === true && st.counts.imported > 0 && st.files.length === 4, 'the status report describes what is watched and done');
+  ok(st.live === true && st.counts.imported > 0 && st.files.length === 6, 'the status report describes what is watched and done');
 }
 
 console.log(failed ? `\n${failed} FAILED, ${passed} passed` : `pen importer: ${passed} checks passed`);

@@ -6,6 +6,10 @@
 //   hold mode (pen_state.live = false): pages are found, drawn and kept ready,
 //   but the journal is not touched. Switch live on once the first pages look right.
 //
+// A notebook from the Moleskine app waits until it has a page rule: which of its
+// pages are his. Pages outside the rule (the ones the children drew on) are never
+// drawn, stored or imported. Files he saves into the hand-filled folder need no rule.
+//
 // A page that is written on again later replaces its earlier entry; an entry he
 // deleted is never brought back; nothing else in the journal is ever changed.
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -97,20 +101,20 @@ async function discover(tok: string): Promise<Watch[]> {
 async function listFiles(tok: string, watch: Watch[]): Promise<any[]> {
   const found = new Map<string, any>();
   const sel = "$select=id,name,file,folder,size,cTag,lastModifiedDateTime";
-  const walk = async (id: string, depth: number) => {
+  const walk = async (id: string, depth: number, home: boolean) => {
     let url = `/me/drive/items/${id}/children?${sel}&$top=200`;
     for (let page = 0; url && page < 5; page++) {
       const r = await graph(tok, url);
       if (r.error) return;
       for (const k of r.value || []) {
-        if (k.folder) { if (depth < 3) await walk(k.id, depth + 1); }
-        else if (isPage(k)) found.set(k.id, k);
+        if (k.folder) { if (depth < 3) await walk(k.id, depth + 1, home); }
+        else if (isPage(k)) found.set(k.id, { ...k, _home: home });
       }
       url = r["@odata.nextLink"] || "";
     }
   };
   for (const w of watch) {
-    if (w.kind === "folder") await walk(w.id, 0);
+    if (w.kind === "folder") await walk(w.id, 0, w.path === "/" + HOME);   // what he saves there himself needs no page rule
     else {
       const it = await graph(tok, `/me/drive/items/${w.id}?${sel}`);
       if (it?.id && !it.deleted && isPage(it)) found.set(it.id, it);
@@ -192,6 +196,16 @@ export function drawPage(doc: any, i: number): { jpg: Uint8Array; w: number; h: 
   return { jpg, w, h, ink: all ? dark / all : 0 };
 }
 
+// A page rule: {only:[[1,40]]} or {skip:[[150,176]]}, counted from 1 as the pages
+// sit in the file; {} means every page. No rule at all means "not decided yet".
+export function allowed(rule: any, i: number): boolean {
+  const pos = i + 1, within = (rs: any) => Array.isArray(rs) && rs.some((r: any) => pos >= +r[0] && pos <= +r[1]);
+  if (!rule) return false;
+  if (Array.isArray(rule.only)) return within(rule.only);
+  if (Array.isArray(rule.skip)) return !within(rule.skip);
+  return true;
+}
+
 const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);   // the app's own id shape
 const localDay = (iso: string) => new Date(iso || Date.now()).toLocaleDateString("en-CA", { timeZone: TZ });
 
@@ -231,7 +245,7 @@ async function dropPicture(uid: string, eid: string) {
 
 // Read one file and keep a row (and a picture) for each page that is new or changed.
 async function workFile(admin: any, tok: string, uid: string, f: any, budget: { ms: number }) {
-  const out = { done: true, fresh: 0, edits: 0, note: "", pages: 0 };
+  const out = { done: true, fresh: 0, edits: 0, note: "", pages: 0, waiting: false };
   let doc: any = null;
   try {
     await readFile(admin, tok, uid, f, budget, out, (d: any) => { doc = d; });
@@ -262,8 +276,11 @@ async function readFile(admin: any, tok: string, uid: string, f: any, budget: { 
       if (n !== 1) { out.note = "pages could not be told apart"; return; }
       sigs = [await sha1([bytes])];                       // a picture file is one page: the file is its signature
     }
+    const { data: frow } = await admin.from("pen_files").select("rule").eq("user_id", uid).eq("file_id", f.id).maybeSingle();
+    const rule = frow?.rule || (f._home ? {} : null);
+    if (!rule) { out.waiting = true; out.note = "waiting to be told which pages are his"; return; }   // nothing is drawn or stored
     const firstAt = new Map<string, number>();
-    sigs.forEach((s2, k) => { if (!firstAt.has(s2)) firstAt.set(s2, k); });
+    sigs.forEach((s2, k) => { if (allowed(rule, k) && !firstAt.has(s2)) firstAt.set(s2, k); });
     const day = localDay(f.lastModifiedDateTime);
     const { data: rows } = await admin.from("pen_pages").select("*").eq("user_id", uid).eq("file_id", f.id);
     const bySig = new Map<string, any>((rows || []).map((r: any) => [r.sig, r]));
@@ -272,6 +289,7 @@ async function readFile(admin: any, tok: string, uid: string, f: any, budget: { 
 
     for (let i = 0; i < n; i++) {
       const sig = sigs[i];
+      if (!allowed(rule, i)) continue;                    // not his page: never drawn, never stored
       if (firstAt.get(sig) !== i) continue;               // the same drawing twice in one file (empty pages): once is enough
       const first = decide(sig, i, null, bySig, gone);
       if (first.what === "known") {
@@ -410,7 +428,7 @@ async function tick(admin: any, row: any) {
     const { data: known } = await admin.from("pen_files").select("file_id,tag").eq("user_id", uid);
     const tags = new Map<string, string>((known || []).map((k: any) => [k.file_id, k.tag]));
     const budget = { ms: RENDER_MS };
-    out.files = files.length; out.fresh = 0; out.edits = 0; out.settling = 0;
+    out.files = files.length; out.fresh = 0; out.edits = 0; out.settling = 0; out.waiting = 0;
     for (const f of files) {
       if (tags.get(f.id) && tags.get(f.id) === f.cTag) continue;                       // this version is already dealt with
       if (Date.now() - Date.parse(f.lastModifiedDateTime) < SETTLE_MS) { out.settling++; continue; }
@@ -418,7 +436,7 @@ async function tick(admin: any, row: any) {
       const r = await workFile(admin, tok, uid, f, budget);
       out.fresh += r.fresh; out.edits += r.edits;
       if (!r.done) pending = true;
-      if (r.note) out.note = r.note;
+      if (r.waiting) out.waiting++; else if (r.note) out.note = r.note;
     }
   }
 
@@ -438,7 +456,7 @@ async function tick(admin: any, row: any) {
 // ---------------------------------------------------------------- looking in (scheduler secret only)
 async function status(admin: any, uid: string) {
   const st = await stateFor(admin, uid);
-  const { data: files } = await admin.from("pen_files").select("file_id,name,pages,modified,tag,note,checked_at").eq("user_id", uid);
+  const { data: files } = await admin.from("pen_files").select("file_id,name,pages,modified,tag,note,rule,checked_at").eq("user_id", uid);
   const { data: pages } = await admin.from("pen_pages").select("file_id,page,state,entry_id,prev_entry,day,ink,revs,readds,changed_at")
     .eq("user_id", uid).order("changed_at", { ascending: false }).limit(400);
   const counts: Record<string, number> = {};
@@ -475,7 +493,7 @@ Deno.serve(async (req) => {
   const { data: rows } = await admin.from("ms_auth").select("*");
   const first = rows?.[0];
 
-  if (body.status || body.peek || body.set || body.watch || body.unwatch || body.approve || body.find) {
+  if (body.status || body.peek || body.set || body.watch || body.unwatch || body.approve || body.find || body.rule) {
     if (!first) return Response.json({ error: "OneDrive is not connected" });
     const uid = first.user_id;
     if (body.peek) {                                       // one held or imported page, as a picture
@@ -491,6 +509,19 @@ Deno.serve(async (req) => {
       await admin.from("pen_state").update({ folders: w }).eq("user_id", uid);
     }
     if (body.unwatch) await admin.from("pen_state").update({ folders: (st.folders || []).filter((x: Watch) => x.id !== body.unwatch) }).eq("user_id", uid);
+    if (body.rule?.file) {                                 // which pages of a notebook are his
+      const fid = String(body.rule.file);
+      const rule = body.rule.clear ? null : Array.isArray(body.rule.only) ? { only: body.rule.only }
+        : Array.isArray(body.rule.skip) ? { skip: body.rule.skip } : {};
+      // the file is read again under the new rule; pages held back that the rule now leaves out are thrown away
+      await admin.from("pen_files").update({ rule, tag: null, note: null }).match({ user_id: uid, file_id: fid });
+      const { data: held } = await admin.from("pen_pages").select("sig,page,entry_id").eq("user_id", uid).eq("file_id", fid).eq("state", "held");
+      for (const h of held || []) {
+        if (allowed(rule, h.page)) continue;
+        if (h.entry_id) await dropPicture(uid, h.entry_id);
+        await admin.from("pen_pages").delete().match({ user_id: uid, file_id: fid, sig: h.sig });
+      }
+    }
     if (body.approve) await admin.from("pen_files").update({ note: "approved" }).match({ user_id: uid, file_id: String(body.approve) });
     return Response.json(await status(admin, uid));
   }
