@@ -20,7 +20,8 @@ in the repo because they carry the secret; they are listed with
 | pen-tick         | :07 and :37     | Moleskine pen pages in OneDrive → queued journal pages |
 
 Inbound (no cron): `health-in` (Health Auto Export, token in path — now
-superseded by oura-tick), `biz-in` (Libby's firm reports), `ask-ben`,
+superseded by oura-tick), `biz-in` (Libby's firm reports), `pen-in` (Moleskine
+pages from Google Drive, token in path), `ask-ben`,
 `ms-oauth` and `oura-oauth` (OAuth start/callback/disconnect).
 
 ## Oura
@@ -42,29 +43,47 @@ events don't count.
 
 ## Moleskine pen
 
-The Moleskine app backs its notebooks up to OneDrive; `pen-tick` reads them with
-the OneDrive connection the photos already use (read-only). It watches any
-folder or file the app has named after itself, and a folder called
-`LifeOS Journal` at the top of the drive for pages saved by hand (PDF, JPG, PNG).
+The Moleskine app only backs up to Google Drive: a folder `Moleskine Notebooks PDF`,
+a subfolder per notebook, and one PDF per written page named `<notebook>_p<page>.pdf`.
+LifeOS has no Google login. A private Zapier workflow in his account
+("Moleskine pages to LifeOS", source in `docs/zapier/` with the address left out)
+starts whenever a new file appears in that folder and talks to `pen-in`:
 
-Each new page is drawn as a 1000-pixel JPEG into `journal-photos/<user>/<entry id>.jpg`
+1. it posts the list of page files (`{"manifest":[{id,name,md5,modified}]}`);
+   `pen-in` answers with the ones it wants: inside the notebook's page rule, not
+   seen before, and not already promised to another run in the last five minutes;
+2. it uploads each wanted page; `pen-in` keeps the PDF in the private `pen-inbox`
+   bucket and speeds `pen-tick` up, which draws the page and then deletes the PDF.
+
+`PEN_IN_TOKEN` (a function secret) is the last part of the `pen-in` address. The
+address is a credential: it lives in the Zapier workflow and nowhere else.
+
+Each page is drawn as a 1000-pixel JPEG into `journal-photos/<user>/<entry id>.jpg`
 and added to the journal as an ordinary queued entry (`src:'pen'`, `psync:true`),
-so `transcribe-tick` reads it like a page scanned with the phone. Pages are told
-apart by a signature of what they draw, kept in `pen_pages`:
+so `transcribe-tick` reads it like a page scanned with the phone. Pages are kept
+in `pen_pages`, filed under `book:<notebook>` at their printed page numbers, and
+told apart by a signature of what they draw:
 
-- a notebook from the Moleskine app waits for a page rule, `{"rule":{"file":"<file id>","only":[[1,40]]}}`
-  (or `skip`, or neither for every page); pages outside the rule are never drawn, stored or imported.
-  Files saved into `LifeOS Journal` by hand need no rule;
-- a page seen before is skipped, wherever it now sits in the file;
-- a page written on again replaces its entry (the old one is tombstoned, his note is kept);
+- a notebook waits for a page rule, `{"rule":{"file":"book:<notebook>","only":[[1,139]]}}`
+  (or `skip`, or neither for every page). Pages outside the rule are never sent,
+  stored, drawn or imported; a notebook with no rule is only noted by name;
+- a page seen before is skipped; a page written on again replaces its entry (the
+  old one is tombstoned, his note is kept);
 - an empty page is noted and adds nothing; an entry he deleted is never brought back;
-- a file is left alone for 20 minutes after it last changed, and more than 60 new
-  pages from one file wait for `{"approve":"<file id>"}`.
+- more than 60 new pages from one notebook wait for `{"approve":"<file id>"}`.
 
-`pen_state.live` is the switch. While it is false the worker finds, draws and
-holds pages but does not touch the journal. With the scheduler secret:
-`{"status":true}` reports what is watched and held, `{"peek":"<entry id>"}`
-returns a held page's picture, `{"set":{"live":true}}` starts importing,
-`{"watch":{"id","path","kind"}}` adds a folder by hand, and a PDF or picture sent
-as the request body is drawn and measured without storing anything.
+`pen_state.live` is the switch (on since 22 Nov 2026). With the scheduler secret,
+`pen-tick` takes: `{"status":true}`, `{"peek":"<entry id>"}` (a page's picture),
+`{"set":{"live":false}}`, the `rule` and `approve` commands above, and a PDF or
+picture as the request body, which is drawn and measured without storing anything.
+
+`pen-tick` can also read OneDrive with the photos' connection: a folder the app
+has named after itself, or a top-level `LifeOS Journal` folder for pages saved by
+hand (those need no rule). Nothing uses that route today.
+
+Not yet known: whether the app, on a later backup, rewrites a page's file in place.
+A changed file is picked up the next time any new page file appears; if in-place
+changes turn out to be common, add a second workflow on Zapier's "Updated File"
+trigger for the notebook's folder (same source).
+
 Checks: `tests/pen` (`npm i && node pen.test.mjs`).

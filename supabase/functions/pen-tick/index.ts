@@ -206,6 +206,16 @@ export function allowed(rule: any, i: number): boolean {
   return true;
 }
 
+const WAITING = "waiting to be told which pages are his";
+// "Smart notebook_p12.pdf" (or "…_p12 (1).pdf") is page 12 of the notebook "Smart notebook"
+export function bookOf(name: string): { book: string; pageno: number } | null {
+  const m = String(name || "").match(/^(.+?)_p(\d{1,4})(?: \(\d+\))?\.pdf$/i);
+  return m && +m[2] >= 1 ? { book: m[1].trim(), pageno: +m[2] } : null;
+}
+function inboxUrl(uid: string, id: string) {
+  return `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/pen-inbox/${uid}/${encodeURIComponent(id)}.pdf`;
+}
+
 const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);   // the app's own id shape
 const localDay = (iso: string) => new Date(iso || Date.now()).toLocaleDateString("en-CA", { timeZone: TZ });
 
@@ -257,12 +267,16 @@ async function workFile(admin: any, tok: string, uid: string, f: any, budget: { 
     user_id: uid, file_id: f.id, name: String(f.name || "").slice(0, 200), modified: f.lastModifiedDateTime,
     pages: out.pages || null, tag: out.done ? f.cTag : null, note: out.note || null, checked_at: new Date().toISOString(),
   }, { onConflict: "user_id,file_id", ignoreDuplicates: false });
+  // a page sent in from Google Drive is not kept once its picture is made
+  if (f._inbox && out.done && !out.waiting) { try { await fetch(inboxUrl(uid, f.id), { method: "DELETE", headers: storageHeaders() }); } catch (_) { /* harmless */ } }
   return out;
 }
 
 async function readFile(admin: any, tok: string, uid: string, f: any, budget: { ms: number }, out: any, keep: (d: any) => void) {
   if ((f.size || 0) > MAX_BYTES) { out.note = "too large"; return; }
-  const res = await fetch(`${GRAPH}/me/drive/items/${f.id}/content`, { headers: { Authorization: "Bearer " + tok } });
+  const res = f._inbox
+    ? await fetch(inboxUrl(uid, f.id), { headers: storageHeaders() })                      // sent in from Google Drive
+    : await fetch(`${GRAPH}/me/drive/items/${f.id}/content`, { headers: { Authorization: "Bearer " + tok } });
   if (!res.ok) { out.done = false; out.note = "download " + res.status; return; }
   const bytes = new Uint8Array(await res.arrayBuffer());
   let doc: any;
@@ -276,42 +290,54 @@ async function readFile(admin: any, tok: string, uid: string, f: any, budget: { 
       if (n !== 1) { out.note = "pages could not be told apart"; return; }
       sigs = [await sha1([bytes])];                       // a picture file is one page: the file is its signature
     }
-    const { data: frow } = await admin.from("pen_files").select("rule").eq("user_id", uid).eq("file_id", f.id).maybeSingle();
-    const rule = frow?.rule || (f._home ? {} : null);
-    if (!rule) { out.waiting = true; out.note = "waiting to be told which pages are his"; return; }   // nothing is drawn or stored
+    // The Moleskine app writes one PDF for each page, named "<notebook>_p<page number>.pdf".
+    // Those files are leaves of one notebook: its pages are kept together under the
+    // notebook's name, at their printed page numbers, and the notebook holds the rule.
+    const bk = n === 1 ? bookOf(f.name) : null;
+    const key = bk ? "book:" + bk.book : f.id;             // what the pages are filed under
+    const base = bk ? bk.pageno - 1 : 0;
+    const { data: frow } = await admin.from("pen_files").select("rule").eq("user_id", uid).eq("file_id", key).maybeSingle();
+    const rule = frow?.rule || (f._home && !bk ? {} : null);
+    if (!rule) {                                           // nothing is drawn or stored
+      if (bk && !frow) await admin.from("pen_files").insert({ user_id: uid, file_id: key, name: bk.book, note: WAITING });
+      out.waiting = true; out.note = WAITING; return;
+    }
     const firstAt = new Map<string, number>();
-    sigs.forEach((s2, k) => { if (allowed(rule, k) && !firstAt.has(s2)) firstAt.set(s2, k); });
+    sigs.forEach((s2, k) => { if (allowed(rule, base + k) && !firstAt.has(s2)) firstAt.set(s2, k); });
     const day = localDay(f.lastModifiedDateTime);
-    const { data: rows } = await admin.from("pen_pages").select("*").eq("user_id", uid).eq("file_id", f.id);
+    const { data: rows } = await admin.from("pen_pages").select("*").eq("user_id", uid).eq("file_id", key);
     const bySig = new Map<string, any>((rows || []).map((r: any) => [r.sig, r]));
     const cur = new Set(sigs);
-    const gone = (rows || []).filter((r: any) => !cur.has(r.sig));   // pages whose old drawing is no longer in the file
+    // pages whose old drawing has gone: for a whole notebook, drawings no longer in the file;
+    // for a single-page file, whatever was at that page number before
+    const gone = bk ? (rows || []).filter((r: any) => r.page === base && r.sig !== sigs![0])
+      : (rows || []).filter((r: any) => !cur.has(r.sig));
 
-    for (let i = 0; i < n; i++) {
-      const sig = sigs[i];
+    for (let k = 0; k < n; k++) {
+      const sig = sigs[k], i = base + k;                   // k: where it is in this file; i: its page in the notebook
       if (!allowed(rule, i)) continue;                    // not his page: never drawn, never stored
-      if (firstAt.get(sig) !== i) continue;               // the same drawing twice in one file (empty pages): once is enough
+      if (firstAt.get(sig) !== k) continue;               // the same drawing twice in one file (empty pages): once is enough
       const first = decide(sig, i, null, bySig, gone);
       if (first.what === "known") {
         const r = bySig.get(sig);
-        if (r.page !== i) { await admin.from("pen_pages").update({ page: i }).match({ user_id: uid, file_id: f.id, sig }); r.page = i; }
+        if (!bk && r.page !== i) { await admin.from("pen_pages").update({ page: i }).match({ user_id: uid, file_id: key, sig }); r.page = i; }
         continue;
       }
       if (budget.ms <= 0) { out.done = false; break; }
       const t = performance.now();
-      const d = drawPage(doc, i);
+      const d = drawPage(doc, k);
       budget.ms -= performance.now() - t;
       const { what, prev } = decide(sig, i, d.ink, bySig, gone);
       const now = new Date().toISOString();
       if (what === "wait") continue;                       // rewritten too often today: looked at again when the file next changes
 
       if (what === "blank") {
-        await admin.from("pen_pages").insert({ user_id: uid, file_id: f.id, sig, page: i, state: "blank", day, ink: d.ink });
+        await admin.from("pen_pages").insert({ user_id: uid, file_id: key, sig, page: i, state: "blank", day, ink: d.ink });
         bySig.set(sig, { sig, page: i, state: "blank" });
         continue;
       }
       if (what === "note") {                               // remember the new drawing, leave the entry as it is
-        await admin.from("pen_pages").update({ sig, page: i, ink: d.ink, changed_at: now }).match({ user_id: uid, file_id: f.id, sig: prev.sig });
+        await admin.from("pen_pages").update({ sig, page: i, ink: d.ink, changed_at: now }).match({ user_id: uid, file_id: key, sig: prev.sig });
         gone.splice(gone.indexOf(prev), 1); bySig.set(sig, { ...prev, sig, page: i });
         continue;
       }
@@ -319,7 +345,7 @@ async function readFile(admin: any, tok: string, uid: string, f: any, budget: { 
       if (!(await putPicture(uid, eid, d.jpg))) { out.done = false; out.note = "picture could not be stored"; continue; }
       const img = await sha1([d.jpg]);
       if (what === "new") {
-        await admin.from("pen_pages").insert({ user_id: uid, file_id: f.id, sig, page: i, state: "held", entry_id: eid, day, img, ink: d.ink });
+        await admin.from("pen_pages").insert({ user_id: uid, file_id: key, sig, page: i, state: "held", entry_id: eid, day, img, ink: d.ink });
         bySig.set(sig, { sig, page: i, state: "held", entry_id: eid });
         out.fresh++;
       } else {                                             // edit: the same page, written on again
@@ -329,7 +355,7 @@ async function readFile(admin: any, tok: string, uid: string, f: any, budget: { 
           sig, page: i, state: "held", entry_id: eid, prev_entry: wasIn ? prev.entry_id : prev.prev_entry,
           day: wasIn || prev.state === "held" ? (prev.day || day) : day, img, ink: d.ink,
           revs: (prev.revs || 0) + (wasIn ? 1 : 0), changed_at: now,
-        }).match({ user_id: uid, file_id: f.id, sig: prev.sig });
+        }).match({ user_id: uid, file_id: key, sig: prev.sig });
         gone.splice(gone.indexOf(prev), 1); bySig.set(sig, { ...prev, sig, page: i, state: "held", entry_id: eid });
         out.edits++;
       }
@@ -355,7 +381,7 @@ async function release(admin: any, uid: string) {
   const perFile: Record<string, number> = {};
   for (const r of held) perFile[r.file_id] = (perFile[r.file_id] || 0) + 1;
   const ready = held.filter((r: any) => {
-    if (!whole.has(r.file_id)) return false;               // still being read: wait until every page of it is drawn
+    if (!whole.has(r.file_id) && !r.file_id.startsWith("book:")) return false;   // still being read: wait until every page of it is drawn
     if (perFile[r.file_id] > FLOOD && !okd.has(r.file_id)) { if (!out.flood.includes(r.file_id)) out.flood.push(r.file_id); return false; }
     return !!r.entry_id && !!r.day;
   });
@@ -410,10 +436,12 @@ async function stateFor(admin: any, uid: string) {
 async function tick(admin: any, row: any) {
   const uid = row.user_id, out: any = { user: uid.slice(0, 8) };
   const st: any = await stateFor(admin, uid);
-  const tok = await accessToken(admin, row);
+  // OneDrive is one way in; pages sent from Google Drive do not depend on it
+  let tok = "";
+  try { tok = await accessToken(admin, row); } catch (_) { out.onedrive = "reconnect needed"; }
   let watch: Watch[] = Array.isArray(st.folders) ? st.folders : [];
 
-  if (!watch.length || !st.looked_at || Date.now() - Date.parse(st.looked_at) > LOOK_EVERY) {
+  if (tok && (!watch.length || !st.looked_at || Date.now() - Date.parse(st.looked_at) > LOOK_EVERY)) {
     const found = await discover(tok);
     const have = new Set(watch.map((w) => w.id));
     for (const w of found) if (!have.has(w.id)) { watch.push(w); have.add(w.id); }
@@ -423,7 +451,7 @@ async function tick(admin: any, row: any) {
   out.live = !!st.live;
   let pending = false;
 
-  if (watch.length) {
+  if (tok && watch.length) {
     const files = await listFiles(tok, watch);
     const { data: known } = await admin.from("pen_files").select("file_id,tag").eq("user_id", uid);
     const tags = new Map<string, string>((known || []).map((k: any) => [k.file_id, k.tag]));
@@ -437,6 +465,22 @@ async function tick(admin: any, row: any) {
       out.fresh += r.fresh; out.edits += r.edits;
       if (!r.done) pending = true;
       if (r.waiting) out.waiting++; else if (r.note) out.note = r.note;
+    }
+  }
+
+  // pages sent in from Google Drive (pen-in keeps them until they are drawn)
+  {
+    const { data: inbox } = await admin.from("pen_files").select("file_id,name,modified,tag,inbox_tag").eq("user_id", uid).eq("src", "inbox");
+    const todo = (inbox || []).filter((r: any) => r.inbox_tag && r.tag !== r.inbox_tag)
+      .sort((a: any, b: any) => String(a.name).localeCompare(String(b.name), undefined, { numeric: true }));
+    const budget = { ms: RENDER_MS };
+    out.inbox = todo.length;
+    for (const r of todo) {
+      if (budget.ms <= 0) { pending = true; break; }
+      const w = await workFile(admin, tok, uid, { id: r.file_id, name: r.name, lastModifiedDateTime: r.modified, cTag: r.inbox_tag, _inbox: true }, budget);
+      out.fresh = (out.fresh || 0) + w.fresh; out.edits = (out.edits || 0) + w.edits;
+      if (!w.done) pending = true;
+      if (w.waiting) out.waiting = (out.waiting || 0) + 1; else if (w.note) out.note = w.note;
     }
   }
 
@@ -456,14 +500,14 @@ async function tick(admin: any, row: any) {
 // ---------------------------------------------------------------- looking in (scheduler secret only)
 async function status(admin: any, uid: string) {
   const st = await stateFor(admin, uid);
-  const { data: files } = await admin.from("pen_files").select("file_id,name,pages,modified,tag,note,rule,checked_at").eq("user_id", uid);
+  const { data: files } = await admin.from("pen_files").select("file_id,name,pages,modified,tag,note,rule,src,inbox_tag,checked_at").eq("user_id", uid);
   const { data: pages } = await admin.from("pen_pages").select("file_id,page,state,entry_id,prev_entry,day,ink,revs,readds,changed_at")
     .eq("user_id", uid).order("changed_at", { ascending: false }).limit(400);
   const counts: Record<string, number> = {};
   for (const p of pages || []) counts[p.state] = (counts[p.state] || 0) + 1;
   return {
     live: st.live, watching: st.folders, looked_at: st.looked_at, last_run: st.last_run, last_note: st.last_note,
-    files: (files || []).map((f: any) => ({ ...f, done: !!f.tag, tag: undefined })), counts,
+    files: (files || []).map((f: any) => ({ ...f, done: f.src === "inbox" ? f.tag === f.inbox_tag : !!f.tag, tag: undefined, inbox_tag: undefined })), counts,
     pages: (pages || []).slice(0, 60),
   };
 }
@@ -514,7 +558,9 @@ Deno.serve(async (req) => {
       const rule = body.rule.clear ? null : Array.isArray(body.rule.only) ? { only: body.rule.only }
         : Array.isArray(body.rule.skip) ? { skip: body.rule.skip } : {};
       // the file is read again under the new rule; pages held back that the rule now leaves out are thrown away
+      if (fid.startsWith("book:")) await admin.from("pen_files").upsert({ user_id: uid, file_id: fid, name: fid.slice(5) }, { onConflict: "user_id,file_id", ignoreDuplicates: true });
       await admin.from("pen_files").update({ rule, tag: null, note: null }).match({ user_id: uid, file_id: fid });
+      if (fid.startsWith("book:")) await admin.from("pen_files").update({ tag: null }).match({ user_id: uid, book: fid.slice(5) });
       const { data: held } = await admin.from("pen_pages").select("sig,page,entry_id").eq("user_id", uid).eq("file_id", fid).eq("state", "held");
       for (const h of held || []) {
         if (allowed(rule, h.page)) continue;
