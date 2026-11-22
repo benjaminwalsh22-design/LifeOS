@@ -17,6 +17,7 @@ in the repo because they carry the secret; they are listed with
 | oura-tick        | 11:00, 17:00 UTC| Oura API → sleep, hrv, rhr, resp, tdev, readiness…     |
 | insight-tick     | 12:10 UTC       | nightly observations from `life_digest`                |
 | health-flush     | */10 min (SQL)  | merges parked health days into the payload             |
+| pen-tick         | :07 and :37     | Moleskine pen pages in OneDrive → queued journal pages |
 
 Inbound (no cron): `health-in` (Health Auto Export, token in path — now
 superseded by oura-tick), `biz-in` (Libby's firm reports), `ask-ben`,
@@ -38,3 +39,29 @@ ahead window. `my_cal_days(from,to)` gives the app per-day counts, meeting
 hours, first/last times, and titles only from feeds with `titles:true`. The
 reviews read it; `CAL_ME` is the address used to read your own RSVP so declined
 events don't count.
+
+## Moleskine pen
+
+The Moleskine app backs its notebooks up to OneDrive; `pen-tick` reads them with
+the OneDrive connection the photos already use (read-only). It watches any
+folder or file the app has named after itself, and a folder called
+`LifeOS Journal` at the top of the drive for pages saved by hand (PDF, JPG, PNG).
+
+Each new page is drawn as a 1000-pixel JPEG into `journal-photos/<user>/<entry id>.jpg`
+and added to the journal as an ordinary queued entry (`src:'pen'`, `psync:true`),
+so `transcribe-tick` reads it like a page scanned with the phone. Pages are told
+apart by a signature of what they draw, kept in `pen_pages`:
+
+- a page seen before is skipped, wherever it now sits in the file;
+- a page written on again replaces its entry (the old one is tombstoned, his note is kept);
+- an empty page is noted and adds nothing; an entry he deleted is never brought back;
+- a file is left alone for 20 minutes after it last changed, and more than 60 new
+  pages from one file wait for `{"approve":"<file id>"}`.
+
+`pen_state.live` is the switch. While it is false the worker finds, draws and
+holds pages but does not touch the journal. With the scheduler secret:
+`{"status":true}` reports what is watched and held, `{"peek":"<entry id>"}`
+returns a held page's picture, `{"set":{"live":true}}` starts importing,
+`{"watch":{"id","path","kind"}}` adds a folder by hand, and a PDF or picture sent
+as the request body is drawn and measured without storing anything.
+Checks: `tests/pen` (`npm i && node pen.test.mjs`).

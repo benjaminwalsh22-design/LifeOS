@@ -1,0 +1,3 @@
+{ "name": "lifeos-pen-tests", "private": true, "type": "module",
+  "description": "Checks for the Moleskine pen importer (supabase/functions/pen-tick). Run: npm i && node pen.test.mjs",
+  "dependencies": { "mupdf": "1.28.6", "pdf-lib": "^1.17.1" } }
