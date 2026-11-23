@@ -70,7 +70,12 @@ async function session(b) {
   w.renderAll(); w.showView('today');
   await new Promise((r) => setTimeout(r, 60));
 }
-const norm = (db) => { const d = JSON.parse(JSON.stringify(db)); return d; };
+// Goals v2 (Nov 2026) is the one deliberate change to what is saved: every goal gains a shape, a
+// state and a change stamp, and goals he sets up can carry an action, a plan and a start date.
+// Those fields are named here and set aside; everything else must still match byte for byte.
+const GOAL_NEW = ['shape', 'state', 'mt', 'act', 'plan', 'since', 'resSrc'];
+const stripGoalText = (t) => String(t || '').replace(/,"shape":"(?:long|list|weekly)","state":"(?:active|parked|done)","mt":\d+/g, '');
+const norm = (db) => { const d = JSON.parse(JSON.stringify(db)); (d.goals || []).forEach((g) => GOAL_NEW.forEach((k) => delete g[k])); return d; };
 
 setTimeout(() => { console.log('FAIL timed out'); process.exit(1); }, 60000);
 (async () => {
@@ -81,15 +86,18 @@ setTimeout(() => { console.log('FAIL timed out'); process.exit(1); }, 60000);
   ok(!ea, 'old build runs the session' + (ea ? ': ' + ea.message : ''));
   ok(!eb, 'new build runs the session' + (eb ? ': ' + eb.message : ''));
   ok(!a.errors.length && !b.errors.length, 'no uncaught errors (old ' + a.errors.join('|') + ' / new ' + b.errors.join('|') + ')');
+  const rawNew = (b.g('DB').goals || []);
+  ok(rawNew.every((g) => g.shape && g.state && g.mt) && rawNew.every((g) => Object.keys(g).every((k) => GOAL_NEW.includes(k) || k in (a.g('DB').goals.find((x) => x.id === g.id) || {}))),
+    'goals gain only the named new fields (' + GOAL_NEW.join(', ') + ')');
   const da = norm(a.g('DB')), db = norm(b.g('DB'));
   const keys = [...new Set([...Object.keys(da), ...Object.keys(db)])].sort();
   for (const k of keys) { const x = JSON.stringify(da[k]), y = JSON.stringify(db[k]); ok(x === y, 'DB.' + k + ' identical' + (x === y ? '' : '\n      old ' + String(x).slice(0, 300) + '\n      new ' + String(y).slice(0, 300))); }
-  const la = a.w.localStorage.getItem('lifeos_v1'), lb = b.w.localStorage.getItem('lifeos_v1');
+  const la = a.w.localStorage.getItem('lifeos_v1'), lb = stripGoalText(b.w.localStorage.getItem('lifeos_v1'));
   ok(la === lb, 'saved copy on the phone identical (' + (la || '').length + ' bytes)');
   // Under a failing network both builds retry in the background, so the count and order
   // of calls depend on timing. What must match is the set of distinct requests: the same
   // endpoints, the same prompts, the same payloads.
-  const uniq = (cs) => [...new Set(cs.map((c) => c.m + ' ' + c.u + ' ' + c.b))].sort();
+  const uniq = (cs) => [...new Set(cs.map((c) => c.m + ' ' + c.u + ' ' + stripGoalText(c.b)))].sort();
   const ca = uniq(a.calls), cb = uniq(b.calls);
   const onlyA = ca.filter((x) => !cb.includes(x)), onlyB = cb.filter((x) => !ca.includes(x));
   ok(!onlyA.length && !onlyB.length, 'distinct network requests identical (' + ca.length + ' kinds; ' + a.calls.length + ' calls old, ' + b.calls.length + ' new)' +

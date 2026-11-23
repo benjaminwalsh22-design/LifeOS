@@ -44,3 +44,17 @@ keys, sync, AI prompts, scoring, imports and exports are unchanged.
 After the redesign goes live, `index.html` is the app again and can be edited directly;
 this folder then stands as the record of how v11 was produced. To keep building through
 the pieces instead, edit them and run the build with `--live`.
+
+## Goals v2 (preview, Nov 2026)
+
+`goals.js` holds the Goals screen. A goal has a shape: `weekly` (an action counted
+per week, with an optional result), `long` (a number looked at monthly) or `list`.
+Weekly actions count themselves from `DB.stats` where the ring supplies them
+(`sleep7`: nights of 7 h or more; `gym`: a strength session of 15 min or more) and
+by a tap otherwise. At most three weekly goals are active; one short week a month
+is covered by a spare. Goals made before v2 keep every field and gain `shape`,
+`state` and `mt`; the new fields are `act`, `plan`, `since`, `resSrc`. Those are
+the only changes to saved data, and `tests/ui/parity.test.js` names them.
+The research and the plan for the next steps (journal as evidence, the Sunday
+review, seasons) are in the proposal doc, not in the repo.
+

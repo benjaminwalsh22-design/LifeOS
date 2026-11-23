@@ -16,7 +16,7 @@ HERE = pathlib.Path(__file__).parent
 ROOT = HERE.parent.parent
 LIVE = '--live' in sys.argv
 src = (ROOT / 'rollback' / 'index-v10.5.html').read_text()
-VERSION = 'v11.2' if LIVE else 'v11.2 preview'
+VERSION = 'v11.3' if LIVE else 'v11.3 preview'
 
 def piece(name):
     return (HERE / name).read_text().rstrip('\n') + '\n'
@@ -78,6 +78,7 @@ swap_range('    <section class="view active" id="view-today">', '    <!-- ======
      '      </header>\n'
      '      <div id="briefCard"></div>\n'
      '      <div id="seasonSlot"></div>\n'
+     '      <div id="weekSlot"></div>\n'
      '      <section class="sec">\n'
      '        <div class="sec-h"><h2>Noticed</h2><button class="link" id="noticedMore" onclick="toggleNoticed()" hidden></button></div>\n'
      '        <div class="sec-body" id="attnList"></div>\n'
@@ -211,7 +212,10 @@ swap_range('function renderMacros(){', 'function twyWeekOf(dstr){', piece('macro
 swap('      <div class="section-head" style="margin-top:22px"><h2>Life goals</h2><button class="action" id="goalAdd">+ Add</button></div>\n      <div id="goalList"></div>\n',
      '      <section class="sec"><div class="sec-h"><h2>Life goals</h2><button class="link" id="goalAdd">Add</button></div><div id="goalList"></div></section>\n')
 swap_range('function renderSprint(el){', 'function renderGoals(){ renderTWY();', '')
-swap_range('function renderGoals(){ renderTWY();', 'function toggleMilestone(gid, mid){', piece('goals.js'))
+swap_range('function renderGoals(){ renderTWY();', 'function deleteGoal(id){', piece('goals.js'))
+# Goals v2: the goals that count themselves come first, the month's sprint sits beneath them
+swap('      <header class="lt"><h1 class="lt-title">Goals</h1></header>\n      <div id="twyBody"></div>\n      <section class="sec"><div class="sec-h"><h2>Life goals</h2><button class="link" id="goalAdd">Add</button></div><div id="goalList"></div></section>\n',
+     '      <header class="lt lt-row"><div><div class="lt-eyebrow" id="goalsEyebrow"></div><h1 class="lt-title">Goals</h1></div><button class="link" id="goalAdd">New goal</button></header>\n      <div id="goalList"></div>\n      <div id="twyBody"></div>\n')
 swap_range('// ---- plan ----', 'function studyGrade(ok){', '')
 swap_range('function studyTestHTML(){', 'function studyPick(i){', '')
 swap_range('function studyTestResultHTML(){', '// ---- visual drills ----', '')

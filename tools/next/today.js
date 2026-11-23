@@ -24,7 +24,7 @@ function briefHTML(){
   else { const q = QUOTES[dayOfYear()%QUOTES.length];
     h += '<figure class="quote"><blockquote class="quote-text">“'+esc(q[0])+'”</blockquote><figcaption class="quote-by">'+esc(q[1])+'</figcaption></figure>'; }
   h += '</div>';
-  if(!seasonHTML()) h += focusRowsHTML();
+  if(!seasonHTML() && !goalsWeekly().length) h += focusRowsHTML();
   return h;
 }
 // with nothing in season, the life goals that most need a push sit under the brief
@@ -141,6 +141,7 @@ function renderToday(){
   ensureBriefLine();
   loadCycle();
   $('seasonSlot').innerHTML = seasonHTML();
+  $('weekSlot').innerHTML = goalsWeekHTML();
 
   // the proactive feed
   renderInsights();
