@@ -19,6 +19,10 @@ in the repo because they carry the secret; they are listed with
 | health-flush     | */10 min (SQL)  | merges parked health days into the payload             |
 | pen-tick         | :07 and :37     | Moleskine pen pages in OneDrive → queued journal pages |
 
+Not scheduled yet: `goal-tick` reads journal pages for evidence of the weekly goals. It only
+reports (`{"dry":true,"from","to"}` with the scheduler secret) and writes nothing; each quotation
+is checked against its page.
+
 Inbound (no cron): `health-in` (Health Auto Export, token in path — now
 superseded by oura-tick), `biz-in` (Libby's firm reports), `pen-in` (Moleskine
 pages from Google Drive, token in path), `ask-ben`,
