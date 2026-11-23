@@ -99,10 +99,13 @@ setTimeout(() => { console.log('FAIL timed out'); process.exit(1); }, 60000);
   // endpoints, the same prompts, the same payloads.
   const uniq = (cs) => [...new Set(cs.map((c) => c.m + ' ' + c.u + ' ' + stripGoalText(c.b)))].sort();
   const ca = uniq(a.calls), cb = uniq(b.calls);
-  const onlyA = ca.filter((x) => !cb.includes(x)), onlyB = cb.filter((x) => !ca.includes(x));
-  ok(!onlyA.length && !onlyB.length, 'distinct network requests identical (' + ca.length + ' kinds; ' + a.calls.length + ' calls old, ' + b.calls.length + ' new)' +
+  // one request is new and named: the app asks his account what his journal says about his goals
+  const NEW_CALLS = ['POST https://x.supabase.co/rest/v1/rpc/my_goal_evidence {}'];
+  const onlyA = ca.filter((x) => !cb.includes(x)), onlyB = cb.filter((x) => !ca.includes(x) && !NEW_CALLS.includes(x));
+  ok(cb.includes(NEW_CALLS[0]), 'the one new request is the read of goal evidence, with nothing sent');
+  ok(!onlyA.length && !onlyB.length, 'distinct network requests otherwise identical (' + ca.length + ' kinds; ' + a.calls.length + ' calls old, ' + b.calls.length + ' new)' +
     (onlyA.length || onlyB.length ? '\n      only old: ' + onlyA.map((x) => x.slice(0, 160)).join('\n                ') + '\n      only new: ' + onlyB.map((x) => x.slice(0, 160)).join('\n                ') : ''));
   const extra = Object.keys(b.w.localStorage).filter((k) => !(k in a.w.localStorage));
-  ok(extra.every((k) => k === 'lifeos_theme'), 'the only new storage keys are display preferences: ' + (extra.join(', ') || 'none'));
+  ok(extra.every((k) => k === 'lifeos_theme' || k === 'lifeos_gev'), 'the only new storage keys are display preferences and the cached goal evidence: ' + (extra.join(', ') || 'none'));
   console.log(fail ? fail + ' FAILED' : 'all passed'); process.exit(fail ? 1 : 0);
 })();

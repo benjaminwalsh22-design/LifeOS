@@ -18,10 +18,19 @@ in the repo because they carry the secret; they are listed with
 | insight-tick     | 12:10 UTC       | nightly observations from `life_digest`                |
 | health-flush     | */10 min (SQL)  | merges parked health days into the payload             |
 | pen-tick         | :07 and :37     | Moleskine pen pages in OneDrive → queued journal pages |
+| goal-tick        | :12 and :42     | journal pages → evidence for the weekly goals          |
 
-Not scheduled yet: `goal-tick` reads journal pages for evidence of the weekly goals. It only
-reports (`{"dry":true,"from","to"}` with the scheduler secret) and writes nothing; each quotation
-is checked against its page.
+`goal-tick` reads each newly transcribed page (the last 30 days, one page per call, with his own
+Anthropic key) for his active weekly goals, other than the ones the ring counts. The goals come
+from `payload->goals`; each is described to the model by `act.what` (his sentence saying what
+counts), else the action's name. What it finds goes to `goal_evidence` with the sentence it rests
+on; `goal_pages` records which version of which page was read and for which goals, so a corrected
+page or a reworded goal is read again and its earlier findings replaced. A quotation that is not
+on the page is thrown away. A finding the page leaves in doubt is stored with `sure = false`: the
+app shows it and counts it only if he says so. The app reads its own rows through
+`my_goal_evidence()`; nothing is written into the journal or the goals. Raise `READER` in the
+function when its instructions change. `{"dry":true,"from","to"}` reports and writes nothing;
+`{"goals":[…]}` reads for those goals instead of the saved ones. Tests: `node tests/goal/sift.test.mjs`.
 
 Inbound (no cron): `health-in` (Health Auto Export, token in path — now
 superseded by oura-tick), `biz-in` (Libby's firm reports), `pen-in` (Moleskine

@@ -706,6 +706,18 @@ mark.unread { padding: 0 2px; border-radius: var(--s1); background: var(--watch-
 .g-ev b { font-weight: var(--w-semi); color: var(--ink-2); }
 .g-src { display: inline-block; margin-left: var(--s1); padding: 1px var(--s2); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--t-cap); color: var(--ink-2); white-space: nowrap; }
 .g-tap { flex: 0 0 auto; }
+/* his own sentence, from the page the count rests on */
+.g-quote { margin-top: var(--s2); padding-left: var(--s3); border-left: 2px solid var(--own-rule); font-family: var(--serif); font-size: var(--t-sub); line-height: var(--lh-body); color: var(--ink); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.g-evs { display: flex; flex-direction: column; gap: var(--s4); }
+.g-evs + .data-fresh { margin-top: var(--s3); }
+.g-evi { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); }
+.g-evi .own { flex: 1 1 auto; min-width: 0; }
+.g-evi .own:not([onclick]) { cursor: default; }
+.g-evi .own-text { font-size: var(--t-sub); line-height: var(--lh-body); }
+.g-evi.out .own-text { color: var(--ink-muted); text-decoration: line-through; }
+.g-strike { flex: 0 0 auto; min-height: var(--hit); padding: 0 0 0 var(--s2); white-space: nowrap; }
+.g-yn { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; }
+.g-maybe { margin-top: var(--s2); font-size: var(--t-foot); line-height: var(--lh-snug); color: var(--ai-ink); }
 .row .g-dots { flex: 0 0 auto; }
 .g-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--s1); }
 .g-day { display: flex; flex-direction: column; align-items: center; gap: var(--s1); min-height: var(--hit); padding: var(--s2) 0; border: 0; border-radius: var(--r-md); background: transparent; font: inherit; font-size: var(--t-cap); color: var(--ink-muted); cursor: pointer; }

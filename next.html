@@ -1011,6 +1011,18 @@ mark.unread { padding: 0 2px; border-radius: var(--s1); background: var(--watch-
 .g-ev b { font-weight: var(--w-semi); color: var(--ink-2); }
 .g-src { display: inline-block; margin-left: var(--s1); padding: 1px var(--s2); border-radius: var(--r-sm); background: var(--surface-sunken); font-size: var(--t-cap); color: var(--ink-2); white-space: nowrap; }
 .g-tap { flex: 0 0 auto; }
+/* his own sentence, from the page the count rests on */
+.g-quote { margin-top: var(--s2); padding-left: var(--s3); border-left: 2px solid var(--own-rule); font-family: var(--serif); font-size: var(--t-sub); line-height: var(--lh-body); color: var(--ink); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.g-evs { display: flex; flex-direction: column; gap: var(--s4); }
+.g-evs + .data-fresh { margin-top: var(--s3); }
+.g-evi { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); }
+.g-evi .own { flex: 1 1 auto; min-width: 0; }
+.g-evi .own:not([onclick]) { cursor: default; }
+.g-evi .own-text { font-size: var(--t-sub); line-height: var(--lh-body); }
+.g-evi.out .own-text { color: var(--ink-muted); text-decoration: line-through; }
+.g-strike { flex: 0 0 auto; min-height: var(--hit); padding: 0 0 0 var(--s2); white-space: nowrap; }
+.g-yn { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; }
+.g-maybe { margin-top: var(--s2); font-size: var(--t-foot); line-height: var(--lh-snug); color: var(--ai-ink); }
 .row .g-dots { flex: 0 0 auto; }
 .g-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--s1); }
 .g-day { display: flex; flex-direction: column; align-items: center; gap: var(--s1); min-height: var(--hit); padding: var(--s2) 0; border: 0; border-radius: var(--r-md); background: transparent; font: inherit; font-size: var(--t-cap); color: var(--ink-muted); cursor: pointer; }
@@ -1538,7 +1550,7 @@ input, textarea, select { font-size: max(16px, 1em); }          /* below 16px iO
       <div class="sec-body pane about">
         <svg class="sunrise" viewBox="112 104 288 316" role="img" aria-label="LifeOS"><path d="M256 122v30M172 151l21 25M340 151l-21 25" fill="none" stroke="#FFC289" stroke-width="14" stroke-linecap="round"/><path d="M154 307a102 102 0 0 1 204 0Z" fill="url(#sunG)"/><rect x="128" y="322" width="256" height="19" rx="9.5" fill="url(#sunL)"/><rect x="158" y="358" width="196" height="18" rx="9" fill="url(#sunL)" opacity=".62"/><rect x="190" y="392" width="132" height="16" rx="8" fill="url(#sunL)" opacity=".34"/></svg>
         <div class="about-name">LifeOS</div>
-        <div class="about-ver" id="appVer">v11.3 preview</div>
+        <div class="about-ver" id="appVer">v11.4 preview</div>
         <button class="btn secondary" onclick="checkUpdate()">Check for updates</button>
         <button class="btn secondary" onclick="showView('styleguide')">Style guide</button>
       </div>
@@ -3562,7 +3574,7 @@ function initSettings(){
   $('importInput').addEventListener('change', importData);
   $('wipeBtn').addEventListener('click', async () => {
     if (!(await confirmSheet('Erase everything on this phone?', 'This cannot be undone here. Anything synced to your account comes back when you sign in again.', 'Erase', true))) return;
-    store.removeItem(KEY);
+    store.removeItem(KEY); store.removeItem('lifeos_gev');
     try { if (_idb){ (await idb()).close(); } indexedDB.deleteDatabase('lifeos'); } catch(e){}
     location.reload();
   });
@@ -5045,21 +5057,30 @@ function renderTWY(){
 // version keep every field they had (kind, current, target, updates, milestones) and gain a
 // shape and a state; nothing is removed.
 const GOAL_CAP = 3;                 // weekly goals in play at once
-const GOAL_SRC = { tap:'Marked by you', sleep7:'Counted by the ring: nights of seven hours or more', gym:'Counted by the ring when it sees a strength session, and by your taps' };
+const GOAL_SRC = { tap:'Counted from your journal and by your taps', sleep7:'Counted by the ring: nights of seven hours or more', gym:'Counted by the ring when it sees a strength session, from your journal, and by your taps' };
+const GOAL_FROM = { you:'marked by you', ring:'from the ring', journal:'from your journal' };
 const goalShape = g => g.shape || (g.kind==='milestones' ? 'list' : 'long');
 const goalActive = g => (g.state||'active')==='active';
 const goalsWeekly = () => (DB.goals||[]).filter(g => goalActive(g) && goalShape(g)==='weekly');
+const GOAL_WHAT = { gym:'I went to the gym or did a strength workout', date:'An evening out with my wife Annalise, without the kids: dinner, drinks, a show. Friends can be along.' };
 function goalsUpgrade(){
   DB.goals = DB.goals || [];
   const now = Date.now(); let dirty = false;
   // the set-up chosen on 23 Nov 2026: weight with the gym as its action, sleep, date night
   const mine = DB.goals.find(g => /^lose 15 pounds$/i.test(String(g.name||'').trim()));
   if(mine && !DB.settings.goals2){
-    Object.assign(mine, { shape:'weekly', state:'active', act:{ label:'Gym', n:2, src:'gym', days:[], off:[] }, resSrc:'weight', since:today(), mt:now });
+    Object.assign(mine, { shape:'weekly', state:'active', act:{ label:'Gym', n:2, src:'gym', what:GOAL_WHAT.gym, days:[], off:[] }, resSrc:'weight', since:today(), mt:now });
     const add = g => { if(!DB.goals.some(x => x.id===g.id) && !(DB.tomb||{})[g.id]) DB.goals.push(Object.assign({ why:'', kind:'number', shape:'weekly', state:'active', updates:[], createdTs:now, since:today(), mt:now }, g)); };
     add({ id:'g2-sleep', name:'Seven hours of sleep', act:{ label:'Nights', n:5, src:'sleep7', days:[], off:[] } });
-    add({ id:'g2-date', name:'Date night', act:{ label:'Date night', n:1, src:'tap', days:[], off:[] } });
-    DB.settings.goals2 = 1; dirty = true;
+    add({ id:'g2-date', name:'Date night', act:{ label:'Date night', n:1, src:'tap', what:GOAL_WHAT.date, days:[], off:[] } });
+    DB.settings.goals2 = 2; dirty = true;
+  }
+  // 23 Nov 2026, the journal starts counting: the same two goals gain a sentence saying what counts
+  if(DB.settings.goals2===1){
+    DB.goals.forEach(g => { if(!g.act || g.act.what!=null) return;
+      if(g.act.src==='gym'){ g.act.what = GOAL_WHAT.gym; g.mt = now; }
+      else if(g.id==='g2-date'){ g.act.what = GOAL_WHAT.date; g.mt = now; } });
+    DB.settings.goals2 = 2; dirty = true;
   }
   DB.goals.forEach(g => { if(!g.shape){ g.shape = g.kind==='milestones' ? 'list' : 'long'; g.state = g.state || 'active'; g.mt = now; dirty = true; } });
   if(dirty){ try{ save(); }catch(e){} }
@@ -5068,14 +5089,44 @@ goalsUpgrade();
 
 // ---- counting a weekly action ----
 function goalWeekDays(ws){ const out=[], d=parseD(ws); for(let i=0;i<7;i++){ out.push(dstr(d)); d.setDate(d.getDate()+1); } return out; }
-function goalAutoDay(g, d){
+// ---- what his journal says he did ----
+// A worker (goal-tick) reads each transcribed page for his weekly actions and keeps what it finds,
+// with the sentence it rests on. That list is fetched from his account and cached on its own, apart
+// from the saved data: it is a reading of his pages, not his record. What he does with a reading is
+// his record: a sentence he strikes is remembered on the goal (act.struck).
+const GEV_KEY = 'lifeos_gev';
+let GEV = (() => { try { const v=JSON.parse(store.getItem(GEV_KEY)||'[]'); return Array.isArray(v) ? v : []; } catch(e){ return []; } })();
+let _gevAt = 0;
+function goalEvSet(list){
+  const next=(list||[]).filter(e => e && e.g && /^\d{4}-\d{2}-\d{2}$/.test(String(e.d||''))).map(e => ({ g:String(e.g), d:String(e.d), q:String(e.q||''), p:String(e.p||''), s:(e.s===false || e.s===0) ? 0 : 1 }));
+  if(JSON.stringify(next)===JSON.stringify(GEV)) return false;
+  GEV=next; try{ store.setItem(GEV_KEY, JSON.stringify(GEV)); }catch(e){}
+  return true;
+}
+async function goalEvLoad(force){
+  let signedIn=false; try{ signedIn=!!(SUPA && SUPA.session); }catch(e){}
+  if(!signedIn || (!force && Date.now()-_gevAt<300000)) return;      // at most every five minutes
+  _gevAt=Date.now();
+  const rows=await photosRpc('my_goal_evidence', {});
+  if(!Array.isArray(rows)){ _gevAt-=240000; return; }                // no answer: try again in a minute
+  if(goalEvSet(rows)){ renderGoals(); if(typeof renderToday==='function' && currentView==='today') renderToday(); }
+}
+// the journal's reading for this goal on this day: counted when the page was clear (s) and he has
+// not struck it. A page that left a doubt is shown to him and counted only if he says so.
+const goalEvAt = (g, d) => GEV.find(e => e.g===g.id && e.d===d) || null;
+const goalEv = (g, d) => { const a=g.act||{}, e=(a.src==='sleep7' || (a.struck||[]).includes(d)) ? null : goalEvAt(g, d); return e && e.s ? e : null; };
+// this week's sentences that may count and still wait for his yes or no
+const goalMaybes = g => { const a=g.act||{}, ws=mondayOf(new Date()); return a.src==='sleep7' ? [] : GEV.filter(e => e.g===g.id && !e.s && e.d>=ws && e.d<=today() && !(a.struck||[]).includes(e.d) && !goalDayOn(g, e.d)); };
+function goalRingDay(g, d){
   const s=(DB.stats||{})[d]||{}, src=(g.act||{}).src;
   if(src==='sleep7') return Number(s.sleep)>=7;
   if(src==='gym') return Number(s.gym)>=15;
   return false;
 }
-// a day counts when the ring saw it or he marked it, unless he struck it
+function goalAutoDay(g, d){ return goalRingDay(g, d) || !!goalEv(g, d); }
+// a day counts when the ring saw it, a page says so or he marked it, unless he turned the day off
 function goalDayOn(g, d){ const a=g.act||{}; if((a.off||[]).includes(d)) return false; return (a.days||[]).includes(d) || goalAutoDay(g, d); }
+const goalDayFrom = (g, d) => ((g.act||{}).days||[]).includes(d) ? 'you' : goalRingDay(g, d) ? 'ring' : goalEv(g, d) ? 'journal' : '';
 function goalWeek(g, ws){
   const days=goalWeekDays(ws), t=today(), on=days.map(d => d<=t && goalDayOn(g, d));
   const n=on.filter(Boolean).length, target=Math.max(1, Number((g.act||{}).n)||1);
@@ -5110,7 +5161,7 @@ function goalStatus(g){
 }
 function goalLastDay(g){
   for(let i=0;i<28;i++){ const d=new Date(); d.setDate(d.getDate()-i); const ds=dstr(d);
-    if(goalDayOn(g, ds)) return { d:ds, auto: !((g.act||{}).days||[]).includes(ds) }; }
+    if(goalDayOn(g, ds)) return { d:ds, from:goalDayFrom(g, ds) }; }
   return null;
 }
 // tap: count or uncount a day by hand (today unless a day is named)
@@ -5118,11 +5169,52 @@ function goalTap(id, d, fromSheet){
   const g=(DB.goals||[]).find(x => x.id===id); if(!g || !g.act) return;
   d = d || today(); if(d>today()) return;
   const a=g.act; a.days=a.days||[]; a.off=a.off||[];
-  if(goalDayOn(g, d)){ if(a.days.includes(d)) a.days=a.days.filter(x => x!==d); else a.off.push(d); }
+  if(goalDayOn(g, d)){ a.days=a.days.filter(x => x!==d); if(goalAutoDay(g, d)) a.off.push(d); }      // one tap always turns the day off
   else { a.off=a.off.filter(x => x!==d); if(!goalAutoDay(g, d)) a.days.push(d); }
   a.days.sort(); g.mt=Date.now(); g.lastProgressTs=Date.now(); save();
   if(fromSheet) openGoal(id);
   renderGoals(); if(typeof renderToday==='function' && currentView==='today') renderToday();
+}
+// "Not this": the page did not mean what the worker took it to mean. Only the journal's reading is
+// struck; a tap or the ring can still count the day. "Count it" puts the reading back.
+function goalStrike(id, d){
+  const g=(DB.goals||[]).find(x => x.id===id); if(!g || !g.act) return;
+  const a=g.act; a.struck=a.struck||[]; a.off=a.off||[];
+  if(a.struck.includes(d) || a.off.includes(d)){ a.struck=a.struck.filter(x => x!==d); a.off=a.off.filter(x => x!==d); }
+  else a.struck.push(d);
+  a.struck.sort(); g.mt=Date.now(); save();
+  openGoal(id); renderGoals(); if(typeof renderToday==='function' && currentView==='today') renderToday();
+}
+// a sentence the page left in doubt: yes counts the day as his own mark, no strikes the sentence
+function goalMaybe(id, d, yes){
+  const g=(DB.goals||[]).find(x => x.id===id); if(!g || !g.act) return;
+  const a=g.act; a.struck=a.struck||[]; a.off=a.off||[]; a.days=a.days||[];
+  if(yes){ a.struck=a.struck.filter(x => x!==d); a.off=a.off.filter(x => x!==d); if(!goalDayOn(g, d)) a.days.push(d); }
+  else { a.days=a.days.filter(x => x!==d); if(!a.struck.includes(d)) a.struck.push(d); }
+  a.days.sort(); a.struck.sort(); g.mt=Date.now(); save();
+  openGoal(id); renderGoals(); if(typeof renderToday==='function' && currentView==='today') renderToday();
+}
+function goalOpenPage(p){ if(!(DB.journal||[]).some(e => e.id===p)) return; closeSheet(); openEntry(p); }
+// the sentences his journal has given for this goal, newest first
+function goalEvList(g){
+  const from=dstr(new Date(Date.now()-70*86400000));
+  return GEV.filter(e => e.g===g.id && e.d>=from && e.d<=today()).sort((a,b) => a.d<b.d ? 1 : -1).slice(0, 8);
+}
+function goalEvHTML(g){
+  const a=g.act||{}; if(a.src==='sleep7') return '';
+  const list=goalEvList(g);
+  if(!list.length) return '<div class="ck-label">From your journal</div><div class="data-fresh">Nothing yet. When a page says you did this, the day is counted and the sentence is shown here.</div>';
+  return '<div class="ck-label">From your journal</div><div class="g-evs">'+list.map(e => {
+    const page=(DB.journal||[]).find(x => x.id===e.p), on=goalDayOn(g, e.d);
+    const out = e.s ? ((a.struck||[]).includes(e.d) || (a.off||[]).includes(e.d)) : (!on && (a.struck||[]).includes(e.d));
+    const wait = !e.s && !on && !out;      // the page left a doubt and he has not said
+    const wrote = page && page.date && page.date!==e.d ? ' <span>· written '+esc(goalDay(page.date))+'</span>' : '';
+    return '<div class="g-evi'+(out?' out':'')+'"><div class="own"'+(page ? ' onclick="goalOpenPage(\''+esc(e.p)+'\')"' : '')+'><div class="own-date">'+esc(fmtDate(e.d))+wrote+'</div>'+
+      '<div class="own-text">“'+esc(e.q)+'”</div>'+(wait ? '<div class="own-note">Not counted: the page leaves it open.</div>' : '')+'</div>'+
+      (e.s ? '<button class="link g-strike" onclick="goalStrike(\''+g.id+'\',\''+e.d+'\')">'+(out ? 'Count it' : 'Not this')+'</button>'
+           : '<span class="g-yn">'+(on ? '' : '<button class="link g-strike" onclick="goalMaybe(\''+g.id+'\',\''+e.d+'\',1)">Count it</button>')+
+               (out ? '' : '<button class="link g-strike" onclick="goalMaybe(\''+g.id+'\',\''+e.d+'\',0)">Not this</button>')+'</span>')+'</div>'; }).join('')+'</div>'+
+    '<div class="data-fresh">Your pages are read twice an hour. Only what a page says you did is counted.</div>';
 }
 
 // ---- the result a goal is after (a weight, a balance) ----
@@ -5170,13 +5262,16 @@ function goalDots(n, target, k){
 }
 function goalCardHTML(g){
   const st=goalStatus(g), w=st.w, a=g.act||{}, last=goalLastDay(g), counted=goalDayOn(g, today());
+  const said = last && last.from==='journal' ? goalEv(g, last.d) : null;
   return '<div class="g-card" onclick="openGoal(\''+g.id+'\')">'+
     '<div class="g-top"><span class="g-name">'+esc(g.name)+'</span><span class="status '+st.k+'">'+st.label+'</span></div>'+
     (g.why ? '<div class="g-why">'+esc(g.why)+'</div>' : '')+
     goalResultHTML(g)+
     '<div class="g-act"><span class="g-act-name">'+esc(a.label||'This week')+'</span>'+goalDots(w.n, w.target, st.k)+'<span class="g-act-n num">'+w.n+' of '+w.target+' this week</span></div>'+
-    '<div class="g-ev"><span>'+(last ? '<b>'+esc(fmtDate(last.d))+'</b> <span class="g-src">'+(last.auto ? 'from the ring' : 'marked by you')+'</span>' : 'Nothing counted yet')+'</span>'+
+    '<div class="g-ev"><span>'+(last ? '<b>'+esc(fmtDate(last.d))+'</b> <span class="g-src">'+GOAL_FROM[last.from||'you']+'</span>' : 'Nothing counted yet')+'</span>'+
       (a.src==='sleep7' ? '' : '<button class="btn sm secondary g-tap" onclick="event.stopPropagation();goalTap(\''+g.id+'\')">'+(counted ? 'Undo today' : 'Count today')+'</button>')+'</div>'+
+    (said && said.q ? '<div class="g-quote">“'+esc(said.q)+'”</div>' : '')+
+    (goalMaybes(g).length ? '<div class="g-maybe">Your journal may show one more. Open to say whether it counts.</div>' : '')+
   '</div>';
 }
 // "2.2 of 6.25 $M portfolio, by Jan 1, 2031": the unit once, the year when it is not this one
@@ -5198,6 +5293,7 @@ function goalPlainRowHTML(g){
 }
 function renderGoals(){
   renderTWY();          // the month's sprint and the study row keep their own section, beneath
+  goalEvLoad();         // the journal's latest reading, at most every five minutes
   const el=$('goalList'); if(!el) return;
   const all=DB.goals||[], act=all.filter(goalActive);
   const weekly=act.filter(g => goalShape(g)==='weekly'), long=act.filter(g => goalShape(g)==='long'), lists=act.filter(g => goalShape(g)==='list');
@@ -5229,7 +5325,7 @@ function openGoal(id){
       '<div class="g-week">'+w.days.map((d,i) => { const hit=w.on[i], fut=d>t;
         return '<button class="g-day'+(fut?' fut':'')+'"'+(fut ? ' disabled' : ' onclick="goalTap(\''+g.id+'\',\''+d+'\',1)"')+' aria-label="'+esc(fmtDate(d))+(hit?', counted':'')+'" aria-pressed="'+(hit?'true':'false')+'">'+
           '<i class="g-dot'+(hit?' on':'')+'">'+(hit?IC_CHECK:'')+'</i><span>'+'MTWTFSS'.charAt(i)+'</span></button>'; }).join('')+'</div>'+
-      '<div class="data-fresh">'+esc(GOAL_SRC[a.src]||GOAL_SRC.tap)+'. Tap a day to correct it.</div>';
+      '<div class="data-fresh">'+esc(GOAL_SRC[a.src]||GOAL_SRC.tap)+'. Tap a day to correct it.</div>'+goalEvHTML(g);
     const H=goalHistory(g, 12).filter(x => x.k!=='none');
     if(H.length>1){
       const past=H.filter(x => x.k!=='now'), hits=past.filter(x => x.k==='hit').length, sp=past.filter(x => x.k==='spare').length;
@@ -5299,7 +5395,7 @@ function logProgress(id){ const g=DB.goals.find(x=>x.id===id); if(!g) return;
 }
 function saveProgress(id){ const g=DB.goals.find(x=>x.id===id); if(!g) return; const v=Number($('gpv').value); if(isNaN(v)){ return; }
   g.current=v; g.updates=g.updates||[]; g.updates.push({date:today(), ts:Date.now(), value:v}); g.lastProgressTs=Date.now(); g.mt=Date.now(); save(); closeSheet(); renderAll(); toast('Saved'); }
-function gKindToggle(){ const k=$('gShape').value; ['weekly','long','list'].forEach(x => { const el=$('gBlock-'+x); if(el) el.style.display = (k===x) ? '' : 'none'; }); }
+function gKindToggle(){ if(!$('gShape')) return; const k=$('gShape').value; ['weekly','long','list'].forEach(x => { const el=$('gBlock-'+x); if(el) el.style.display = (k===x) ? '' : 'none'; }); }
 function editGoal(id){
   const g=id ? DB.goals.find(x=>x.id===id) : null, sh=g ? goalShape(g) : 'weekly', a=(g&&g.act)||{};
   const opt=(v,l,sel)=>'<option value="'+v+'"'+(sel?' selected':'')+'>'+l+'</option>';
@@ -5311,7 +5407,8 @@ function editGoal(id){
     '<div id="gBlock-weekly">'+
       '<div class="row2"><div class="field"><label for="gAct">The action</label><input id="gAct" placeholder="Gym, date night, a long run" value="'+esc(a.label||'')+'"></div>'+
       '<div class="field"><label for="gN">Times a week</label><input id="gN" type="number" inputmode="numeric" min="1" max="7" value="'+(a.n||'')+'" placeholder="3"></div></div>'+
-      '<div class="field"><label for="gSrc">How it is counted</label><select id="gSrc">'+opt('tap','I mark it with a tap',!a.src||a.src==='tap')+opt('gym','The ring counts strength sessions, and I can tap',a.src==='gym')+opt('sleep7','The ring counts nights of seven hours or more',a.src==='sleep7')+'</select></div>'+
+      '<div class="field"><label for="gSrc">How it is counted</label><select id="gSrc">'+opt('tap','My journal and my taps',!a.src||a.src==='tap')+opt('gym','The ring (strength sessions), my journal and my taps',a.src==='gym')+opt('sleep7','The ring counts nights of seven hours or more',a.src==='sleep7')+'</select></div>'+
+      '<div class="field"><label for="gWhat">What counts, in a sentence. Your journal is read for this.</label><textarea id="gWhat" rows="2" placeholder="I went to the gym or did a strength workout">'+esc(a.what||'')+'</textarea></div>'+
       '<div class="ck-label">The result you are after (optional)</div>'+
       '<div class="row2"><div class="field"><label for="gwTgt">Target</label><input id="gwTgt" type="number" inputmode="decimal" value="'+(g&&sh==='weekly'?num(g.target):'')+'" placeholder="170"></div>'+
       '<div class="field"><label for="gwUnit">Unit</label><input id="gwUnit" placeholder="lb" value="'+esc(g&&sh==='weekly'?(g.unit||''):'')+'"></div></div>'+
@@ -5338,7 +5435,7 @@ function saveGoal(id){
   g.name=name; g.why=$('gWhy').value.trim(); g.shape=sh; g.kind = sh==='list' ? 'milestones' : 'number';
   if(sh==='weekly'){
     const old=g.act||{};
-    g.act={ label:$('gAct').value.trim() || name, n:Math.max(1, Math.min(7, Math.round(numOr($('gN').value, 1)))), src:$('gSrc').value, days:old.days||[], off:old.off||[] };
+    g.act={ label:$('gAct').value.trim() || name, n:Math.max(1, Math.min(7, Math.round(numOr($('gN').value, 1)))), src:$('gSrc').value, what:$('gWhat').value.trim(), days:old.days||[], off:old.off||[], struck:old.struck||[] };
     const tgt=$('gwTgt').value;
     if(tgt!==''){ g.target=Number(tgt); g.unit=$('gwUnit').value.trim(); g.start=numOr($('gwStart').value, g.start!=null ? g.start : null); g.targetDate=$('gwDate').value;
       g.direction = (g.start!=null && g.target<g.start) ? 'down' : 'up'; g.resSrc=$('gwRes').value || ''; if(g.current==null) g.current=g.start; }
@@ -7491,7 +7588,7 @@ async function tryUnlock(){
 }
 async function lockForgot(){
   if(await confirmSheet('Reset this phone?', 'Local data is erased; anything synced to your account returns after you log back in.', 'Reset', true)){
-    store.removeItem(LOCK_KEY); store.removeItem(KEY);
+    store.removeItem(LOCK_KEY); store.removeItem(KEY); store.removeItem('lifeos_gev');
     try{ indexedDB.deleteDatabase('lifeos'); }catch(e){}
     location.reload();
   }

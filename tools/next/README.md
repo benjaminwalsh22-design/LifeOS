@@ -45,7 +45,7 @@ After the redesign goes live, `index.html` is the app again and can be edited di
 this folder then stands as the record of how v11 was produced. To keep building through
 the pieces instead, edit them and run the build with `--live`.
 
-## Goals v2 (preview, Nov 2026)
+## Goals v2 (Nov 2026)
 
 `goals.js` holds the Goals screen. A goal has a shape: `weekly` (an action counted
 per week, with an optional result), `long` (a number looked at monthly) or `list`.
@@ -55,6 +55,21 @@ by a tap otherwise. At most three weekly goals are active; one short week a mont
 is covered by a spare. Goals made before v2 keep every field and gain `shape`,
 `state` and `mt`; the new fields are `act`, `plan`, `since`, `resSrc`. Those are
 the only changes to saved data, and `tests/ui/parity.test.js` names them.
-The research and the plan for the next steps (journal as evidence, the Sunday
-review, seasons) are in the proposal doc, not in the repo.
+The research and the plan for the next steps (the Sunday review, seasons) are in
+the proposal doc, not in the repo.
+
+### The journal as evidence (v11.4)
+
+A worker (`goal-tick`, see `docs/workers.md`) reads his journal pages for his weekly
+actions. The app fetches what it found with `my_goal_evidence()` when Goals is drawn
+(at most every five minutes) and keeps it in its own cache, `lifeos_gev`, apart from
+the saved data: `[{g: goal id, d: day, q: his sentence, p: page id, s: sure}]`. A
+day with a sure finding counts like a day the ring saw; the card and the goal sheet
+show the sentence in his own-words style, and the sheet lists them with "Not this".
+A finding the page leaves in doubt is shown with "Count it" and "Not this" and
+counts only on a yes (which is an ordinary mark in `act.days`).
+Two fields are new inside `act`, both his own record and synced with the goal:
+`act.what` (a sentence saying what counts, which the worker reads by) and
+`act.struck` (days whose sentence he struck). `act.off` still turns a whole day
+off, whatever counted it. Erasing the phone clears the cache too.
 

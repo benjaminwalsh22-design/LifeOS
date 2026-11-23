@@ -16,7 +16,7 @@ HERE = pathlib.Path(__file__).parent
 ROOT = HERE.parent.parent
 LIVE = '--live' in sys.argv
 src = (ROOT / 'rollback' / 'index-v10.5.html').read_text()
-VERSION = 'v11.3' if LIVE else 'v11.3 preview'
+VERSION = 'v11.4' if LIVE else 'v11.4 preview'
 
 def piece(name):
     return (HERE / name).read_text().rstrip('\n') + '\n'
@@ -362,6 +362,10 @@ swap("    '<div class=\"turn-a\">' + askMd(t.answer_markdown || '') + '</div></d
 # a notification or a link opens its screen in the tab it belongs to
 swap("  if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v); return true; }", "  if(Object.prototype.hasOwnProperty.call(VIEWS, v)){ showView(v, 'cold'); return true; }")
 swap("if(m && VIEWS[m[1]]!=null) showView(m[1]); });", "if(m && VIEWS[m[1]]!=null) showView(m[1], 'cold'); });")
+
+# erasing this phone also drops the cached reading of the journal (goal evidence)
+swap("    store.removeItem(KEY);\n    try { if (_idb){", "    store.removeItem(KEY); store.removeItem('lifeos_gev');\n    try { if (_idb){")
+swap("    store.removeItem(LOCK_KEY); store.removeItem(KEY);", "    store.removeItem(LOCK_KEY); store.removeItem(KEY); store.removeItem('lifeos_gev');")
 
 # ---------------------------------------------------------------- clear out: functions and styles nothing uses any more
 def drop_fn(name, until):
