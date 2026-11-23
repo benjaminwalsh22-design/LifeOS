@@ -81,9 +81,13 @@ picture as the request body, which is drawn and measured without storing anythin
 has named after itself, or a top-level `LifeOS Journal` folder for pages saved by
 hand (those need no rule). Nothing uses that route today.
 
-Not yet known: whether the app, on a later backup, rewrites a page's file in place.
-A changed file is picked up the next time any new page file appears; if in-place
-changes turn out to be common, add a second workflow on Zapier's "Updated File"
-trigger for the notebook's folder (same source).
+On a later backup the app adds a file for each new page and rewrites the file of
+a page he continued in place (same Drive file, new contents). Two workflows cover
+that, both running the same steps: "Moleskine pages to LifeOS" starts on a new
+file anywhere under the backup folder, and "Moleskine pages to LifeOS (changed
+pages)" starts on Zapier's "Updated File" trigger for the notebook's own folder
+(that trigger does not look into subfolders, so a second notebook needs its own
+copy). First seen working unattended on 23 Nov 2026: a new page and a continued
+page reached the journal three minutes after the backup.
 
 Checks: `tests/pen` (`npm i && node pen.test.mjs`).
